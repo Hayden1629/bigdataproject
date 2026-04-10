@@ -8,6 +8,11 @@
 
 Deploying:
 
+```
+pip install -r requirements.txt
+python3 utils/STARTHERE.py
+```
+
 Navigate to the utils folder. Run the STARTHERE.py (change LOW_RAM variable to True for testing)
 
 ---
