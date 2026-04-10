@@ -1,1 +1,6 @@
 /data
+# uv
+.venv/
+.uv/
+__pycache__/
+*.pyc

@@ -26,7 +26,7 @@ Usage:
 WHY NOT ONE FLAT DATAFRAME?
     DEMO has 1 row per case. DRUG has 4-5 rows per case on average. REAC has
     3-4 rows per case on average. A full outer join would multiply rows:
-    1 case × 5 drugs × 4 reactions = 20 rows per case, all heavily duplicated.
+    1 case x 5 drugs x 4 reactions = 20 rows per case, all heavily duplicated.
     Keep them separate and join only what you need for a specific question.
 
     Example: join demo + drug to study drug demographics
@@ -37,6 +37,7 @@ WHY NOT ONE FLAT DATAFRAME?
 """
 
 import os
+import re
 import glob
 import pandas as pd
 
@@ -51,19 +52,40 @@ FILE_PREFIXES = {
     "indi": "INDI",
 }
 
-DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
+# utils/ is one level below the project root, so go up one level to find data/
+DATA_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
 
 
-def _find_txt(quarter: str, prefix: str) -> str:
-    """Locate the .txt file for a given quarter and table prefix."""
-    year = quarter[:4]  # e.g. "2025"
-    q = quarter[-1]     # e.g. "4"
-    yy = year[-2:]      # e.g. "25"
+def _find_txt(quarter: str, prefix: str, folder: str | None = None) -> str:
+    """Locate the .txt file for a given quarter and table prefix.
 
-    # Search both the flat dir and the ASCII subdir
+    Args:
+        quarter: normalized quarter string, e.g. "2018Q1"
+        prefix:  file prefix, e.g. "DEMO"
+        folder:  actual data folder name under DATA_ROOT (may differ from quarter
+                 when FDA releases corrected zips like "faers_ascii_2018Q1_new")
+    """
+    year, q = quarter.split("Q")  # robust split — avoids quarter[-1] bug
+    yy = year[-2:]
+
+    folder_name = folder or f"faers_ascii_{year}Q{q}"
+
+    # Search both the flat dir and the ascii subdir; also handle FDA "_new" filename suffix
+    base = f"{prefix}{yy}Q{q}"
+    base_lo = base.lower()
+    ascii_dir = os.path.join(DATA_ROOT, folder_name, "ascii")
+    flat_dir  = os.path.join(DATA_ROOT, folder_name)
     patterns = [
-        os.path.join(DATA_ROOT, f"faers_ascii_{year}Q{q}", "ASCII", f"{prefix}{yy}Q{q}.txt"),
-        os.path.join(DATA_ROOT, f"faers_ascii_{year}Q{q}", f"{prefix}{yy}Q{q}.txt"),
+        os.path.join(ascii_dir, f"{base}.txt"),
+        os.path.join(flat_dir,  f"{base}.txt"),
+        os.path.join(ascii_dir, f"{base}_new.txt"),
+        os.path.join(flat_dir,  f"{base}_new.txt"),
+        os.path.join(ascii_dir, f"{base_lo}.txt"),
+        os.path.join(flat_dir,  f"{base_lo}.txt"),
+        os.path.join(ascii_dir, f"{base_lo}_new.txt"),
+        os.path.join(flat_dir,  f"{base_lo}_new.txt"),
+        os.path.join(ascii_dir, f"{base}*.txt"),
+        os.path.join(flat_dir,  f"{base}*.txt"),
     ]
     for pattern in patterns:
         matches = glob.glob(pattern)
@@ -76,14 +98,16 @@ def _find_txt(quarter: str, prefix: str) -> str:
     )
 
 
-def load_quarter(quarter: str, tables: list[str] | None = None) -> dict[str, pd.DataFrame]:
+def load_quarter(quarter: str, tables: list[str] | None = None, folder: str | None = None) -> dict[str, pd.DataFrame]:
     """
     Load all (or selected) FAERS tables for one quarter.
 
     Args:
-        quarter: e.g. "2025Q4"
+        quarter: normalized quarter string, e.g. "2025Q4"
         tables:  list of table names to load, e.g. ["demo", "drug", "reac"]
                  defaults to all 7 tables
+        folder:  actual folder name under DATA_ROOT (e.g. "faers_ascii_2018Q1_new");
+                 inferred from quarter when omitted
 
     Returns:
         dict mapping table name -> DataFrame
@@ -93,7 +117,7 @@ def load_quarter(quarter: str, tables: list[str] | None = None) -> dict[str, pd.
 
     for name in to_load:
         prefix = FILE_PREFIXES[name]
-        path = _find_txt(quarter, prefix)
+        path = _find_txt(quarter, prefix, folder)
         print(f"  Loading {name} ({quarter}) from {os.path.basename(path)} ...", end=" ", flush=True)
         df = pd.read_csv(
             path,
@@ -102,9 +126,8 @@ def load_quarter(quarter: str, tables: list[str] | None = None) -> dict[str, pd.
             encoding="latin-1",  # FDA files use latin-1, not utf-8
             low_memory=False,
         )
-        # Normalize column names to lowercase
         df.columns = df.columns.str.lower().str.strip()
-        df["quarter"] = quarter  # tag source quarter for multi-quarter stacks
+        df["quarter"] = quarter
         print(f"{len(df):,} rows")
         result[name] = df
 
@@ -133,15 +156,26 @@ def load_quarters(quarters: list[str], tables: list[str] | None = None) -> dict[
     return {name: pd.concat(dfs, ignore_index=True) for name, dfs in all_dfs.items()}
 
 
-if __name__ == "__main__":
-    # Quick demo: load 2025Q4 and print shape of each table
-    print("Loading 2025Q4...")
-    tables = load_quarter("2025Q4")
+def load_all_quarters() -> dict[str, pd.DataFrame]:
+    """Load every downloaded quarter, preferring corrected (_new) versions."""
+    folders = sorted(f for f in os.listdir(DATA_ROOT) if f.startswith("faers_ascii_"))
 
-    print("\nTable shapes:")
-    for name, df in tables.items():
-        print(f"  {name:6s}: {df.shape[0]:>10,} rows × {df.shape[1]} cols")
+    # normalized quarter (e.g. "2018Q1") -> actual folder name on disk
+    quarter_to_folder: dict[str, str] = {}
+    for folder in folders:
+        m = re.search(r"(\d{4}Q\d)", folder)
+        if m:
+            quarter = m.group(1)
+            # prefer the "_new" (corrected) version when both exist
+            if quarter not in quarter_to_folder or "_new" in folder:
+                quarter_to_folder[quarter] = folder
 
-    print("\nDEMO columns:", list(tables["demo"].columns))
-    print("DRUG columns:", list(tables["drug"].columns))
-    print("REAC columns:", list(tables["reac"].columns))
+    all_dfs: dict[str, list[pd.DataFrame]] = {t: [] for t in FILE_PREFIXES.keys()}
+    for quarter in sorted(quarter_to_folder):
+        folder = quarter_to_folder[quarter]
+        print(f"Loading {quarter} (from {folder})...")
+        q_data = load_quarter(quarter, folder=folder)
+        for name, df in q_data.items():
+            all_dfs[name].append(df)
+
+    return {name: pd.concat(dfs, ignore_index=True) for name, dfs in all_dfs.items()}
