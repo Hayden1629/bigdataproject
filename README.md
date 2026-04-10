@@ -1,10 +1,14 @@
-# [Project Title — Fill In]
+# [FDA FAERs Database Dashboard]
 
 > **TODO:** Replace this title and all `[Fill In]` placeholders throughout this file before submitting.
 
 ## Executive Summary
 
 [Fill In: 2–4 sentences describing the project, the problem you are solving, and the key findings or approach.]
+
+Deploying:
+
+Navigate to the utils folder. Run the STARTHERE.py (change LOW_RAM variable to True for testing)
 
 ---
 

@@ -13,7 +13,7 @@
 set -euo pipefail
 
 BASE_URL="https://fis.fda.gov/content/Exports"
-DATA_DIR="$(dirname "$0")/data"
+DATA_DIR="$(dirname "$0")/../data"
 RAW_DIR="$DATA_DIR/raw"
 
 mkdir -p "$RAW_DIR"
