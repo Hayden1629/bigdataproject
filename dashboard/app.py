@@ -28,6 +28,7 @@ import queries as qr
 from drug_normalizer import rxnorm_lookup, find_faers_names
 from reaction_search import search_reactions
 from signal_interpreter import interpret_signals
+from research_connector import search_clinical_trials, search_pubmed, get_fda_approval_info
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Page config
@@ -40,31 +41,32 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Design tokens
+# Design tokens  —  FDA blue / white
 # ─────────────────────────────────────────────────────────────────────────────
 C = {
-    "bg":      "#0d1117",
-    "surface": "#161b22",
-    "border":  "#30363d",
-    "text":    "#e6edf3",
-    "muted":   "#8b949e",
-    "accent":  "#3b82f6",
-    "high":    "#f85149",
-    "medium":  "#e3b341",
-    "low":     "#3fb950",
-    "blue":    "#58a6ff",
-    "purple":  "#a78bfa",
-    "teal":    "#22d3ee",
+    "bg":      "#FFFFFF",    # page background
+    "surface": "#EFF6FB",    # card / sidebar surface  (FDA light blue-gray)
+    "border":  "#BDD7EA",    # borders
+    "text":    "#1B2A3B",    # primary text  (FDA navy-ish)
+    "muted":   "#5B616B",    # secondary text  (FDA gray)
+    "accent":  "#0071BC",    # FDA primary blue
+    "navy":    "#112E51",    # FDA darkest navy  (header)
+    "high":    "#981B1E",    # danger red
+    "medium":  "#D97706",    # amber warning
+    "low":     "#2E8540",    # success green
+    "blue":    "#205493",    # FDA dark blue  (links)
+    "teal":    "#02BFE7",    # FDA light-blue accent
+    "purple":  "#4C2C92",    # kept for chart variety
 }
 
 CHART_BASE = dict(
-    plot_bgcolor  = C["bg"],
+    plot_bgcolor  = "#FFFFFF",
     paper_bgcolor = C["surface"],
     font          = dict(color=C["text"], family="Inter, system-ui, sans-serif", size=12),
     margin        = dict(l=0, r=8, t=28, b=0),
-    xaxis         = dict(gridcolor=C["border"], zerolinecolor=C["border"], tickfont=dict(size=11)),
-    yaxis         = dict(gridcolor=C["border"], zerolinecolor=C["border"], tickfont=dict(size=11)),
-    legend        = dict(bgcolor="rgba(0,0,0,0)", bordercolor=C["border"]),
+    xaxis         = dict(gridcolor="#D5E5F0", zerolinecolor="#D5E5F0", tickfont=dict(size=11)),
+    yaxis         = dict(gridcolor="#D5E5F0", zerolinecolor="#D5E5F0", tickfont=dict(size=11)),
+    legend        = dict(bgcolor="rgba(255,255,255,0.8)", bordercolor=C["border"]),
 )
 
 def _theme(fig: go.Figure, h: int = 360) -> go.Figure:
@@ -72,12 +74,12 @@ def _theme(fig: go.Figure, h: int = 360) -> go.Figure:
     return fig
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CSS
+# CSS  —  FDA blue / white
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-html,body,[class*="css"]{{font-family:'Inter',system-ui,sans-serif;}}
+html,body,[class*="css"]{{font-family:'Inter',system-ui,sans-serif;background:{C['bg']};color:{C['text']};}}
 
 /* ── layout ─────────────────────────────────────────────── */
 .block-container{{padding-top:0;padding-bottom:2rem;max-width:1440px;}}
@@ -88,68 +90,64 @@ html,body,[class*="css"]{{font-family:'Inter',system-ui,sans-serif;}}
 
 /* ── tabs ────────────────────────────────────────────────── */
 .stTabs [role="tablist"]{{
-    border-bottom:1px solid {C['border']};
-    gap:2px;
-    padding:0 2px;
+    border-bottom:2px solid {C['accent']};
+    gap:2px;padding:0 2px;
 }}
 .stTabs [role="tab"]{{
-    font-size:0.80rem;
-    font-weight:500;
-    padding:8px 18px;
-    border-radius:6px 6px 0 0;
-    color:{C['muted']};
-    transition:color .15s, background .15s;
+    font-size:0.80rem;font-weight:500;
+    padding:8px 18px;border-radius:6px 6px 0 0;
+    color:{C['muted']};transition:color .15s,background .15s;
 }}
 .stTabs [role="tab"][aria-selected="true"]{{
-    color:{C['text']};
-    background:rgba(59,130,246,.08);
-    border-bottom:2px solid {C['accent']};
+    color:{C['accent']};
+    background:rgba(0,113,188,.08);
+    border-bottom:3px solid {C['accent']};
+    font-weight:700;
 }}
 
 /* ── header ──────────────────────────────────────────────── */
 .dash-header{{
-    background:linear-gradient(90deg,{C['surface']} 0%,rgba(22,27,34,.95) 100%);
-    border-bottom:1px solid {C['border']};
+    background:linear-gradient(90deg,{C['navy']} 0%,{C['blue']} 60%,{C['accent']} 100%);
+    border-bottom:3px solid {C['teal']};
     padding:14px 28px;
     margin:-1rem -1.5rem 1.5rem -1.5rem;
     display:flex;align-items:center;gap:16px;
 }}
 .dash-logo{{
-    width:30px;height:30px;
-    background:linear-gradient(135deg,{C['accent']},{C['purple']});
-    border-radius:7px;
+    width:32px;height:32px;
+    background:#FFFFFF;
+    border-radius:6px;
     display:flex;align-items:center;justify-content:center;
-    font-size:14px;font-weight:800;color:#fff;
+    font-size:15px;font-weight:800;color:{C['accent']};
     flex-shrink:0;
 }}
-.dash-wordmark{{font-size:0.97rem;font-weight:700;color:{C['text']};letter-spacing:0.005em;}}
-.dash-sep{{color:{C['border']};margin:0 4px;}}
-.dash-sub{{font-size:0.73rem;color:{C['muted']};}}
+.dash-wordmark{{font-size:0.97rem;font-weight:700;color:#FFFFFF;letter-spacing:0.005em;}}
+.dash-sep{{color:rgba(255,255,255,.4);margin:0 6px;}}
+.dash-sub{{font-size:0.73rem;color:rgba(255,255,255,.75);}}
 .dash-pill{{
     margin-left:auto;
-    background:rgba(63,185,80,.12);
-    color:{C['low']};
-    border:1px solid rgba(63,185,80,.30);
+    background:rgba(255,255,255,.15);
+    color:#FFFFFF;
+    border:1px solid rgba(255,255,255,.35);
     border-radius:20px;
     font-size:0.65rem;font-weight:600;
-    padding:3px 10px;
-    letter-spacing:.05em;
-    text-transform:uppercase;
+    padding:3px 10px;letter-spacing:.05em;text-transform:uppercase;
 }}
 
 /* ── KPI cards ───────────────────────────────────────────── */
 .kpi-row{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.25rem;}}
 .kpi{{
-    background:{C['surface']};
+    background:#FFFFFF;
     border:1px solid {C['border']};
-    border-radius:10px;
+    border-radius:8px;
     padding:14px 18px;
     flex:1;min-width:130px;
-    transition:border-color .2s;
+    box-shadow:0 1px 3px rgba(0,71,188,.06);
+    transition:border-color .2s,box-shadow .2s;
 }}
-.kpi:hover{{border-color:{C['accent']};}}
+.kpi:hover{{border-color:{C['accent']};box-shadow:0 2px 8px rgba(0,113,188,.12);}}
 .kpi-label{{font-size:0.62rem;color:{C['muted']};text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px;}}
-.kpi-value{{font-size:1.75rem;font-weight:800;color:{C['text']};line-height:1;font-variant-numeric:tabular-nums;}}
+.kpi-value{{font-size:1.75rem;font-weight:800;color:{C['navy']};line-height:1;font-variant-numeric:tabular-nums;}}
 .kpi-sub{{font-size:0.68rem;color:{C['muted']};margin-top:4px;}}
 .kpi-danger .kpi-value{{color:{C['high']};}}
 .kpi-warn   .kpi-value{{color:{C['medium']};}}
@@ -160,10 +158,10 @@ html,body,[class*="css"]{{font-family:'Inter',system-ui,sans-serif;}}
 
 /* ── section labels ──────────────────────────────────────── */
 .sec{{
-    font-size:0.65rem;font-weight:700;color:{C['muted']};
-    text-transform:uppercase;letter-spacing:.15em;
+    font-size:0.63rem;font-weight:700;color:{C['blue']};
+    text-transform:uppercase;letter-spacing:.16em;
     border-bottom:1px solid {C['border']};
-    padding-bottom:6px;margin-bottom:12px;margin-top:8px;
+    padding-bottom:5px;margin-bottom:12px;margin-top:8px;
 }}
 
 /* ── signal badges ───────────────────────────────────────── */
@@ -172,35 +170,54 @@ html,body,[class*="css"]{{font-family:'Inter',system-ui,sans-serif;}}
     padding:2px 8px;border-radius:4px;
     text-transform:uppercase;letter-spacing:.08em;
 }}
-.bHIGH  {{background:rgba(248,81,73,.12); color:{C['high']};  border:1px solid rgba(248,81,73,.35);}}
-.bMEDIUM{{background:rgba(227,179,65,.12);color:{C['medium']};border:1px solid rgba(227,179,65,.35);}}
-.bLOW   {{background:rgba(63,185,80,.12); color:{C['low']};   border:1px solid rgba(63,185,80,.35);}}
+.bHIGH  {{background:rgba(152,27,30,.09); color:{C['high']};  border:1px solid rgba(152,27,30,.30);}}
+.bMEDIUM{{background:rgba(217,119,6,.10); color:{C['medium']};border:1px solid rgba(217,119,6,.30);}}
+.bLOW   {{background:rgba(46,133,64,.09); color:{C['low']};   border:1px solid rgba(46,133,64,.30);}}
 
 /* ── chip strip (RxNorm names) ───────────────────────────── */
 .chips{{margin:4px 0 12px;line-height:2.4;}}
 .chip{{
     display:inline-block;
-    background:rgba(59,130,246,.08);
+    background:rgba(0,113,188,.07);
     color:{C['blue']};
-    border:1px solid rgba(59,130,246,.25);
-    border-radius:5px;font-size:.67rem;font-weight:500;
+    border:1px solid rgba(0,113,188,.22);
+    border-radius:4px;font-size:.67rem;font-weight:500;
     padding:2px 8px;margin:2px 3px;
 }}
 
+/* ── FDA approval card ───────────────────────────────────── */
+.fda-card{{
+    background:#FFFFFF;
+    border:1px solid {C['border']};
+    border-left:4px solid {C['accent']};
+    border-radius:0 8px 8px 0;
+    padding:12px 18px;
+    margin:8px 0 14px;
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+    gap:10px 20px;
+}}
+.fda-field{{}}
+.fda-label{{font-size:.60rem;color:{C['muted']};text-transform:uppercase;letter-spacing:.10em;margin-bottom:2px;}}
+.fda-value{{font-size:.80rem;font-weight:600;color:{C['navy']};}}
+.fda-value a{{color:{C['accent']};text-decoration:none;}}
+.fda-value a:hover{{text-decoration:underline;}}
+
 /* ── note / info box ─────────────────────────────────────── */
 .note{{
-    background:{C['surface']};border:1px solid {C['border']};
+    background:{C['surface']};
+    border:1px solid {C['border']};
     border-left:3px solid {C['accent']};
-    border-radius:0 6px 6px 0;padding:10px 14px;
+    border-radius:0 6px 6px 0;
+    padding:10px 14px;
     font-size:0.74rem;color:{C['muted']};
-    line-height:1.6;
-    margin:10px 0 14px;
+    line-height:1.6;margin:10px 0 14px;
 }}
 
 /* ── dataframe ───────────────────────────────────────────── */
-.stDataFrame {{border-radius:8px;overflow:hidden;}}
+.stDataFrame {{border-radius:8px;overflow:hidden;border:1px solid {C['border']};}}
 
-/* ── spinner ─────────────────────────────────────────────── */
+/* ── spinner / status ────────────────────────────────────── */
 [data-testid="stSpinner"] > div {{color:{C['accent']};}}
 </style>
 """, unsafe_allow_html=True)
@@ -219,7 +236,28 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Data load (cached — runs once per session, ~15 s first time)
+# Background cache warm-up
+# Fires once when the server first starts (guarded by dl._warm_started which
+# lives in the data_loader module namespace and survives across Streamlit reruns).
+# By the time a second user visits, load_tables() returns in <1 ms from memory.
+# ─────────────────────────────────────────────────────────────────────────────
+if not dl._warm_started:
+    dl._warm_started = True
+    import threading as _threading
+
+    def _bg_warm() -> None:
+        # Only call cache_resource functions here — cache_data functions require
+        # a Streamlit ScriptRunContext and will log a warning if called from a
+        # background thread. cache_resource is truly global and thread-safe.
+        try:
+            dl.warm_all_tables()
+        except Exception:
+            pass
+
+    _threading.Thread(target=_bg_warm, daemon=True).start()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Data load (cached — runs once per server start, subsequent loads < 1 ms)
 # ─────────────────────────────────────────────────────────────────────────────
 with st.spinner("Loading FAERS dataset..."):
     _tables  = dl.load_tables()
@@ -237,7 +275,12 @@ Global Filters
 </div>
 """, unsafe_allow_html=True)
 
-    sel_quarters = st.multiselect("Quarters", options=all_q, default=all_q)
+    st.markdown(
+        f'<div style="font-size:.72rem;color:{C["muted"]};margin-bottom:6px;">Quarters</div>',
+        unsafe_allow_html=True,
+    )
+    with st.container(height=180, border=True):
+        sel_quarters = [q for q in all_q if st.checkbox(q, value=True, key=f"q_{q}")]
     q_key = qr._quarters_key(sel_quarters) if sel_quarters else "ALL"
 
     role_label = st.selectbox(
@@ -266,7 +309,7 @@ Dataset
     st.markdown(f"""
 | Metric | Value |
 |---|---|
-| Cases (dedup) | **{gk['n_cases']:,}** |
+| Cases | **{gk['n_cases']:,}** |
 | Deaths | **{gk['n_deaths']:,}** |
 | Unique drugs | **{gk['n_drugs']:,}** |
 | MedDRA PTs | **{gk['n_pts']:,}** |
@@ -326,11 +369,16 @@ def bar_h(df: pd.DataFrame, x: str, y: str, color_scale: list, text_col: str | N
     text = df[text_col] if text_col else df[x].apply(lambda v: f"{v:,}")
     fig = go.Figure(go.Bar(
         x=df[x], y=df[y], orientation="h",
-        text=text, textposition="outside",
+        text=text, textposition="inside", insidetextanchor="end",
+        textfont=dict(color="white", size=11),
         marker=dict(color=df[x], colorscale=color_scale, showscale=False),
         hovertemplate=f"<b>%{{y}}</b><br>{x}: %{{x:,}}<extra></extra>",
     ))
-    fig.update_layout(yaxis=dict(categoryorder="total ascending"), xaxis_title=None, yaxis_title=None)
+    fig.update_layout(
+        yaxis=dict(categoryorder="total ascending"),
+        xaxis_title=None,
+        yaxis_title=None,
+    )
     return _theme(fig, max(h, len(df) * 22 + 80))
 
 
@@ -388,7 +436,8 @@ def bar_v(df: pd.DataFrame, x: str, y: str, color_scale: list, h: int = 280) -> 
     fig = go.Figure(go.Bar(
         x=df[x], y=df[y],
         text=df[y].apply(lambda v: f"{v:,}"),
-        textposition="outside",
+        textposition="inside", insidetextanchor="end",
+        textfont=dict(color="white", size=11),
         marker=dict(color=df[y], colorscale=color_scale, showscale=False),
         hovertemplate="<b>%{x}</b><br>%{y:,}<extra></extra>",
     ))
@@ -485,11 +534,15 @@ tab_ov, tab_drug, tab_cmp, tab_sig, tab_reac = st.tabs(
 # TAB 0  ─  Overview
 # ═════════════════════════════════════════════════════════════════════════════
 with tab_ov:
-    # KPI row
-    gk = qr.global_kpis()
+    with st.spinner("Loading overview..."):
+        gk = qr.global_kpis()
+        global_trend = qr.global_quarterly_trend()
+        drug_sum  = dl.load_drug_summary()
+        reac_sum  = dl.load_reac_summary()
+        sc        = sd.signal_counts()
     death_pct_global = round(gk["n_deaths"] / gk["n_cases"] * 100, 2) if gk["n_cases"] else 0
     kpis_html = "".join([
-        kpi_card("Deduplicated Cases",    f"{gk['n_cases']:,}"),
+        kpi_card("Total Cases",           f"{gk['n_cases']:,}"),
         kpi_card("Deaths Reported",       f"{gk['n_deaths']:,}",
                  f"{death_pct_global}% of cases", "kpi-danger"),
         kpi_card("Hospitalisations",      f"{gk['n_hosp']:,}"),
@@ -499,15 +552,8 @@ with tab_ov:
     ])
     st.markdown(f'<div class="kpi-row">{kpis_html}</div>', unsafe_allow_html=True)
 
-    # Global trend
-    sec("Reports Per Quarter")
-    global_trend = qr.global_quarterly_trend()
-    st.plotly_chart(line_trend(global_trend, "quarter", "case_count", "Cases"), use_container_width=True)
-
     # Top drugs + top reactions
     col_a, col_b = st.columns(2)
-    drug_sum = dl.load_drug_summary()
-    reac_sum = dl.load_reac_summary()
 
     with col_a:
         sec("Top 15 Drugs by Report Volume")
@@ -517,7 +563,8 @@ with tab_ov:
                 x=top15d["n_cases"], y=top15d["drug"], orientation="h",
                 marker=dict(color=top15d["n_cases"], colorscale=[[0,"#1d4ed8"],[1,"#60a5fa"]], showscale=False),
                 text=top15d["n_cases"].apply(lambda v: f"{v:,}"),
-                textposition="outside",
+                textposition="inside", insidetextanchor="end",
+                textfont=dict(color="white", size=11),
                 hovertemplate="<b>%{y}</b><br>Cases: %{x:,}<extra></extra>",
             ))
             fig_td.update_layout(yaxis=dict(categoryorder="total ascending"), xaxis_title=None)
@@ -532,77 +579,16 @@ with tab_ov:
                 x=top15r["n_cases"], y=top15r["pt"], orientation="h",
                 marker=dict(color=top15r["n_cases"], colorscale=[[0,"#7c3aed"],[1,"#c4b5fd"]], showscale=False),
                 text=top15r["n_cases"].apply(lambda v: f"{v:,}"),
-                textposition="outside",
+                textposition="inside", insidetextanchor="end",
+                textfont=dict(color="white", size=11),
                 hovertemplate="<b>%{y}</b><br>Cases: %{x:,}<extra></extra>",
             ))
             fig_tr.update_layout(yaxis=dict(categoryorder="total ascending"), xaxis_title=None)
             _theme(fig_tr, 420)
             st.plotly_chart(fig_tr, use_container_width=True)
 
-    # World map + Reporter type
-    sec("Global Report Distribution")
-    choropleth_data = qr.global_country_choropleth()
-    if not choropleth_data.empty:
-        fig_map = go.Figure(go.Choropleth(
-            locations=choropleth_data["iso3"],
-            z=choropleth_data["count"],
-            text=choropleth_data.apply(
-                lambda r: f"<b>{r['country']}</b><br>{r['count']:,} reports ({r['pct']}%)", axis=1
-            ),
-            hovertemplate="%{text}<extra></extra>",
-            colorscale=[[0, "#0c1a2e"], [0.2, "#1e3a5f"], [0.5, "#1d4ed8"], [0.8, "#3b82f6"], [1.0, "#93c5fd"]],
-            showscale=True,
-            colorbar=dict(
-                title=dict(text="Reports", font=dict(color=C["muted"], size=11)),
-                thickness=12,
-                len=0.6,
-                bgcolor="rgba(0,0,0,0)",
-                bordercolor=C["border"],
-                tickfont=dict(color=C["muted"], size=10),
-            ),
-            marker=dict(line=dict(color=C["border"], width=0.5)),
-        ))
-        fig_map.update_layout(
-            **CHART_BASE,
-            height=380,
-            geo=dict(
-                bgcolor=C["bg"],
-                lakecolor=C["bg"],
-                landcolor=C["surface"],
-                showland=True,
-                showlakes=False,
-                showcountries=True,
-                countrycolor=C["border"],
-                showframe=False,
-                projection_type="natural earth",
-            ),
-            margin=dict(l=0, r=0, t=28, b=0),
-        )
-        st.plotly_chart(fig_map, use_container_width=True)
-
-    col_c, col_d = st.columns([3, 2])
-    with col_c:
-        sec("Top 20 Countries by Report Volume")
-        ctry = qr.global_top_countries(top_n=20)
-        fig_ctry = go.Figure(go.Bar(
-            x=ctry["country"], y=ctry["count"],
-            marker=dict(color=ctry["count"], colorscale=[[0,"#0c4a6e"],[1,"#38bdf8"]], showscale=False),
-            text=ctry["pct"].apply(lambda v: f"{v}%"),
-            textposition="outside",
-            hovertemplate="<b>%{x}</b><br>%{y:,} reports (%{text})<extra></extra>",
-        ))
-        fig_ctry.update_layout(xaxis_tickangle=-40, yaxis_title="Reports")
-        _theme(fig_ctry, 280)
-        st.plotly_chart(fig_ctry, use_container_width=True)
-
-    with col_d:
-        sec("Reporter Type Distribution")
-        rtype = qr.global_reporter_types()
-        st.plotly_chart(donut(rtype, "count", "label", h=280), use_container_width=True)
-
     # Signal summary
     sec("Pharmacovigilance Signal Summary")
-    sc = sd.signal_counts()
     sig_html = "".join([
         kpi_card("HIGH Signals",   f"{sc['HIGH']:,}",
                  "PRR \u2265 4, N \u2265 5, \u03c7\u00b2 \u2265 4", "kpi-danger"),
@@ -621,6 +607,10 @@ with tab_ov:
         unsafe_allow_html=True,
     )
 
+    # Global trend
+    sec("Reports Per Quarter")
+    st.plotly_chart(line_trend(global_trend, "quarter", "case_count", "Cases"), use_container_width=True)
+
     # Trending quarter-over-quarter
     sec("Quarter-over-Quarter Trends")
     trend_d = qr.trending_drugs(top_n=10)
@@ -634,7 +624,8 @@ with tab_ov:
             fig_td2 = go.Figure(go.Bar(
                 x=trend_d["delta"], y=trend_d["drug"], orientation="h",
                 text=trend_d.apply(lambda r: f"+{r['delta']:,}  ({r['pct_change']:+.0f}%)", axis=1),
-                textposition="outside",
+                textposition="inside", insidetextanchor="end",
+                textfont=dict(color="white", size=11),
                 marker=dict(color=trend_d["delta"], colorscale=[[0,"#164e63"],[1,"#22d3ee"]], showscale=False),
                 hovertemplate="<b>%{y}</b><br>+%{x:,} cases<extra></extra>",
             ))
@@ -649,7 +640,8 @@ with tab_ov:
             fig_tr2 = go.Figure(go.Bar(
                 x=trend_r["delta"], y=trend_r["reaction"], orientation="h",
                 text=trend_r.apply(lambda r: f"+{r['delta']:,}  ({r['pct_change']:+.0f}%)", axis=1),
-                textposition="outside",
+                textposition="inside", insidetextanchor="end",
+                textfont=dict(color="white", size=11),
                 marker=dict(color=trend_r["delta"], colorscale=[[0,"#4a1d96"],[1,"#c4b5fd"]], showscale=False),
                 hovertemplate="<b>%{y}</b><br>+%{x:,} cases<extra></extra>",
             ))
@@ -695,10 +687,18 @@ with tab_drug:
             )
         st.stop()
 
-    # ── Drug normalisation ────────────────────────────────────────────────────
-    with st.spinner("Normalising via RxNorm..."):
-        rxn      = rxnorm_lookup(drug_query)
-        matched  = find_faers_names(drug_query, _tables["drug"])
+    # ── Drug normalisation + status console ──────────────────────────────────
+    with st.status("Looking up drug...", expanded=True) as _status:
+        st.write(f"Querying RxNorm for **{drug_query}**...")
+        rxn = rxnorm_lookup(drug_query)
+        canon_tmp = rxn.get("canonical") or drug_query.title()
+        st.write(f"Resolved to **{canon_tmp}** — matching FAERS records...")
+        matched = find_faers_names(drug_query, _tables["drug"])
+        if matched:
+            st.write(f"Found **{len(matched)}** drug name variants in FAERS — loading profile...")
+            _status.update(label=f"{canon_tmp} — {len(matched)} variants matched", state="complete", expanded=False)
+        else:
+            _status.update(label="No records found", state="error", expanded=False)
 
     if not matched:
         st.error(
@@ -719,6 +719,38 @@ with tab_drug:
         chips_html = " ".join(f'<span class="chip">{n}</span>' for n in sorted(related)[:50])
         st.markdown(f'<div class="chips">{chips_html}</div>', unsafe_allow_html=True)
     st.caption(f"{len(matched)} FAERS drug name strings matched — role filter: {role_cod}")
+
+    # ── FDA Approval Info ─────────────────────────────────────────────────────
+    _fda_records = get_fda_approval_info(canon)
+    if _fda_records:
+        _fda = _fda_records[0]  # show the primary application
+        def _fda_field(label: str, value: str) -> str:
+            return (
+                f'<div class="fda-field">'
+                f'<div class="fda-label">{label}</div>'
+                f'<div class="fda-value">{value}</div>'
+                f'</div>'
+            )
+        _fda_fields = [
+            _fda_field("Application Type",  _fda["app_type"]),
+            _fda_field("Application No.",   _fda["application_number"]),
+            _fda_field("Sponsor",           _fda["sponsor"]),
+            _fda_field("First Approval",    _fda["first_approval"]),
+            _fda_field("Latest Action",     _fda["latest_action"]),
+            _fda_field("Dosage Forms",      _fda["dosage_forms"] or "—"),
+            _fda_field("Route(s)",          _fda["routes"] or "—"),
+            _fda_field("Marketing Status",  _fda["marketing_status"] or "—"),
+            _fda_field("Links",
+                f'<a href="{_fda["fda_url"]}" target="_blank">FDA Portal</a>'
+                f' &nbsp;·&nbsp; '
+                f'<a href="{_fda["ob_url"]}" target="_blank">Orange Book</a>'),
+        ]
+        st.markdown(
+            f'<div class="fda-card">{"".join(_fda_fields)}</div>',
+            unsafe_allow_html=True,
+        )
+        if len(_fda_records) > 1:
+            st.caption(f"{len(_fda_records)} FDA applications found — showing primary application ({_fda['application_number']})")
 
     # ── KPIs ──────────────────────────────────────────────────────────────────
     kpi = qr.drug_kpis(nk, role_cod, q_key)
@@ -845,7 +877,7 @@ with tab_drug:
             st.markdown('<div style="font-size:.68rem;color:#8b949e;margin-bottom:4px;">FOREST PLOT — 95% CI on log scale</div>', unsafe_allow_html=True)
             st.plotly_chart(forest_plot(sig_df, h=400), use_container_width=True)
     else:
-        st.info("No PRR signals found. Run `python3 claude_test/precompute.py` to generate the signal cache.")
+        st.info("No PRR signals found. Run `python3 dashboard/precompute.py` to generate the signal cache.")
 
     # ── AI signal interpretation ──────────────────────────────────────────────
     if not sig_df.empty:
@@ -866,9 +898,132 @@ with tab_drug:
                 unsafe_allow_html=True,
             )
         else:
-            st.caption("AI interpretation unavailable — set ANTHROPIC_API_KEY to enable.")
+            st.caption("AI interpretation unavailable — set ANTHROPIC_API_KEY or GROQ_API_KEY to enable. Groq is free at console.groq.com.")
 
-    with st.expander("All matched FAERS drug name strings"):
+    # ── Research Context (auto-search for this drug) ─────────────────────────
+    sec("Research Context")
+    _rc_ct, _rc_pm = st.tabs(["Clinical Trials", "Literature (PubMed)"])
+
+    # Use a clean short name (ingredient or brand) — not the full RxNorm clinical string
+    # e.g. "tirzepatide" rather than "0.5 ML tirzepatide 5 MG/ML Auto-Injector [Zepbound]"
+    import re as _re
+    _related = rxn.get("related", [])
+    _ingredients = sorted(
+        [n for n in _related if n.replace(" ", "").isalpha() and 5 <= len(n) <= 25],
+        key=len,
+    )
+    if _ingredients:
+        _research_name = _ingredients[0].title()
+    else:
+        _bracket = _re.search(r'\[([^\]]+)\]', canon)
+        _research_name = _bracket.group(1).title() if _bracket else drug_query.title()
+
+    with _rc_ct:
+        with st.status(f"Searching ClinicalTrials.gov for {_research_name}...", expanded=False) as _ct_status:
+            _ct_df, _ct_total = search_clinical_trials(_research_name, max_results=8, search_mode="intervention")
+            _ct_status.update(
+                label=f"{_ct_total:,} trials found for {_research_name}" if _ct_total else f"No trials found for {_research_name}",
+                state="complete" if _ct_total else "error",
+                expanded=False,
+            )
+        if _ct_df.empty:
+            st.caption(f"No clinical trials found for {_research_name} on ClinicalTrials.gov.")
+        else:
+            st.caption(f"{_ct_total:,} total trials on ClinicalTrials.gov — showing top {len(_ct_df)}")
+            _ct_header = (
+                f"background:{C['surface']};color:{C['muted']};font-size:.65rem;"
+                f"text-transform:uppercase;letter-spacing:.10em;padding:6px 10px;"
+                f"text-align:left;border-bottom:1px solid {C['border']};"
+            )
+            _ct_status_colors = {
+                "RECRUITING": C["low"], "COMPLETED": C["muted"],
+                "ACTIVE_NOT_RECRUITING": C["medium"], "NOT_YET_RECRUITING": C["blue"],
+                "TERMINATED": C["high"],
+            }
+            _ct_rows = ""
+            for _, _r in _ct_df.iterrows():
+                _enroll = f"{int(_r['enrollment']):,}" if str(_r["enrollment"]).isdigit() else "—"
+                _sc = _ct_status_colors.get(_r["status"], C["muted"])
+                _ct_rows += (
+                    f"<tr>"
+                    f"<td style='padding:6px 10px;white-space:nowrap;'>"
+                    f'<a href="{_r["url"]}" target="_blank" style="color:{C["blue"]};text-decoration:none;">{_r["nct_id"]}</a>'
+                    f"</td>"
+                    f"<td style='padding:6px 10px;font-size:.78rem;line-height:1.4;'>{_r['title']}</td>"
+                    f"<td style='padding:6px 10px;white-space:nowrap;font-size:.75rem;color:{_sc};'>{_r['status']}</td>"
+                    f"<td style='padding:6px 10px;white-space:nowrap;font-size:.75rem;'>{_r['phase']}</td>"
+                    f"<td style='padding:6px 10px;font-size:.73rem;color:{C['muted']};'>{str(_r['sponsor'])[:40]}</td>"
+                    f"<td style='padding:6px 10px;text-align:right;font-size:.75rem;'>{_enroll}</td>"
+                    f"</tr>"
+                )
+            _ct_html = (
+                f'<div style="overflow-x:auto;border:1px solid {C["border"]};border-radius:8px;">'
+                f'<table style="width:100%;border-collapse:collapse;font-family:Inter,system-ui,sans-serif;color:{C["text"]};">'
+                f'<thead><tr>'
+                f'<th style="{_ct_header}">NCT ID</th>'
+                f'<th style="{_ct_header}">Title</th>'
+                f'<th style="{_ct_header}">Status</th>'
+                f'<th style="{_ct_header}">Phase</th>'
+                f'<th style="{_ct_header}">Sponsor</th>'
+                f'<th style="{_ct_header};text-align:right;">Enrollment</th>'
+                f'</tr></thead><tbody>{_ct_rows}</tbody></table></div>'
+            )
+            st.markdown(_ct_html, unsafe_allow_html=True)
+
+    with _rc_pm:
+        _pm_query = f"{_research_name} adverse events"
+        with st.status(f"Searching PubMed for '{_pm_query}'...", expanded=False) as _pm_status:
+            _pm_df, _pm_total = search_pubmed(_pm_query, max_results=8, sort="relevance")
+            _pm_status.update(
+                label=f"{_pm_total:,} articles in PubMed" if _pm_total else "No articles found",
+                state="complete" if _pm_total else "error",
+                expanded=False,
+            )
+        if _pm_df.empty:
+            st.caption(f"No PubMed results for '{_pm_query}'.")
+        else:
+            st.caption(f"{_pm_total:,} total PubMed results — showing top {len(_pm_df)}")
+            _pm_header = (
+                f"background:{C['surface']};color:{C['muted']};font-size:.65rem;"
+                f"text-transform:uppercase;letter-spacing:.10em;padding:6px 10px;"
+                f"text-align:left;border-bottom:1px solid {C['border']};"
+            )
+            _pm_rows = ""
+            for _, _r in _pm_df.iterrows():
+                _doi_link = (
+                    f'<a href="https://doi.org/{_r["doi"]}" target="_blank" '
+                    f'style="color:{C["muted"]};font-size:.70rem;">DOI</a>'
+                    if _r["doi"] else ""
+                )
+                _pm_rows += (
+                    f"<tr>"
+                    f"<td style='padding:6px 10px;white-space:nowrap;'>"
+                    f'<a href="{_r["url"]}" target="_blank" style="color:{C["blue"]};font-size:.73rem;">{_r["pmid"]}</a>'
+                    f"</td>"
+                    f"<td style='padding:6px 10px;font-size:.78rem;line-height:1.4;'>"
+                    f'<a href="{_r["url"]}" target="_blank" style="color:{C["text"]};text-decoration:none;">{_r["title"]}</a>'
+                    f"</td>"
+                    f"<td style='padding:6px 10px;font-size:.72rem;color:{C['muted']};'>{_r['authors']}</td>"
+                    f"<td style='padding:6px 10px;font-size:.71rem;color:{C['muted']};font-style:italic;'>{_r['journal']}</td>"
+                    f"<td style='padding:6px 10px;white-space:nowrap;font-size:.72rem;color:{C['muted']};'>{_r['pub_date']}</td>"
+                    f"<td style='padding:6px 10px;'>{_doi_link}</td>"
+                    f"</tr>"
+                )
+            _pm_html = (
+                f'<div style="overflow-x:auto;border:1px solid {C["border"]};border-radius:8px;">'
+                f'<table style="width:100%;border-collapse:collapse;font-family:Inter,system-ui,sans-serif;color:{C["text"]};">'
+                f'<thead><tr>'
+                f'<th style="{_pm_header}">PMID</th>'
+                f'<th style="{_pm_header}">Title</th>'
+                f'<th style="{_pm_header}">Authors</th>'
+                f'<th style="{_pm_header}">Journal</th>'
+                f'<th style="{_pm_header}">Date</th>'
+                f'<th style="{_pm_header}">DOI</th>'
+                f'</tr></thead><tbody>{_pm_rows}</tbody></table></div>'
+            )
+            st.markdown(_pm_html, unsafe_allow_html=True)
+
+    with st.expander("Matched drug name strings"):
         st.dataframe(
             pd.DataFrame({"FAERS Drug Name": sorted(matched)}),
             use_container_width=True, hide_index=True,
@@ -879,9 +1034,10 @@ with tab_drug:
 # TAB 2  ─  Signal Intelligence
 # ═════════════════════════════════════════════════════════════════════════════
 with tab_sig:
-    prr_global = dl.load_prr_table()
+    with st.spinner("Loading signal table..."):
+        prr_global = dl.load_prr_table()
     if prr_global is None or prr_global.empty:
-        st.warning("PRR cache not found. Run `python3 claude_test/precompute.py`.")
+        st.warning("PRR cache not found. Run `python3 dashboard/precompute.py`.")
         st.stop()
 
     # ── Filter row ────────────────────────────────────────────────────────────
@@ -971,7 +1127,8 @@ with tab_reac:
     )
 
     if not reac_query:
-        reac_sum2 = dl.load_reac_summary()
+        with st.spinner("Loading reaction data..."):
+            reac_sum2 = dl.load_reac_summary()
         if reac_sum2 is not None:
             sec("Most Reported Adverse Reactions")
             top20r = reac_sum2.head(20).copy()
@@ -983,8 +1140,14 @@ with tab_reac:
         st.stop()
 
     # ── MedDRA mapping ────────────────────────────────────────────────────────
-    with st.spinner("Searching MedDRA vocabulary..."):
+    with st.status(f"Mapping '{reac_query}' to MedDRA terms...", expanded=True) as _reac_status:
+        st.write("Searching synonym dictionary...")
         pt_hits = search_reactions(reac_query, all_pts, max_results=25)
+        if pt_hits:
+            st.write(f"Found {len(pt_hits)} matching Preferred Terms")
+            _reac_status.update(label=f"{len(pt_hits)} MedDRA terms matched", state="complete", expanded=False)
+        else:
+            _reac_status.update(label="No MedDRA terms matched", state="error", expanded=False)
 
     if not pt_hits:
         st.error(f"No MedDRA terms matched **{reac_query}**. Try different phrasing.")
@@ -1119,11 +1282,17 @@ with tab_cmp:
             )
         st.stop()
 
-    with st.spinner("Normalising drug names..."):
-        rxn_a    = rxnorm_lookup(drug_a_query)
+    with st.status("Looking up both drugs...", expanded=True) as _cmp_status:
+        st.write(f"Querying RxNorm for **{drug_a_query}**...")
+        rxn_a     = rxnorm_lookup(drug_a_query)
         matched_a = find_faers_names(drug_a_query, _tables["drug"])
-        rxn_b    = rxnorm_lookup(drug_b_query)
+        st.write(f"Querying RxNorm for **{drug_b_query}**...")
+        rxn_b     = rxnorm_lookup(drug_b_query)
         matched_b = find_faers_names(drug_b_query, _tables["drug"])
+        _a_label  = (rxn_a.get("canonical") or drug_a_query).title()
+        _b_label  = (rxn_b.get("canonical") or drug_b_query).title()
+        st.write(f"Matched **{len(matched_a)}** variants for {_a_label}, **{len(matched_b)}** for {_b_label}")
+        _cmp_status.update(label=f"{_a_label} vs {_b_label}", state="complete", expanded=False)
 
     if not matched_a:
         st.error(f"No FAERS records found for **{drug_a_query}**.")
@@ -1276,3 +1445,4 @@ with tab_cmp:
             )
         else:
             st.info("No HIGH signals found.")
+
