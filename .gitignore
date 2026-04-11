@@ -1,5 +1,6 @@
 /data
 claude_test/cache/
+dashboard/cache/
 # uv
 .venv/
 .uv/
