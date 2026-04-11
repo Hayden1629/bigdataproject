@@ -28,7 +28,10 @@ import queries as qr
 from drug_normalizer import rxnorm_lookup, find_faers_names
 from reaction_search import search_reactions
 from signal_interpreter import interpret_signals
-from research_connector import search_clinical_trials, search_pubmed, get_fda_approval_info
+from research_connector import (
+    search_clinical_trials, search_pubmed,
+    get_fda_approval_info, get_drug_class, get_drug_label, get_drug_enforcement,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Page config
@@ -477,6 +480,25 @@ def prr_scatter(df: pd.DataFrame, h: int = 420) -> go.Figure:
     return _theme(fig, h)
 
 
+def _add_prr_ci(df: pd.DataFrame) -> pd.DataFrame:
+    """Add PRR_lower / PRR_upper 95% CI columns using the log-normal approximation."""
+    a  = df["N_DR"].to_numpy(dtype=float).clip(min=1)
+    nd = df["N_D"].to_numpy(dtype=float)
+    nr = df["N_R"].to_numpy(dtype=float)
+    nt = df["N_total"].to_numpy(dtype=float)
+    se = np.sqrt(
+        1/a
+        + np.where(nd - a > 0, 1/(nd - a), 0)
+        + np.where(nr - a > 0, 1/(nr - a), 0)
+        + np.where(nt - nd - nr + a > 0, 1/(nt - nd - nr + a), 0)
+    )
+    ln_prr = np.log(df["PRR"].clip(lower=0.01))
+    out = df.copy()
+    out["CI_lower"] = np.exp(ln_prr - 1.96 * se).round(2)
+    out["CI_upper"] = np.exp(ln_prr + 1.96 * se).round(2)
+    return out
+
+
 def forest_plot(df: pd.DataFrame, h: int | None = None) -> go.Figure:
     """Forest plot of top PRR signals for a drug."""
     if df.empty:
@@ -667,7 +689,7 @@ with tab_ov:
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 1  ─  Drug Explorer
 # ═════════════════════════════════════════════════════════════════════════════
-with tab_drug:
+def _render_drug_tab():
     drug_query = st.text_input(
         "Drug search",
         placeholder="Brand name, generic name, or active ingredient  —  e.g. naloxone, Mounjaro, dupilumab, warfarin",
@@ -685,7 +707,7 @@ with tab_drug:
                 top20.style.format({"N Cases": "{:,}", "N Deaths": "{:,}", "Death Pct": "{:.2f}%"}),
                 use_container_width=True, hide_index=True, height=580,
             )
-        st.stop()
+        return
 
     # ── Drug normalisation + status console ──────────────────────────────────
     with st.status("Looking up drug...", expanded=True) as _status:
@@ -705,7 +727,7 @@ with tab_drug:
             f"No FAERS records found for **{drug_query}**. "
             "Try a different spelling, the generic name, or a brand name."
         )
-        st.stop()
+        return
 
     nk = qr._names_key(matched)  # stable cache key
 
@@ -714,7 +736,16 @@ with tab_drug:
     related = rxn.get("related", [])
     rxcui_tag = f" &nbsp;·&nbsp; RxCUI `{rxn['rxcui']}`" if rxn.get("rxcui") else ""
 
-    st.markdown(f"**{canon}**{rxcui_tag}", unsafe_allow_html=True)
+    # Drug therapeutic class from RxClass (ATC / VA)
+    _drug_classes = get_drug_class(rxn.get("rxcui", "") or "")
+    _class_tag = ""
+    if _drug_classes:
+        _atc = [c for c in _drug_classes if c["source"] == "ATC"]
+        _va  = [c for c in _drug_classes if c["source"] == "VA"]
+        _primary = (_atc or _va)[0]["class_name"].title()
+        _class_tag = f' &nbsp;·&nbsp; <span style="color:{C["muted"]};font-size:.85em;">{_primary}</span>'
+
+    st.markdown(f"**{canon}**{rxcui_tag}{_class_tag}", unsafe_allow_html=True)
     if related:
         chips_html = " ".join(f'<span class="chip">{n}</span>' for n in sorted(related)[:50])
         st.markdown(f'<div class="chips">{chips_html}</div>', unsafe_allow_html=True)
@@ -752,6 +783,22 @@ with tab_drug:
         if len(_fda_records) > 1:
             st.caption(f"{len(_fda_records)} FDA applications found — showing primary application ({_fda['application_number']})")
 
+    # ── Boxed warning ─────────────────────────────────────────────────────────
+    _label = get_drug_label(canon)
+    if _label.get("boxed_warning"):
+        _bw_text = _label["boxed_warning"][:600]
+        if len(_label["boxed_warning"]) > 600:
+            _bw_text += "…"
+        st.markdown(
+            f'<div style="background:#FFF3F3;border-left:4px solid {C["high"]};'
+            f'border-radius:0 6px 6px 0;padding:10px 16px;margin:6px 0 14px;">'
+            f'<div style="font-size:.60rem;font-weight:700;color:{C["high"]};'
+            f'text-transform:uppercase;letter-spacing:.10em;margin-bottom:4px;">Boxed Warning (FDA Label)</div>'
+            f'<div style="font-size:.75rem;color:{C["text"]};line-height:1.55;">{_bw_text}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
     # ── KPIs ──────────────────────────────────────────────────────────────────
     kpi = qr.drug_kpis(nk, role_cod, q_key)
     serious_pct = round(kpi["n_serious"] / kpi["n_cases"] * 100, 1) if kpi["n_cases"] else 0
@@ -785,7 +832,34 @@ with tab_drug:
     # ── Trend ─────────────────────────────────────────────────────────────────
     sec("Quarterly Report Volume")
     trend = qr.drug_trend(nk, role_cod, q_key)
-    st.plotly_chart(line_trend(trend, "quarter", "case_count", "Reports"), use_container_width=True)
+    _trend_fig = line_trend(trend, "quarter", "case_count", "Reports")
+    if _fda_records and not trend.empty:
+        _appr_raw = _fda_records[0].get("first_approval", "")
+        if _appr_raw and len(_appr_raw) >= 7:
+            try:
+                from datetime import datetime as _dt
+                _d = _dt.strptime(_appr_raw[:10], "%Y-%m-%d")
+                _appr_q = f"{_d.year}Q{(_d.month - 1) // 3 + 1}"
+                _quarters_list = trend["quarter"].tolist()
+                if _appr_q in _quarters_list:
+                    _trend_fig.add_vline(
+                        x=_quarters_list.index(_appr_q),
+                        line=dict(color=C["accent"], dash="dash", width=1.5),
+                        annotation_text=f"FDA Approved ({_appr_q})",
+                        annotation_position="top left",
+                        annotation_font=dict(size=10, color=C["accent"]),
+                    )
+                elif _appr_q < _quarters_list[0]:
+                    _trend_fig.add_annotation(
+                        x=_quarters_list[0], y=1, xref="x", yref="paper",
+                        text=f"FDA Approved {_appr_raw[:7]}",
+                        showarrow=False, xanchor="left",
+                        font=dict(size=9, color=C["muted"]),
+                        bgcolor=C["surface"], borderpad=3,
+                    )
+            except Exception:
+                pass
+    st.plotly_chart(_trend_fig, use_container_width=True)
 
     # ── Demographics + Country ────────────────────────────────────────────────
     sec("Patient Demographics & Geography")
@@ -861,15 +935,18 @@ with tab_drug:
         )
         fp1, fp2 = st.columns([2, 3])
         with fp1:
-            sig_disp = sig_df.rename(columns={
+            sig_disp = _add_prr_ci(sig_df).rename(columns={
                 "pt":"Preferred Term","N_DR":"N (D+R)","N_D":"N (Drug)","N_R":"N (Rxn)",
-                "PRR":"PRR","chi2":"Chi-sq","signal":"Signal",
+                "PRR":"PRR","CI_lower":"CI Low","CI_upper":"CI High",
+                "chi2":"Chi-sq","signal":"Signal",
             })
             st.dataframe(
-                sig_disp[["Signal","Preferred Term","PRR","N (D+R)","Chi-sq"]],
+                sig_disp[["Signal","Preferred Term","PRR","CI Low","CI High","N (D+R)","Chi-sq"]],
                 use_container_width=True, hide_index=True, height=400,
                 column_config={
                     "PRR":    st.column_config.NumberColumn("PRR",    format="%.2f"),
+                    "CI Low": st.column_config.NumberColumn("CI Low", format="%.2f"),
+                    "CI High":st.column_config.NumberColumn("CI High",format="%.2f"),
                     "Chi-sq": st.column_config.NumberColumn("Chi-sq", format="%.1f"),
                 },
             )
@@ -902,7 +979,7 @@ with tab_drug:
 
     # ── Research Context (auto-search for this drug) ─────────────────────────
     sec("Research Context")
-    _rc_ct, _rc_pm = st.tabs(["Clinical Trials", "Literature (PubMed)"])
+    _rc_ct, _rc_pm, _rc_en = st.tabs(["Clinical Trials", "Literature (PubMed)", "Recalls & Enforcement"])
 
     # Use a clean short name (ingredient or brand) — not the full RxNorm clinical string
     # e.g. "tirzepatide" rather than "0.5 ML tirzepatide 5 MG/ML Auto-Injector [Zepbound]"
@@ -1023,6 +1100,38 @@ with tab_drug:
             )
             st.markdown(_pm_html, unsafe_allow_html=True)
 
+    with _rc_en:
+        with st.status(f"Searching FDA enforcement actions for {_research_name}...", expanded=False) as _en_status:
+            _en_records = get_drug_enforcement(_research_name, limit=8)
+            _en_status.update(
+                label=f"{len(_en_records)} enforcement action(s) found" if _en_records else "No enforcement actions found",
+                state="complete" if _en_records else "error",
+                expanded=False,
+            )
+        if not _en_records:
+            st.caption(f"No FDA recalls or enforcement actions found for {_research_name}.")
+        else:
+            _cls_colors = {"Class I": C["high"], "Class II": C["medium"], "Class III": C["low"]}
+            for _er in _en_records:
+                _cls = _er["classification"]
+                _cls_color = _cls_colors.get(_cls, C["muted"])
+                st.markdown(
+                    f'<div style="border:1px solid {C["border"]};border-left:4px solid {_cls_color};'
+                    f'border-radius:0 8px 8px 0;padding:10px 14px;margin:6px 0;">'
+                    f'<div style="display:flex;gap:12px;align-items:center;margin-bottom:4px;">'
+                    f'<span style="font-size:.68rem;font-weight:700;color:{_cls_color};text-transform:uppercase;">{_cls}</span>'
+                    f'<span style="font-size:.68rem;color:{C["muted"]};">{_er["recall_initiation_date"]}</span>'
+                    f'<span style="font-size:.68rem;color:{C["muted"]};">{_er["status"]}</span>'
+                    f'<span style="font-size:.68rem;color:{C["muted"]};">{_er["recalling_firm"]}</span>'
+                    f'</div>'
+                    f'<div style="font-size:.78rem;color:{C["text"]};margin-bottom:2px;">'
+                    f'{_er["reason_for_recall"]}</div>'
+                    f'<div style="font-size:.70rem;color:{C["muted"]};">{_er["product_description"]}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+            st.caption("Class I = most serious (may cause serious health consequences or death). Source: openFDA Drug Enforcement.")
+
     with st.expander("Matched drug name strings"):
         st.dataframe(
             pd.DataFrame({"FAERS Drug Name": sorted(matched)}),
@@ -1030,15 +1139,19 @@ with tab_drug:
         )
 
 
+
+with tab_drug:
+    _render_drug_tab()
+
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 2  ─  Signal Intelligence
 # ═════════════════════════════════════════════════════════════════════════════
-with tab_sig:
+def _render_sig_tab():
     with st.spinner("Loading signal table..."):
         prr_global = dl.load_prr_table()
     if prr_global is None or prr_global.empty:
         st.warning("PRR cache not found. Run `python3 dashboard/precompute.py`.")
-        st.stop()
+        return
 
     # ── Filter row ────────────────────────────────────────────────────────────
     fc1, fc2, fc3, fc4 = st.columns([2, 2, 2, 2])
@@ -1083,17 +1196,19 @@ with tab_sig:
 
     # ── Table ─────────────────────────────────────────────────────────────────
     sec("Signal Table")
-    disp = filtered.head(500).copy()
-    disp = disp.rename(columns={
+    disp = _add_prr_ci(filtered.head(500)).rename(columns={
         "drug":"Drug","pt":"Preferred Term",
         "N_DR":"N (D+R)","N_D":"N (Drug)","N_R":"N (Reaction)",
-        "PRR":"PRR","ROR":"ROR","chi2":"Chi-sq","signal":"Signal",
+        "PRR":"PRR","CI_lower":"CI Low","CI_upper":"CI High",
+        "ROR":"ROR","chi2":"Chi-sq","signal":"Signal",
     })
     st.dataframe(
-        disp[["Signal","Drug","Preferred Term","PRR","N (D+R)","N (Drug)","N (Reaction)","Chi-sq"]],
+        disp[["Signal","Drug","Preferred Term","PRR","CI Low","CI High","N (D+R)","N (Drug)","N (Reaction)","Chi-sq"]],
         use_container_width=True, hide_index=True, height=520,
         column_config={
             "PRR":    st.column_config.NumberColumn("PRR",    format="%.2f"),
+            "CI Low": st.column_config.NumberColumn("CI Low", format="%.2f"),
+            "CI High":st.column_config.NumberColumn("CI High",format="%.2f"),
             "Chi-sq": st.column_config.NumberColumn("Chi-sq", format="%.1f"),
         },
     )
@@ -1115,10 +1230,14 @@ with tab_sig:
     )
 
 
+
+with tab_sig:
+    _render_sig_tab()
+
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 3  ─  Reaction Explorer
 # ═════════════════════════════════════════════════════════════════════════════
-with tab_reac:
+def _render_reac_tab():
     reac_query = st.text_input(
         "Reaction search",
         placeholder="Plain English or clinical term  —  e.g. heart attack, hair loss, throwing up, myocardial infarction",
@@ -1137,7 +1256,7 @@ with tab_reac:
                 top20r.style.format({"N Cases":"{:,}","N Deaths":"{:,}","Death Pct":"{:.2f}%"}),
                 use_container_width=True, hide_index=True, height=580,
             )
-        st.stop()
+        return
 
     # ── MedDRA mapping ────────────────────────────────────────────────────────
     with st.status(f"Mapping '{reac_query}' to MedDRA terms...", expanded=True) as _reac_status:
@@ -1151,7 +1270,7 @@ with tab_reac:
 
     if not pt_hits:
         st.error(f"No MedDRA terms matched **{reac_query}**. Try different phrasing.")
-        st.stop()
+        return
 
     col_sel, col_tbl = st.columns([3, 1])
     with col_sel:
@@ -1167,7 +1286,7 @@ with tab_reac:
 
     if not selected_pts:
         st.info("Select at least one Preferred Term.")
-        st.stop()
+        return
 
     pk = "|".join(sorted(selected_pts))
 
@@ -1232,10 +1351,14 @@ with tab_reac:
         st.info("No elevated PRR signals found for the selected terms.")
 
 
+
+with tab_reac:
+    _render_reac_tab()
+
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 2  ─  Drug Comparison
 # ═════════════════════════════════════════════════════════════════════════════
-with tab_cmp:
+def _render_cmp_tab():
     st.markdown(
         '<div class="note">Enter two drugs to compare their adverse event profiles side-by-side. '
         'Useful for comparing therapeutic alternatives, biosimilars, or competing products in the same class.</div>',
@@ -1280,7 +1403,7 @@ with tab_cmp:
                 ).style.format({"Cases":"{:,}","Deaths":"{:,}","Death %":"{:.2f}%"}),
                 use_container_width=True, hide_index=True, height=440,
             )
-        st.stop()
+        return
 
     with st.status("Looking up both drugs...", expanded=True) as _cmp_status:
         st.write(f"Querying RxNorm for **{drug_a_query}**...")
@@ -1296,10 +1419,10 @@ with tab_cmp:
 
     if not matched_a:
         st.error(f"No FAERS records found for **{drug_a_query}**.")
-        st.stop()
+        return
     if not matched_b:
         st.error(f"No FAERS records found for **{drug_b_query}**.")
-        st.stop()
+        return
 
     nk_a = qr._names_key(matched_a)
     nk_b = qr._names_key(matched_b)
@@ -1311,7 +1434,7 @@ with tab_cmp:
             "Both inputs resolved to the same drug entity. "
             "Enter two distinct drugs to compare."
         )
-        st.stop()
+        return
 
     # ── KPI comparison table ──────────────────────────────────────────────────
     sec("Key Metrics Comparison")
@@ -1446,3 +1569,7 @@ with tab_cmp:
         else:
             st.info("No HIGH signals found.")
 
+
+
+with tab_cmp:
+    _render_cmp_tab()
