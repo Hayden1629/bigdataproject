@@ -1,0 +1,203 @@
+
+Skip to content
+Resources for MSBA 6331 Big Data Analytics
+Trends Market
+Type to start searching
+
+    Home
+    FAQs
+    Pre-work
+    Homework Guidelines
+    Trends Market
+    Public Datasets
+    Lab Reference
+    Kion Cloud Portal
+    Final Exam Guide
+
+    Trends Market
+        Goals and Requirements
+            Business Value
+            Data
+            Technology
+            IT Resources/Support
+            Teams
+        Deliverables
+            Project Proposal
+            Examples: How Teams May Leverage AI (Optional)
+            Event Day Deliverables
+            Post-event Final deliverable
+        Grading
+        Sample Past Projects
+        Public Datasets
+
+Big Data and AI Trends Market, Spring 2026 - From Data to Action: Agentic AI Systems on Big Data Platforms*
+
+Draft revision: 2026-03-23
+
+Time/Location: April 24, 3:00-4:30pm Humphrey
+Goals and Requirements
+
+The fields of big data, cloud computing, and AI are fast-moving and expertise in those areas are in demand. Many companies leverage scalable infrastructure to handle structured data, semi-structured, and unstructured data, and address data volume, variety, velocity, and veracity challenges using modern tools, pipelines, and platforms (especially cloud-based ones). This year's theme emphasizes moving from data to action, including applications of Generative and Agentic AI. AI/agentic components are aspirational and encouraged, but not an absolute requirement.
+
+The trend marketplace project aims for two types of goals. Your team may place emphasis on either one or both of them:
+
+    Goal A. (Problem Solving with Big Data/AI) Identify a meaningful business problem and real-world dataset that could be leveraged to address the problem. Your team will implement an appealing big data solution, potentially enhanced by generative/agentic AI, to produce actionable outcomes.
+
+    Goal B. (Explore Novel Big Data/AI Technologies) Learn and research a novel big data/AI technology. Through research and prototyping one or more use cases, your team will build understanding of the technology, applications, and merits/shortcomings. This may include generative/agentic AI workflows, but such AI use is optional.
+
+Business Value
+
+Your project should speak to the business needs of an intended audience. The intended audience could be a specific business or a population (e.g. business analytics students, a marketing team). I expect that in your hand out that you will highlight your big data/AI technology/solution adds value for your intended audience.
+Data
+
+The most effective way of practicing data skills is to work with real world data. The project will benefit you the most if you choose to work with a dataset that ideally has one or a few of the following big data characteristics that allow you to practice big data/AI skills.
+
+    Volume: for project purpose, a large data set means a data set that has a few millions records and/or a few gigabytes (this is less than what real-world big data is, but we may not have the resources to handle even bigger datasets), or
+    Velocity: you are dealing with streaming data, or
+    Variety: you are dealing with semi-structured or unstructured data such as Json, logs, text, images, documents, audio, videos,
+    Veracity: your are dealing with real-world data that has biases, noise, and abnormality. As a result, you are implementing a data pipeline to perform essential data cleaning, inspection, transformation, and augmentation steps before the data is good enough for use.
+
+Technology
+
+Every team project is expected to leverage big data/AI technologies, be it technologies we cover in the course (e.g. Hive, Spark, Cloud technologies) or ones we did not cover. Technologies are interpreted broadly, which may include (but not limited to) big data, cloud computing, Gen AI, and NoSQL technologies. Use of GenAI/agentic AI is desirable but not required. Projects completed following MLOps practices are valued.
+
+Ideally, your entire data pipeline is built to scale, but I also accept projects that have some (but not all) steps that use non-scalable technologies.
+IT Resources/Support
+
+Carlson IT will collaborate with us to provide access to a vareity cloud computing resources on a case-by-case basis -- which may include servers, AWS (via Kion), Azure, AI Foundry, Databricks, and more—within reason. You have give them enough lead time to make it work. Please follow the guidelines and procedures for obtaining Carlson IT support.
+
+    When you plan to use Carlson IT support, please make a note in your proposal.
+    Please cc-me in your communication with CSOM IT support.
+    Please acknowledge CSOM IT support in your flyer.
+
+Teams
+
+Instructor will form randomized teams of 5-6, and may balance different backgrounds in doing so.
+Deliverables
+
+This project has two milestones: proposal and final deliverables. See course schedule for due dates of these milestones.
+Project Proposal
+
+The first milestone is to submit your project proposal to get instructor feedback.
+
+    Proposal is not graded, and is only for obtaining feedback and approval.
+    Please submit your project proposal draft l through the instructor designated google doc (a separate doc for each team).
+    The approved proposal/abstract will be shared in this Google doc.
+
+Your proposal should have these elements
+
+    Team number
+    Members
+    Project Title
+
+    The project description depends on your project goal:
+
+        Goal A - Problem Solving with Big Data/AI:
+            What is the topic of your project
+            what kinds of data you will use (how you get it, provide links to data sources).
+            What kinds of analysis do you plan to do? Who is your target audience?
+            which tools will be leveraged for major steps of data engineering and analysis (ingestion, ETL, exploration, model building, deployment etc).
+            if using AI, where AI is used in the architecture and what model/tool stack you selected (and why).
+            if using AI, how outputs will be validated (e.g., quality checks, hallucination controls, reliability metrics) and what safeguards you plan to use (privacy, bias, cost, fallback/human review).
+
+        Goal B - Explore Novel Big Data/AI Technologies
+            what kind of technology you plan to focus on,
+            what you plan to cover in your demonstration,
+            where resources you plan to draw upon (books, videos, PPTs, articles etc - so that the instructor can also evaluate the feasibility and interestingness).
+            If your proposal includes a use case, describe what kinds of analysis you plan to do, including links to possible data sources.
+            if using AI, describe the intended workflow (e.g., retrieval, tool use, agent steps), expected value, and how you will evaluate performance and risk.
+
+Examples: How Teams May Leverage AI (Optional)
+
+These are examples of optional enhancements. Projects can still be strong without GenAI/agentic AI if they deliver business value and technical rigor.
+
+    Build a RAG assistant over enterprise/public documents using Spark preprocessing and vector indexing for grounded Q&A.
+    Create an incident triage workflow that reads logs/metrics, proposes root causes, and drafts response playbooks for analyst approval.
+    Implement a marketing insights copilot that summarizes customer feedback streams and recommends segment-level actions.
+    Design a supply-chain exception workflow that monitors forecast/inventory data and recommends reorder or routing actions.
+    Develop a data quality remediation assistant that detects schema drifts/anomalies and proposes ETL fixes with confidence scores.
+    Build a BI narrative generator that converts dashboard trends into executive summaries with cited evidence.
+    Prototype a data-engineering copilot for generating SQL/PySpark transformations with unit-test checks.
+    Build an AI evaluation harness comparing prompt/model/workflow strategies on latency, cost, factuality, and task success.
+
+The project proposal workflow is as follows:
+
+    Enter a draft proposal in the designated Google doc for your team
+    Contact the instructors for feedback (with your google doc as an attachment).
+        Initially, you may present 2+ options to get an instructor opinion on which one is preferred.
+        You may also verbally talk to the instructors and/or schedule an appointment.
+    The instructor will give feedback, including how/whether you should proceed.
+    If a revision is required, you should revise your proposal and repeat steps 1-3.
+
+Once the project starts, if your team requires assistance from the instructor, please make an appointment on a case-by-case basis.
+Event Day Deliverables
+
+On the day of the Trends Market, each team will have a table to showcase their work for peers, external evaluators, and professors, and prepare to give a short presentation with Q\&A.
+
+Prior to the day of the Trend Marketplace, the team will need to prepare the following material:
+
+    Each student wear a name tag/sticker to make it easier to interact with guests. Please feel free to reuse ones from prior events; we may have limited supply of blank ones for you to write your name on.
+    A two-page / 1 sheet handout that summarizes the project, data, methodology, results/takeaways.
+        The handout should clearly mark team Number and member names.
+    Prepare a short (< 5 minute) briefing that includes:
+        A demonstration of the technology or solution, or
+        A slideshow or poster board summary
+
+Post-event Final deliverable
+
+    Please submit your github link to the Google doc as well as the Trends Market assignment on canvas before the submission deadline.
+
+Github.com Repository
+
+A git repository is a preferred way of showcasing your skill sets (e.g. to potential employers). The git repository will host your project materials. It is also a place for a more technical audience to dig in and learn from your work.
+
+Your git repository should include the following components:
+
+    (required) A README.md markdown file that serves as a project homepage and introduction/executive summary. It also provides links to more project-related materials, e.g. flier, links to dataset, links to relevant articles/resources. The readme should mention that “This project repository is created in partial fulfillment of the requirements for the Big Data Analytics course offered by the Master of Science in Business Analytics program at the Carlson School of Management, University of Minnesota.”
+    (required) An instruction: provide instructions on how to use (reuse) this project’s codes (e.g. setup/installation, commands, steps, requirements etc).
+    (required) Project scripts (commands, python scripts, jupyter notebooks, SQL queries etc) that you use in the project with proper documentation/comments for ease of understanding. Please note that the code should be free of password and credentials (you should not commit such confidential information to the repository to begin with).
+    (required) The flier (pdf).
+    (optional) bibliography and credits: give credits to sources that you use (e.g., papers/articles, web pages, data source, git repository etc). This is part of the scholarly honesty requirements and allows the instructor to evaluate the amount/quality of work the team has done.
+    (optional) additional resources (e.g., pdf documents and/or links to external resources).
+    (optional) sample data (small data, but not the whole data because github is not meant for storing large quantities of data). Note: big files should be submitted via Google drive.
+
+Here is a simple guide on how to organize your data science git repo
+Grading
+
+We use the following evaluation methods:
+
+    (10%) Completing your deliverables (project flier, git repository, evaluation of other teams & your teammates)
+    (40%) Peer evaluation. Each student will evaluate at least two other team’s projects based on the team’s project flier, git repository, and booth visit.
+    (25%) Instructor evaluation. The instructor will evaluate each project based on the team’s team’s project flier, and git repository.
+    (25%) External evaluation. External evaluators’ evaluation of the project.
+    (5% bonus) Best in show: Each team will submit a consensus list of their picks for the top 3 projects of the entire session.
+
+Evaluations will generally use the following criteria:
+
+    Business value (20%): The project topic is meaningful/interesting for intended audience. The problem being addressed is relevant, with clear potential impact.
+    Technical Quality (20%): The technical approach of the project is sound and appropriate, with reproducible methods, clear evaluation, and an implementation quality that matches project scope. If AI is used, we also evaluate grounding, reliability, and governance choices.
+    Presentation (30%): The presentation is clear, effective, and well organized. Instructor evaluation may take into account the organization and completeness of the team's github repository.
+    Novelty (20%): The team introduces a technology, solution approach, or problem domain. The project demonstrates creativity and innovation. AI/agentic elements can strengthen novelty but are not required.
+    Professionalism (10%): The team conducts themselves professionally in presentations and interactions.
+
+Teammate Evaluation
+
+    Member contribution: We will collect your anonymous evaluation of your teammates. While in general every team member receives the same project credits, those who lack contribution (as reflected by teammate evaluation and comments) could receive partial to zero credit for the team project.
+    Professionalism: The team members will also submit anonymous evaluations of each other in terms of professionalism in the collaboration process. The instructor reserves the right to take measures to address professionalism issues including imposing a penalty on members who violate the code of professionalism.
+
+Sample Past Projects
+
+See below for sample projects from previous years’ full-time MSBA students (please note that there are a number of stream projects because we had time to get a bit into streaming during the fall semester). You are welcome to reuse and expand on these projects (but you should always give credits to prior work including what you’ve found on the Internet).
+
+2025 Projects
+
+2023 Projects
+
+2022 Projects
+
+2021 Projects
+Public Datasets
+
+Check out a curated list of public datasets here.
+© 2025 De Liu
+Made with Material for MkDocs
