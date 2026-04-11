@@ -12,11 +12,12 @@ Carlson MSBA 6331 · Spring 2026
 # Install dependencies (once)
 pip install -r dashboard/requirements.txt
 
-# Build the signal cache (once, ~3–5 minutes)
-python dashboard/precompute.py
+# Build a small recent dataset for testing
+python3 utils/STARTHERE.py --mode recent
+FAERS_PARQUET_DIR=data/parquet_recent FAERS_CACHE_DIR=dashboard/cache_recent python3 dashboard/precompute.py
 
-# Launch
-streamlit run dashboard/app.py
+# Launch the dashboard on that dataset
+python3 utils/run_dashboard.py --mode recent
 ```
 
 Open `http://localhost:8501`.
@@ -27,16 +28,15 @@ Open `http://localhost:8501`.
 
 ## What It Does
 
-An exploratory pharmacovigilance platform built on 2.85 million deduplicated FDA FAERS adverse event reports (2023 Q3 – 2025 Q2). Six tabs:
+An exploratory pharmacovigilance platform built on deduplicated FDA FAERS adverse event reports (2023 Q3 – 2025 Q2). The dashboard is organized around five analyst workflows:
 
 | Tab | Description |
 |---|---|
 | **Overview** | Global KPIs, quarterly trend, top drugs/reactions, world choropleth map, QoQ trending, global HIGH signal table |
-| **Drug Explorer** | Search any drug name → full adverse event profile: reactions, outcomes, demographics, geography, indications, co-medications, PRR signals, AI summary |
+| **Drug Explorer** | Search any drug name → full adverse event profile: reactions, outcomes, demographics, geography, indications, co-medications, PRR signals, AI summary, and live research context |
 | **Drug Comparison** | Side-by-side comparison of two drugs: overlaid trend, shared reaction rates per 1,000 cases, outcome distributions, HIGH signal tables |
 | **Signal Intelligence** | Filterable PRR/chi² signal landscape across 511K drug-reaction pairs, scatter plot + downloadable table |
 | **Reaction Explorer** | Search in plain English ("heart attack", "throwing up") → mapped to MedDRA terms → top associated drugs, signals, trend |
-| **Research Hub** | Live search: ClinicalTrials.gov (trials by condition or drug) + PubMed (literature by drug/symptom) |
 
 ---
 
@@ -52,7 +52,8 @@ An exploratory pharmacovigilance platform built on 2.85 million deduplicated FDA
 | Clinical trials | ClinicalTrials.gov v2 API — real-time, no key required |
 | Literature search | PubMed eutils — real-time, supports MeSH field tags, no key required |
 | Deduplication | Max `caseversion` per `caseid` per FDA guidance |
-| Performance | Pre-computed Parquet cache; all queries < 100 ms |
+| Dataset modes | Run against a smaller recent parquet set for testing or the full parquet history for final analysis |
+| Performance | Pre-computed Parquet cache plus indexed lookup tables to reduce repeated full-table scans during interactive use |
 | Cloud-ready | Data paths configurable via `FAERS_PARQUET_DIR` / `FAERS_CACHE_DIR` env vars |
 | Containerized | Docker + docker-compose |
 
@@ -70,6 +71,14 @@ An exploratory pharmacovigilance platform built on 2.85 million deduplicated FDA
 | PRR signal pairs | 511,218 |
 | HIGH signals | 188,348 |
 
+For day-to-day development you can use the smaller `recent` parquet build. For final results, switch to `full` and rebuild the cache:
+
+```bash
+python3 utils/STARTHERE.py --mode full
+FAERS_PARQUET_DIR=data/parquet FAERS_CACHE_DIR=dashboard/cache_full python3 dashboard/precompute.py
+python3 utils/run_dashboard.py --mode full
+```
+
 ---
 
 ## Repository Structure
@@ -78,9 +87,9 @@ An exploratory pharmacovigilance platform built on 2.85 million deduplicated FDA
 bigdataproject/
 ├── README.md
 ├── dashboard/                   # Dashboard application (run from here)
-│   ├── app.py                   # Main Streamlit app — 6 tabs
-│   ├── queries.py               # Streamlit-cached query layer
-│   ├── data_loader.py           # FAERS table loading, deduplication, path config
+│   ├── app.py                   # Main Streamlit app — 5 tabs
+│   ├── queries.py               # Cached query layer backed by indexed case lookups
+│   ├── data_loader.py           # FAERS loading, deduplication, and reusable lookup tables
 │   ├── analytics.py             # Pure pandas KPIs and aggregations
 │   ├── signal_detection.py      # PRR signal retrieval from pre-computed table
 │   ├── drug_normalizer.py       # RxNorm API + fuzzy drug name matching
@@ -92,18 +101,17 @@ bigdataproject/
 │   ├── Dockerfile
 │   ├── docker-compose.yml
 │   ├── GUIDE.md                 # Full developer and user guide
-│   ├── .streamlit/config.toml   # Dark theme + server settings
-│   └── cache/                   # Pre-computed Parquet files (gitignored)
-│       ├── prr_table.parquet    # 511K drug-reaction signals
-│       ├── drug_summary.parquet
-│       ├── reac_summary.parquet
-│       ├── quarterly_drug.parquet
-│       └── quarterly_reac.parquet
+│   ├── .streamlit/config.toml   # Streamlit settings
+│   ├── cache_recent/            # Cache for recent parquet dataset
+│   └── cache_full/              # Cache for full parquet dataset
 ├── data/
-│   └── parquet_recent/          # FAERS source tables — 7 parquet files (gitignored)
+│   ├── parquet_recent/          # Smaller recent parquet dataset for testing
+│   └── parquet/                 # Full parquet history
 ├── utils/                       # Data download and conversion scripts
 │   ├── download_faers.sh        # Download quarterly ZIPs from FDA
-│   └── load_faers.py            # Parse ASCII → pandas → Parquet
+│   ├── load_faers.py            # Parse ASCII → pandas tables
+│   ├── STARTHERE.py             # Build recent/full parquet datasets
+│   └── run_dashboard.py         # Launch dashboard with matching env vars
 ├── rubric_and_plan/             # Assignment materials
 ├── DATA_DICTIONARY.md           # FAERS column definitions
 └── flier/                       # Project flier
@@ -142,4 +150,4 @@ FAERS is a spontaneous reporting system. Signals indicate disproportionate co-re
 
 ---
 
-*Created in partial fulfillment of Big Data Analytics (MSBA 6331), Carlson School of Management, University of Minnesota.*
+*This project repository is created in partial fulfillment of the requirements for the Big Data Analytics course offered by the Master of Science in Business Analytics program at the Carlson School of Management, University of Minnesota.*

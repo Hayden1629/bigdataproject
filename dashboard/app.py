@@ -65,7 +65,7 @@ C = {
 CHART_BASE = dict(
     plot_bgcolor  = "#FFFFFF",
     paper_bgcolor = C["surface"],
-    font          = dict(color=C["text"], family="Inter, system-ui, sans-serif", size=12),
+    font          = dict(color=C["text"], family="Avenir Next, Segoe UI, Helvetica Neue, Arial, sans-serif", size=12),
     margin        = dict(l=0, r=8, t=28, b=0),
     xaxis         = dict(gridcolor="#D5E5F0", zerolinecolor="#D5E5F0", tickfont=dict(size=11)),
     yaxis         = dict(gridcolor="#D5E5F0", zerolinecolor="#D5E5F0", tickfont=dict(size=11)),
@@ -81,8 +81,7 @@ def _theme(fig: go.Figure, h: int = 360) -> go.Figure:
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-html,body,[class*="css"]{{font-family:'Inter',system-ui,sans-serif;background:{C['bg']};color:{C['text']};}}
+html,body,[class*="css"]{{font-family:'Avenir Next','Segoe UI','Helvetica Neue',Arial,sans-serif;background:{C['bg']};color:{C['text']};}}
 
 /* ── layout ─────────────────────────────────────────────── */
 .block-container{{padding-top:0;padding-bottom:2rem;max-width:1440px;}}
@@ -303,6 +302,7 @@ Global Filters
     st.divider()
     gk = qr.global_kpis()
     sc = sd.signal_counts()
+    profile = dl.get_dataset_profile()
     st.markdown(f"""
 <div style="font-size:.70rem;font-weight:700;color:{C['muted']};
     text-transform:uppercase;letter-spacing:.14em;margin-bottom:8px;">
@@ -316,7 +316,8 @@ Dataset
 | Deaths | **{gk['n_deaths']:,}** |
 | Unique drugs | **{gk['n_drugs']:,}** |
 | MedDRA PTs | **{gk['n_pts']:,}** |
-| Quarters | **{len(all_q)}** |
+| Mode | **{profile['mode']}** |
+| Quarters | **{profile['quarter_start']} → {profile['quarter_end']}** |
 | HIGH signals | **{sc['HIGH']:,}** |
 """)
     st.divider()
@@ -360,6 +361,26 @@ def empty_fig(msg: str = "No data", h: int = 200) -> go.Figure:
     f.add_annotation(text=msg, x=.5, y=.5, showarrow=False,
                      font=dict(color=C["muted"], size=13))
     return _theme(f, h)
+
+
+def summary_note(title: str, items: list[str]) -> None:
+    lines = "".join(f"<li>{item}</li>" for item in items if item)
+    if not lines:
+        return
+    st.markdown(
+        f'<div class="note"><strong>{title}</strong><ul style="margin:8px 0 0 18px;padding:0;">{lines}</ul></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def quarter_delta_text(trend_df: pd.DataFrame) -> str:
+    if len(trend_df) < 2:
+        return ""
+    prev = int(trend_df["case_count"].iloc[-2])
+    curr = int(trend_df["case_count"].iloc[-1])
+    delta = curr - prev
+    pct = (delta / prev * 100) if prev else 0
+    return f"{trend_df['quarter'].iloc[-2]} to {trend_df['quarter'].iloc[-1]}: {delta:+,} reports ({pct:+.1f}%)"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -690,6 +711,7 @@ with tab_ov:
 # TAB 1  ─  Drug Explorer
 # ═════════════════════════════════════════════════════════════════════════════
 def _render_drug_tab():
+    st.caption("Start with a drug name to see the core safety profile first. External research lookups are optional and can be loaded on demand.")
     drug_query = st.text_input(
         "Drug search",
         placeholder="Brand name, generic name, or active ingredient  —  e.g. naloxone, Mounjaro, dupilumab, warfarin",
@@ -698,6 +720,10 @@ def _render_drug_tab():
     )
 
     if not drug_query:
+        st.markdown(
+            '<div class="note"><strong>Try one of these:</strong> ozempic, mounjaro, keytruda, dupilumab, warfarin, naloxone.</div>',
+            unsafe_allow_html=True,
+        )
         drug_sum2 = dl.load_drug_summary()
         if drug_sum2 is not None:
             sec("Most Reported Drugs — Full Dataset")
@@ -709,18 +735,10 @@ def _render_drug_tab():
             )
         return
 
-    # ── Drug normalisation + status console ──────────────────────────────────
-    with st.status("Looking up drug...", expanded=True) as _status:
-        st.write(f"Querying RxNorm for **{drug_query}**...")
+    # ── Drug normalization ───────────────────────────────────────────────────
+    with st.spinner("Looking up drug..."):
         rxn = rxnorm_lookup(drug_query)
-        canon_tmp = rxn.get("canonical") or drug_query.title()
-        st.write(f"Resolved to **{canon_tmp}** — matching FAERS records...")
         matched = find_faers_names(drug_query, _tables["drug"])
-        if matched:
-            st.write(f"Found **{len(matched)}** drug name variants in FAERS — loading profile...")
-            _status.update(label=f"{canon_tmp} — {len(matched)} variants matched", state="complete", expanded=False)
-        else:
-            _status.update(label="No records found", state="error", expanded=False)
 
     if not matched:
         st.error(
@@ -749,7 +767,7 @@ def _render_drug_tab():
     if related:
         chips_html = " ".join(f'<span class="chip">{n}</span>' for n in sorted(related)[:50])
         st.markdown(f'<div class="chips">{chips_html}</div>', unsafe_allow_html=True)
-    st.caption(f"{len(matched)} FAERS drug name strings matched — role filter: {role_cod}")
+    st.caption(f"{len(matched)} FAERS drug name strings matched. Current role filter: {role_cod}.")
 
     # ── FDA Approval Info ─────────────────────────────────────────────────────
     _fda_records = get_fda_approval_info(canon)
@@ -813,11 +831,24 @@ def _render_drug_tab():
     ])
     st.markdown(f'<div class="kpi-row">{k_html}</div>', unsafe_allow_html=True)
 
-    # ── Reactions + Outcomes ──────────────────────────────────────────────────
+    trend = qr.drug_trend(nk, role_cod, q_key)
+    reac_df = qr.drug_top_reactions(nk, role_cod, q_key, top_n)
+    outc_df = qr.drug_outcomes(nk, role_cod, q_key)
+    demog = qr.drug_demographics(nk, role_cod, q_key)
+    ctry_df = qr.drug_countries(nk, role_cod, q_key, top_n=10)
+    indi_df = qr.drug_indications(nk, role_cod, q_key, top_n=12)
+    comed_df = qr.drug_concomitants(nk, role_cod, q_key, top_n=12)
+    sig_df = sd.signals_for_drug(matched, min_signal="LOW", top_n=25, min_n_dr=10)
+
+    lead_reaction = f"Top reported reaction: {reac_df.iloc[0]['pt']} ({int(reac_df.iloc[0]['count']):,} reports, {reac_df.iloc[0]['pct']:.1f}% of matched cases)." if not reac_df.empty else ""
+    recent_change = f"Recent volume change: {quarter_delta_text(trend)}." if not trend.empty else ""
+    strongest_signal = f"Strongest PRR signal: {sig_df.iloc[0]['pt']} (PRR {sig_df.iloc[0]['PRR']:.2f}, N={int(sig_df.iloc[0]['N_DR']):,}, {sig_df.iloc[0]['signal'].lower()})." if not sig_df.empty else ""
+    top_indication = f"Most common linked indication: {indi_df.iloc[0]['indication']}." if not indi_df.empty else ""
+    summary_note("At A Glance", [lead_reaction, recent_change, strongest_signal, top_indication])
+
     c_left, c_right = st.columns([3, 2])
     with c_left:
         sec("Top Adverse Reactions (MedDRA PTs)")
-        reac_df = qr.drug_top_reactions(nk, role_cod, q_key, top_n)
         st.plotly_chart(
             bar_h(reac_df, "count", "pt",
                   [[0,"#1d4ed8"],[1,"#60a5fa"]],
@@ -826,12 +857,9 @@ def _render_drug_tab():
         )
     with c_right:
         sec("Outcome Distribution")
-        outc_df = qr.drug_outcomes(nk, role_cod, q_key)
         st.plotly_chart(donut(outc_df, "count", "outcome_label", h=340), use_container_width=True)
 
-    # ── Trend ─────────────────────────────────────────────────────────────────
     sec("Quarterly Report Volume")
-    trend = qr.drug_trend(nk, role_cod, q_key)
     _trend_fig = line_trend(trend, "quarter", "case_count", "Reports")
     if _fda_records and not trend.empty:
         _appr_raw = _fda_records[0].get("first_approval", "")
@@ -861,11 +889,9 @@ def _render_drug_tab():
                 pass
     st.plotly_chart(_trend_fig, use_container_width=True)
 
-    # ── Demographics + Country ────────────────────────────────────────────────
     sec("Patient Demographics & Geography")
     d1, d2, d3, d4 = st.columns(4)
 
-    demog = qr.drug_demographics(nk, role_cod, q_key)
     with d1:
         st.markdown('<div style="text-align:center;font-size:.68rem;color:#8b949e;">SEX</div>', unsafe_allow_html=True)
         sex_df = demog["sex"]
@@ -883,20 +909,17 @@ def _render_drug_tab():
                               [[0,"#1a3a2a"],[1,"#3fb950"]], h=220), use_container_width=True)
     with d4:
         sec("Top Reporter Countries")
-        ctry_df = qr.drug_countries(nk, role_cod, q_key, top_n=10)
         if not ctry_df.empty:
             st.dataframe(
                 ctry_df[["country", "count", "pct"]].rename(columns={"count":"Cases","pct":"%"}),
                 use_container_width=True, hide_index=True, height=220,
             )
 
-    # ── Drug Indications + Concomitants ───────────────────────────────────────
     sec("Clinical Context")
     ci1, ci2 = st.columns(2)
 
     with ci1:
         st.markdown('<div style="font-size:.72rem;color:#8b949e;margin-bottom:6px;">PRESCRIBED FOR (Top Indications)</div>', unsafe_allow_html=True)
-        indi_df = qr.drug_indications(nk, role_cod, q_key, top_n=12)
         if not indi_df.empty:
             st.plotly_chart(
                 bar_h(indi_df, "count", "indication",
@@ -908,7 +931,6 @@ def _render_drug_tab():
 
     with ci2:
         st.markdown('<div style="font-size:.72rem;color:#8b949e;margin-bottom:6px;">COMMONLY CO-REPORTED DRUGS</div>', unsafe_allow_html=True)
-        comed_df = qr.drug_concomitants(nk, role_cod, q_key, top_n=12)
         if not comed_df.empty:
             st.plotly_chart(
                 bar_h(comed_df, "count", "drug",
@@ -918,10 +940,7 @@ def _render_drug_tab():
         else:
             st.caption("No concomitant drug data found.")
 
-    # ── PRR Signals ──────────────────────────────────────────────────────────
     sec("Pharmacovigilance Signals (PRR)")
-    sig_df = sd.signals_for_drug(matched, min_signal="LOW", top_n=25, min_n_dr=10)
-
     if not sig_df.empty:
         cnt_h = int((sig_df["signal"] == "HIGH").sum())
         cnt_m = int((sig_df["signal"] == "MEDIUM").sum())
@@ -956,181 +975,171 @@ def _render_drug_tab():
     else:
         st.info("No PRR signals found. Run `python3 dashboard/precompute.py` to generate the signal cache.")
 
-    # ── AI signal interpretation ──────────────────────────────────────────────
-    if not sig_df.empty:
-        sec("AI Signal Interpretation (Claude Haiku)")
-        with st.spinner("Generating signal summary..."):
-            signals_csv_str = sig_df[["pt","N_DR","PRR","chi2","signal"]].head(15).to_csv(index=False)
-            ai_summary = interpret_signals(
-                drug_name=canon,
-                signals_csv=signals_csv_str,
-                n_cases=kpi["n_cases"],
-                n_deaths=kpi["n_deaths"],
-            )
-        if ai_summary:
-            st.markdown(
-                f'<div class="note" style="font-size:.80rem;color:{C["text"]};line-height:1.7;">'
-                f'{ai_summary}'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-        else:
-            st.caption("AI interpretation unavailable — set ANTHROPIC_API_KEY or GROQ_API_KEY to enable. Groq is free at console.groq.com.")
+    with st.expander("Optional External Context", expanded=False):
+        load_ai = bool(sig_df is not None and not sig_df.empty) and st.toggle(
+            "Generate AI interpretation",
+            value=False,
+            key=f"ai_{canon}",
+            help="Uses an external model only when you turn this on.",
+        )
+        load_research = st.toggle(
+            "Load live research and FDA enforcement context",
+            value=False,
+            key=f"research_{canon}",
+            help="Fetches ClinicalTrials.gov, PubMed, and openFDA enforcement data on demand.",
+        )
 
-    # ── Research Context (auto-search for this drug) ─────────────────────────
-    sec("Research Context")
-    _rc_ct, _rc_pm, _rc_en = st.tabs(["Clinical Trials", "Literature (PubMed)", "Recalls & Enforcement"])
-
-    # Use a clean short name (ingredient or brand) — not the full RxNorm clinical string
-    # e.g. "tirzepatide" rather than "0.5 ML tirzepatide 5 MG/ML Auto-Injector [Zepbound]"
-    import re as _re
-    _related = rxn.get("related", [])
-    _ingredients = sorted(
-        [n for n in _related if n.replace(" ", "").isalpha() and 5 <= len(n) <= 25],
-        key=len,
-    )
-    if _ingredients:
-        _research_name = _ingredients[0].title()
-    else:
-        _bracket = _re.search(r'\[([^\]]+)\]', canon)
-        _research_name = _bracket.group(1).title() if _bracket else drug_query.title()
-
-    with _rc_ct:
-        with st.status(f"Searching ClinicalTrials.gov for {_research_name}...", expanded=False) as _ct_status:
-            _ct_df, _ct_total = search_clinical_trials(_research_name, max_results=8, search_mode="intervention")
-            _ct_status.update(
-                label=f"{_ct_total:,} trials found for {_research_name}" if _ct_total else f"No trials found for {_research_name}",
-                state="complete" if _ct_total else "error",
-                expanded=False,
-            )
-        if _ct_df.empty:
-            st.caption(f"No clinical trials found for {_research_name} on ClinicalTrials.gov.")
-        else:
-            st.caption(f"{_ct_total:,} total trials on ClinicalTrials.gov — showing top {len(_ct_df)}")
-            _ct_header = (
-                f"background:{C['surface']};color:{C['muted']};font-size:.65rem;"
-                f"text-transform:uppercase;letter-spacing:.10em;padding:6px 10px;"
-                f"text-align:left;border-bottom:1px solid {C['border']};"
-            )
-            _ct_status_colors = {
-                "RECRUITING": C["low"], "COMPLETED": C["muted"],
-                "ACTIVE_NOT_RECRUITING": C["medium"], "NOT_YET_RECRUITING": C["blue"],
-                "TERMINATED": C["high"],
-            }
-            _ct_rows = ""
-            for _, _r in _ct_df.iterrows():
-                _enroll = f"{int(_r['enrollment']):,}" if str(_r["enrollment"]).isdigit() else "—"
-                _sc = _ct_status_colors.get(_r["status"], C["muted"])
-                _ct_rows += (
-                    f"<tr>"
-                    f"<td style='padding:6px 10px;white-space:nowrap;'>"
-                    f'<a href="{_r["url"]}" target="_blank" style="color:{C["blue"]};text-decoration:none;">{_r["nct_id"]}</a>'
-                    f"</td>"
-                    f"<td style='padding:6px 10px;font-size:.78rem;line-height:1.4;'>{_r['title']}</td>"
-                    f"<td style='padding:6px 10px;white-space:nowrap;font-size:.75rem;color:{_sc};'>{_r['status']}</td>"
-                    f"<td style='padding:6px 10px;white-space:nowrap;font-size:.75rem;'>{_r['phase']}</td>"
-                    f"<td style='padding:6px 10px;font-size:.73rem;color:{C['muted']};'>{str(_r['sponsor'])[:40]}</td>"
-                    f"<td style='padding:6px 10px;text-align:right;font-size:.75rem;'>{_enroll}</td>"
-                    f"</tr>"
+        if load_ai:
+            st.markdown("**AI Signal Interpretation**")
+            with st.spinner("Generating signal summary..."):
+                signals_csv_str = sig_df[["pt","N_DR","PRR","chi2","signal"]].head(15).to_csv(index=False)
+                ai_summary = interpret_signals(
+                    drug_name=canon,
+                    signals_csv=signals_csv_str,
+                    n_cases=kpi["n_cases"],
+                    n_deaths=kpi["n_deaths"],
                 )
-            _ct_html = (
-                f'<div style="overflow-x:auto;border:1px solid {C["border"]};border-radius:8px;">'
-                f'<table style="width:100%;border-collapse:collapse;font-family:Inter,system-ui,sans-serif;color:{C["text"]};">'
-                f'<thead><tr>'
-                f'<th style="{_ct_header}">NCT ID</th>'
-                f'<th style="{_ct_header}">Title</th>'
-                f'<th style="{_ct_header}">Status</th>'
-                f'<th style="{_ct_header}">Phase</th>'
-                f'<th style="{_ct_header}">Sponsor</th>'
-                f'<th style="{_ct_header};text-align:right;">Enrollment</th>'
-                f'</tr></thead><tbody>{_ct_rows}</tbody></table></div>'
-            )
-            st.markdown(_ct_html, unsafe_allow_html=True)
-
-    with _rc_pm:
-        _pm_query = f"{_research_name} adverse events"
-        with st.status(f"Searching PubMed for '{_pm_query}'...", expanded=False) as _pm_status:
-            _pm_df, _pm_total = search_pubmed(_pm_query, max_results=8, sort="relevance")
-            _pm_status.update(
-                label=f"{_pm_total:,} articles in PubMed" if _pm_total else "No articles found",
-                state="complete" if _pm_total else "error",
-                expanded=False,
-            )
-        if _pm_df.empty:
-            st.caption(f"No PubMed results for '{_pm_query}'.")
-        else:
-            st.caption(f"{_pm_total:,} total PubMed results — showing top {len(_pm_df)}")
-            _pm_header = (
-                f"background:{C['surface']};color:{C['muted']};font-size:.65rem;"
-                f"text-transform:uppercase;letter-spacing:.10em;padding:6px 10px;"
-                f"text-align:left;border-bottom:1px solid {C['border']};"
-            )
-            _pm_rows = ""
-            for _, _r in _pm_df.iterrows():
-                _doi_link = (
-                    f'<a href="https://doi.org/{_r["doi"]}" target="_blank" '
-                    f'style="color:{C["muted"]};font-size:.70rem;">DOI</a>'
-                    if _r["doi"] else ""
-                )
-                _pm_rows += (
-                    f"<tr>"
-                    f"<td style='padding:6px 10px;white-space:nowrap;'>"
-                    f'<a href="{_r["url"]}" target="_blank" style="color:{C["blue"]};font-size:.73rem;">{_r["pmid"]}</a>'
-                    f"</td>"
-                    f"<td style='padding:6px 10px;font-size:.78rem;line-height:1.4;'>"
-                    f'<a href="{_r["url"]}" target="_blank" style="color:{C["text"]};text-decoration:none;">{_r["title"]}</a>'
-                    f"</td>"
-                    f"<td style='padding:6px 10px;font-size:.72rem;color:{C['muted']};'>{_r['authors']}</td>"
-                    f"<td style='padding:6px 10px;font-size:.71rem;color:{C['muted']};font-style:italic;'>{_r['journal']}</td>"
-                    f"<td style='padding:6px 10px;white-space:nowrap;font-size:.72rem;color:{C['muted']};'>{_r['pub_date']}</td>"
-                    f"<td style='padding:6px 10px;'>{_doi_link}</td>"
-                    f"</tr>"
-                )
-            _pm_html = (
-                f'<div style="overflow-x:auto;border:1px solid {C["border"]};border-radius:8px;">'
-                f'<table style="width:100%;border-collapse:collapse;font-family:Inter,system-ui,sans-serif;color:{C["text"]};">'
-                f'<thead><tr>'
-                f'<th style="{_pm_header}">PMID</th>'
-                f'<th style="{_pm_header}">Title</th>'
-                f'<th style="{_pm_header}">Authors</th>'
-                f'<th style="{_pm_header}">Journal</th>'
-                f'<th style="{_pm_header}">Date</th>'
-                f'<th style="{_pm_header}">DOI</th>'
-                f'</tr></thead><tbody>{_pm_rows}</tbody></table></div>'
-            )
-            st.markdown(_pm_html, unsafe_allow_html=True)
-
-    with _rc_en:
-        with st.status(f"Searching FDA enforcement actions for {_research_name}...", expanded=False) as _en_status:
-            _en_records = get_drug_enforcement(_research_name, limit=8)
-            _en_status.update(
-                label=f"{len(_en_records)} enforcement action(s) found" if _en_records else "No enforcement actions found",
-                state="complete" if _en_records else "error",
-                expanded=False,
-            )
-        if not _en_records:
-            st.caption(f"No FDA recalls or enforcement actions found for {_research_name}.")
-        else:
-            _cls_colors = {"Class I": C["high"], "Class II": C["medium"], "Class III": C["low"]}
-            for _er in _en_records:
-                _cls = _er["classification"]
-                _cls_color = _cls_colors.get(_cls, C["muted"])
+            if ai_summary:
                 st.markdown(
-                    f'<div style="border:1px solid {C["border"]};border-left:4px solid {_cls_color};'
-                    f'border-radius:0 8px 8px 0;padding:10px 14px;margin:6px 0;">'
-                    f'<div style="display:flex;gap:12px;align-items:center;margin-bottom:4px;">'
-                    f'<span style="font-size:.68rem;font-weight:700;color:{_cls_color};text-transform:uppercase;">{_cls}</span>'
-                    f'<span style="font-size:.68rem;color:{C["muted"]};">{_er["recall_initiation_date"]}</span>'
-                    f'<span style="font-size:.68rem;color:{C["muted"]};">{_er["status"]}</span>'
-                    f'<span style="font-size:.68rem;color:{C["muted"]};">{_er["recalling_firm"]}</span>'
-                    f'</div>'
-                    f'<div style="font-size:.78rem;color:{C["text"]};margin-bottom:2px;">'
-                    f'{_er["reason_for_recall"]}</div>'
-                    f'<div style="font-size:.70rem;color:{C["muted"]};">{_er["product_description"]}</div>'
-                    f'</div>',
+                    f'<div class="note" style="font-size:.80rem;color:{C["text"]};line-height:1.7;">{ai_summary}</div>',
                     unsafe_allow_html=True,
                 )
-            st.caption("Class I = most serious (may cause serious health consequences or death). Source: openFDA Drug Enforcement.")
+            else:
+                st.caption("AI interpretation unavailable — set ANTHROPIC_API_KEY or GROQ_API_KEY to enable.")
+
+        if load_research:
+            st.markdown("**Research Context**")
+            _rc_ct, _rc_pm, _rc_en = st.tabs(["Clinical Trials", "Literature (PubMed)", "Recalls & Enforcement"])
+
+            import re as _re
+            _related = rxn.get("related", [])
+            _ingredients = sorted(
+                [n for n in _related if n.replace(" ", "").isalpha() and 5 <= len(n) <= 25],
+                key=len,
+            )
+            if _ingredients:
+                _research_name = _ingredients[0].title()
+            else:
+                _bracket = _re.search(r'\[([^\]]+)\]', canon)
+                _research_name = _bracket.group(1).title() if _bracket else drug_query.title()
+
+            with _rc_ct:
+                _ct_df, _ct_total = search_clinical_trials(_research_name, max_results=8, search_mode="intervention")
+                if _ct_df.empty:
+                    st.caption(f"No clinical trials found for {_research_name} on ClinicalTrials.gov.")
+                else:
+                    st.caption(f"{_ct_total:,} total trials on ClinicalTrials.gov — showing top {len(_ct_df)}")
+                    _ct_header = (
+                        f"background:{C['surface']};color:{C['muted']};font-size:.65rem;"
+                        f"text-transform:uppercase;letter-spacing:.10em;padding:6px 10px;"
+                        f"text-align:left;border-bottom:1px solid {C['border']};"
+                    )
+                    _ct_status_colors = {
+                        "RECRUITING": C["low"], "COMPLETED": C["muted"],
+                        "ACTIVE_NOT_RECRUITING": C["medium"], "NOT_YET_RECRUITING": C["blue"],
+                        "TERMINATED": C["high"],
+                    }
+                    _ct_rows = ""
+                    for _, _r in _ct_df.iterrows():
+                        _enroll = f"{int(_r['enrollment']):,}" if str(_r["enrollment"]).isdigit() else "—"
+                        _sc = _ct_status_colors.get(_r["status"], C["muted"])
+                        _ct_rows += (
+                            f"<tr>"
+                            f"<td style='padding:6px 10px;white-space:nowrap;'>"
+                            f'<a href="{_r["url"]}" target="_blank" style="color:{C["blue"]};text-decoration:none;">{_r["nct_id"]}</a>'
+                            f"</td>"
+                            f"<td style='padding:6px 10px;font-size:.78rem;line-height:1.4;'>{_r['title']}</td>"
+                            f"<td style='padding:6px 10px;white-space:nowrap;font-size:.75rem;color:{_sc};'>{_r['status']}</td>"
+                            f"<td style='padding:6px 10px;white-space:nowrap;font-size:.75rem;'>{_r['phase']}</td>"
+                            f"<td style='padding:6px 10px;font-size:.73rem;color:{C['muted']};'>{str(_r['sponsor'])[:40]}</td>"
+                            f"<td style='padding:6px 10px;text-align:right;font-size:.75rem;'>{_enroll}</td>"
+                            f"</tr>"
+                        )
+                    _ct_html = (
+                        f'<div style="overflow-x:auto;border:1px solid {C["border"]};border-radius:8px;">'
+                        f'<table style="width:100%;border-collapse:collapse;font-family:Avenir Next,Segoe UI,Helvetica Neue,Arial,sans-serif;color:{C["text"]};">'
+                        f'<thead><tr>'
+                        f'<th style="{_ct_header}">NCT ID</th>'
+                        f'<th style="{_ct_header}">Title</th>'
+                        f'<th style="{_ct_header}">Status</th>'
+                        f'<th style="{_ct_header}">Phase</th>'
+                        f'<th style="{_ct_header}">Sponsor</th>'
+                        f'<th style="{_ct_header};text-align:right;">Enrollment</th>'
+                        f'</tr></thead><tbody>{_ct_rows}</tbody></table></div>'
+                    )
+                    st.markdown(_ct_html, unsafe_allow_html=True)
+
+            with _rc_pm:
+                _pm_query = f"{_research_name} adverse events"
+                _pm_df, _pm_total = search_pubmed(_pm_query, max_results=8, sort="relevance")
+                if _pm_df.empty:
+                    st.caption(f"No PubMed results for '{_pm_query}'.")
+                else:
+                    st.caption(f"{_pm_total:,} total PubMed results — showing top {len(_pm_df)}")
+                    _pm_header = (
+                        f"background:{C['surface']};color:{C['muted']};font-size:.65rem;"
+                        f"text-transform:uppercase;letter-spacing:.10em;padding:6px 10px;"
+                        f"text-align:left;border-bottom:1px solid {C['border']};"
+                    )
+                    _pm_rows = ""
+                    for _, _r in _pm_df.iterrows():
+                        _doi_link = (
+                            f'<a href="https://doi.org/{_r["doi"]}" target="_blank" '
+                            f'style="color:{C["muted"]};font-size:.70rem;">DOI</a>'
+                            if _r["doi"] else ""
+                        )
+                        _pm_rows += (
+                            f"<tr>"
+                            f"<td style='padding:6px 10px;white-space:nowrap;'>"
+                            f'<a href="{_r["url"]}" target="_blank" style="color:{C["blue"]};font-size:.73rem;">{_r["pmid"]}</a>'
+                            f"</td>"
+                            f"<td style='padding:6px 10px;font-size:.78rem;line-height:1.4;'>"
+                            f'<a href="{_r["url"]}" target="_blank" style="color:{C["text"]};text-decoration:none;">{_r["title"]}</a>'
+                            f"</td>"
+                            f"<td style='padding:6px 10px;font-size:.72rem;color:{C['muted']};'>{_r['authors']}</td>"
+                            f"<td style='padding:6px 10px;font-size:.71rem;color:{C['muted']};font-style:italic;'>{_r['journal']}</td>"
+                            f"<td style='padding:6px 10px;white-space:nowrap;font-size:.72rem;color:{C['muted']};'>{_r['pub_date']}</td>"
+                            f"<td style='padding:6px 10px;'>{_doi_link}</td>"
+                            f"</tr>"
+                        )
+                    _pm_html = (
+                        f'<div style="overflow-x:auto;border:1px solid {C["border"]};border-radius:8px;">'
+                        f'<table style="width:100%;border-collapse:collapse;font-family:Avenir Next,Segoe UI,Helvetica Neue,Arial,sans-serif;color:{C["text"]};">'
+                        f'<thead><tr>'
+                        f'<th style="{_pm_header}">PMID</th>'
+                        f'<th style="{_pm_header}">Title</th>'
+                        f'<th style="{_pm_header}">Authors</th>'
+                        f'<th style="{_pm_header}">Journal</th>'
+                        f'<th style="{_pm_header}">Date</th>'
+                        f'<th style="{_pm_header}">DOI</th>'
+                        f'</tr></thead><tbody>{_pm_rows}</tbody></table></div>'
+                    )
+                    st.markdown(_pm_html, unsafe_allow_html=True)
+
+            with _rc_en:
+                _en_records = get_drug_enforcement(_research_name, limit=8)
+                if not _en_records:
+                    st.caption(f"No FDA recalls or enforcement actions found for {_research_name}.")
+                else:
+                    _cls_colors = {"Class I": C["high"], "Class II": C["medium"], "Class III": C["low"]}
+                    for _er in _en_records:
+                        _cls = _er["classification"]
+                        _cls_color = _cls_colors.get(_cls, C["muted"])
+                        st.markdown(
+                            f'<div style="border:1px solid {C["border"]};border-left:4px solid {_cls_color};'
+                            f'border-radius:0 8px 8px 0;padding:10px 14px;margin:6px 0;">'
+                            f'<div style="display:flex;gap:12px;align-items:center;margin-bottom:4px;">'
+                            f'<span style="font-size:.68rem;font-weight:700;color:{_cls_color};text-transform:uppercase;">{_cls}</span>'
+                            f'<span style="font-size:.68rem;color:{C["muted"]};">{_er["recall_initiation_date"]}</span>'
+                            f'<span style="font-size:.68rem;color:{C["muted"]};">{_er["status"]}</span>'
+                            f'<span style="font-size:.68rem;color:{C["muted"]};">{_er["recalling_firm"]}</span>'
+                            f'</div>'
+                            f'<div style="font-size:.78rem;color:{C["text"]};margin-bottom:2px;">{_er["reason_for_recall"]}</div>'
+                            f'<div style="font-size:.70rem;color:{C["muted"]};">{_er["product_description"]}</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+                    st.caption("Class I = most serious. Source: openFDA Drug Enforcement.")
 
     with st.expander("Matched drug name strings"):
         st.dataframe(
@@ -1238,6 +1247,7 @@ with tab_sig:
 # TAB 3  ─  Reaction Explorer
 # ═════════════════════════════════════════════════════════════════════════════
 def _render_reac_tab():
+    st.caption("Use plain language if you want. The app maps common phrases to MedDRA terms before analyzing the signal.")
     reac_query = st.text_input(
         "Reaction search",
         placeholder="Plain English or clinical term  —  e.g. heart attack, hair loss, throwing up, myocardial infarction",
@@ -1246,6 +1256,10 @@ def _render_reac_tab():
     )
 
     if not reac_query:
+        st.markdown(
+            '<div class="note"><strong>Try one of these:</strong> heart attack, hair loss, throwing up, liver damage, memory loss.</div>',
+            unsafe_allow_html=True,
+        )
         with st.spinner("Loading reaction data..."):
             reac_sum2 = dl.load_reac_summary()
         if reac_sum2 is not None:
@@ -1259,18 +1273,14 @@ def _render_reac_tab():
         return
 
     # ── MedDRA mapping ────────────────────────────────────────────────────────
-    with st.status(f"Mapping '{reac_query}' to MedDRA terms...", expanded=True) as _reac_status:
-        st.write("Searching synonym dictionary...")
+    with st.spinner("Mapping to MedDRA terms..."):
         pt_hits = search_reactions(reac_query, all_pts, max_results=25)
-        if pt_hits:
-            st.write(f"Found {len(pt_hits)} matching Preferred Terms")
-            _reac_status.update(label=f"{len(pt_hits)} MedDRA terms matched", state="complete", expanded=False)
-        else:
-            _reac_status.update(label="No MedDRA terms matched", state="error", expanded=False)
 
     if not pt_hits:
         st.error(f"No MedDRA terms matched **{reac_query}**. Try different phrasing.")
         return
+
+    st.caption(f"{len(pt_hits)} MedDRA terms matched for '{reac_query}'.")
 
     col_sel, col_tbl = st.columns([3, 1])
     with col_sel:
@@ -1302,11 +1312,19 @@ def _render_reac_tab():
     ])
     st.markdown(f'<div class="kpi-row">{rk_html}</div>', unsafe_allow_html=True)
 
-    # ── Charts ────────────────────────────────────────────────────────────────
+    top_d = qr.reaction_top_drugs(pk, role_cod, q_key, top_n)
+    outc_r = qr.reaction_outcomes(pk, q_key)
+    tr = qr.reaction_trend(pk, q_key)
+    reac_sigs = sd.signals_for_reaction(selected_pts, min_signal="MEDIUM", top_n=20)
+
+    top_drug_note = f"Top associated drug: {top_d.iloc[0]['drug_label']} ({int(top_d.iloc[0]['case_count']):,} cases, {top_d.iloc[0]['pct']:.1f}% of matched reaction cases)." if not top_d.empty else ""
+    reaction_trend_note = f"Recent volume change: {quarter_delta_text(tr)}." if not tr.empty else ""
+    reaction_signal_note = f"Strongest elevated drug signal: {reac_sigs.iloc[0]['drug']} (PRR {reac_sigs.iloc[0]['PRR']:.2f}, N={int(reac_sigs.iloc[0]['N_DR']):,})." if not reac_sigs.empty else ""
+    summary_note("At A Glance", [top_drug_note, reaction_trend_note, reaction_signal_note])
+
     cl, cr = st.columns([3, 2])
     with cl:
         sec(f"Top Associated Drugs (role: {role_cod})")
-        top_d = qr.reaction_top_drugs(pk, role_cod, q_key, top_n)
         st.plotly_chart(
             bar_h(top_d, "case_count", "drug_label",
                   [[0,"#7c3aed"],[1,"#c4b5fd"]], h=max(400, top_n*22+80)),
@@ -1314,16 +1332,12 @@ def _render_reac_tab():
         )
     with cr:
         sec("Outcome Distribution")
-        outc_r = qr.reaction_outcomes(pk, q_key)
         st.plotly_chart(donut(outc_r, "count", "outcome_label", h=340), use_container_width=True)
 
     sec("Quarterly Report Volume")
-    tr = qr.reaction_trend(pk, q_key)
     st.plotly_chart(line_trend(tr, "quarter", "case_count", "Reports", color=C["purple"]), use_container_width=True)
 
-    # ── PRR signals for this reaction ─────────────────────────────────────────
     sec("Drug Signals for This Reaction (PRR)")
-    reac_sigs = sd.signals_for_reaction(selected_pts, min_signal="MEDIUM", top_n=20)
     if not reac_sigs.empty:
         sr1, sr2 = st.columns([2, 3])
         with sr1:
@@ -1405,17 +1419,11 @@ def _render_cmp_tab():
             )
         return
 
-    with st.status("Looking up both drugs...", expanded=True) as _cmp_status:
-        st.write(f"Querying RxNorm for **{drug_a_query}**...")
+    with st.spinner("Looking up both drugs..."):
         rxn_a     = rxnorm_lookup(drug_a_query)
         matched_a = find_faers_names(drug_a_query, _tables["drug"])
-        st.write(f"Querying RxNorm for **{drug_b_query}**...")
         rxn_b     = rxnorm_lookup(drug_b_query)
         matched_b = find_faers_names(drug_b_query, _tables["drug"])
-        _a_label  = (rxn_a.get("canonical") or drug_a_query).title()
-        _b_label  = (rxn_b.get("canonical") or drug_b_query).title()
-        st.write(f"Matched **{len(matched_a)}** variants for {_a_label}, **{len(matched_b)}** for {_b_label}")
-        _cmp_status.update(label=f"{_a_label} vs {_b_label}", state="complete", expanded=False)
 
     if not matched_a:
         st.error(f"No FAERS records found for **{drug_a_query}**.")
@@ -1428,6 +1436,7 @@ def _render_cmp_tab():
     nk_b = qr._names_key(matched_b)
     label_a = (rxn_a.get("canonical") or drug_a_query).title()
     label_b = (rxn_b.get("canonical") or drug_b_query).title()
+    st.caption(f"{label_a}: {len(matched_a)} matched FAERS names. {label_b}: {len(matched_b)} matched FAERS names.")
 
     if nk_a == nk_b:
         st.warning(

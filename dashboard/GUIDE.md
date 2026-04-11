@@ -9,14 +9,14 @@
 ```bash
 # From the project root (bigdataproject/)
 pip install -r dashboard/requirements.txt   # first time only
-python dashboard/precompute.py              # first time only (~3–5 min)
-streamlit run dashboard/app.py
+python3 utils/STARTHERE.py --mode recent
+FAERS_PARQUET_DIR=data/parquet_recent FAERS_CACHE_DIR=dashboard/cache_recent python3 dashboard/precompute.py
+python3 utils/run_dashboard.py --mode recent
 ```
 
 Open `http://localhost:8501` in your browser.
 
-> **Prerequisite:** FAERS parquet data must be in `data/parquet_recent/` and the
-> signal cache must be built. See [Setup](#setup) below if starting from scratch.
+> **Prerequisite:** a parquet dataset and matching cache must be built first. See [Setup](#setup) below.
 
 ---
 
@@ -74,7 +74,7 @@ related drug names. All FAERS records matching any of those names are aggregated
 
 **Try:** `zepbound`, `ozempic`, `keytruda`, `dupilumab`, `warfarin`, `naloxone`
 
-A step-by-step status console shows the lookup progress as it runs.
+The page now emphasizes the core FAERS safety profile first. AI summaries and live external research are optional and load only when you explicitly turn them on.
 
 | Section | What it shows |
 |---|---|
@@ -122,7 +122,7 @@ clinical drug string, so results are relevant.
 - **Literature** — top 8 results from PubMed eutils for `{ingredient} adverse events`.
   Shows PMID (linked), title (linked), authors, journal, publication date, DOI.
 
-Both run unauthenticated. Results are cached for 1 hour.
+Both run unauthenticated. Results are cached for 1 hour and only fetched when requested.
 
 ---
 
@@ -193,8 +193,9 @@ semantic search to map plain-English descriptions to MedDRA Preferred Terms.
 ### Prerequisites
 
 - Python 3.10+
-- ~2 GB disk space for parquet data
-- FAERS parquet data in `data/parquet_recent/` (7 tables: demo, drug, reac, outc, rpsr, ther, indi)
+- Enough disk space for either:
+- `data/parquet_recent/` for a smaller testing dataset
+- `data/parquet/` for the full dataset history
 
 ### 1. Install dependencies
 
@@ -202,20 +203,35 @@ semantic search to map plain-English descriptions to MedDRA Preferred Terms.
 pip install -r dashboard/requirements.txt
 ```
 
-### 2. Download and convert FAERS data (skip if data already exists)
+### 2. Build parquet data
+
+Small recent dataset for testing:
 
 ```bash
-bash utils/download_faers.sh          # Download quarterly ZIP files from FDA
-python utils/load_faers.py            # Parse ASCII → DataFrames → Parquet
+python3 utils/STARTHERE.py --mode recent
 ```
 
-### 3. Build the pre-computed signal cache (run once, ~3–5 min)
+Full dataset:
 
 ```bash
-python dashboard/precompute.py
+python3 utils/STARTHERE.py --mode full
 ```
 
-This creates five parquet files in `dashboard/cache/`:
+`STARTHERE.py` replaces the old manual `LOW_RAM = True/False` code edit. Use `--mode recent` for faster local iteration and `--mode full` for final runs.
+
+### 3. Build the pre-computed signal cache (run once per dataset, ~3–5 min on recent data)
+
+```bash
+FAERS_PARQUET_DIR=data/parquet_recent FAERS_CACHE_DIR=dashboard/cache_recent python3 dashboard/precompute.py
+```
+
+For the full dataset:
+
+```bash
+FAERS_PARQUET_DIR=data/parquet FAERS_CACHE_DIR=dashboard/cache_full python3 dashboard/precompute.py
+```
+
+This creates five parquet files in the cache directory that matches your dataset mode:
 
 | File | Contents |
 |---|---|
@@ -244,12 +260,16 @@ If neither key is set, the AI section is hidden and everything else works normal
 ### 5. Run the dashboard
 
 ```bash
-streamlit run dashboard/app.py
+python3 utils/run_dashboard.py --mode recent
 ```
 
-**Tip:** For demos or presentations, start the server a minute or two early. The
-background warm-up thread loads all data into memory immediately on server start, so
-the first browser load is near-instant rather than waiting 15–30 seconds.
+For the full dataset:
+
+```bash
+python3 utils/run_dashboard.py --mode full
+```
+
+**Tip:** The sidebar now shows whether you are looking at the recent testing dataset or the full history, plus the quarter range actually loaded.
 
 ---
 

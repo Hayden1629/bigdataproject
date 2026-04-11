@@ -68,67 +68,153 @@ def _quarters_key(quarters: list[str] | None) -> str:
     return "|".join(sorted(quarters)) if quarters else "ALL"
 
 
+def _primaryids_for_index(indexed_df: pd.DataFrame, keys: list[str] | tuple[str, ...]) -> set[int]:
+    if not keys:
+        return set()
+
+    found: list[pd.DataFrame] = []
+    for key in keys:
+        try:
+            rows = indexed_df.loc[[key]]
+        except KeyError:
+            continue
+        found.append(rows[["primaryid"]])
+
+    if not found:
+        return set()
+    primaryids = pd.concat(found, ignore_index=True)["primaryid"].unique()
+    return set(primaryids.tolist())
+
+
+def _quarter_primaryids(quarters_key: str) -> set[int] | None:
+    if quarters_key == "ALL":
+        return None
+
+    lookups = dl.load_lookup_tables()
+    quarters = quarters_key.split("|")
+    return _primaryids_for_index(lookups["quarter_cases"], quarters)
+
+
+def _intersect_quarters(case_ids: set[int], quarters_key: str) -> set[int]:
+    quarter_ids = _quarter_primaryids(quarters_key)
+    if quarter_ids is None:
+        return case_ids
+    return case_ids & quarter_ids
+
+
+def _drug_case_ids(names_key: str, role: str, quarters_key: str) -> set[int]:
+    lookups = dl.load_lookup_tables()
+    names = names_key.split("|") if names_key else []
+
+    if role == "all":
+        case_ids = _primaryids_for_index(lookups["drug_cases"], names)
+    else:
+        role_keys = [(name, role) for name in names]
+        case_ids = _primaryids_for_index(lookups["drug_role_cases"], role_keys)
+    return _intersect_quarters(case_ids, quarters_key)
+
+
+def _reaction_case_ids(pts_key: str, quarters_key: str) -> set[int]:
+    lookups = dl.load_lookup_tables()
+    pts = pts_key.split("|") if pts_key else []
+    case_ids = _primaryids_for_index(lookups["reaction_cases"], pts)
+    return _intersect_quarters(case_ids, quarters_key)
+
+
 # ── Drug queries ──────────────────────────────────────────────────────────────
 
 @st.cache_data(show_spinner=False)
 def drug_kpis(names_key: str, role: str, quarters_key: str) -> dict:
     tables = dl.load_tables()
-    drug   = _filter_quarters(tables["drug"], quarters_key)
-    outc   = _filter_quarters_by_demo(tables["outc"], tables["demo"], quarters_key)
-    name_set = set(names_key.split("|"))
-    return ana.kpis_for_drug(drug, outc, name_set, role=role)
+    case_ids = _drug_case_ids(names_key, role, quarters_key)
+    n_cases = len(case_ids)
+    if n_cases == 0:
+        return {"n_cases": 0, "n_deaths": 0, "n_hosp": 0, "n_lt": 0, "n_serious": 0, "death_pct": 0.0}
+
+    outc_sub = tables["outc"][tables["outc"]["primaryid"].isin(case_ids)]
+    vc = outc_sub["outc_cod"].value_counts()
+    n_deaths = int(vc.get("DE", 0))
+    return {
+        "n_cases": n_cases,
+        "n_deaths": n_deaths,
+        "n_hosp": int(vc.get("HO", 0)),
+        "n_lt": int(vc.get("LT", 0)),
+        "n_serious": int(outc_sub["primaryid"].nunique()),
+        "death_pct": round(n_deaths / n_cases * 100, 2),
+    }
 
 
 @st.cache_data(show_spinner=False)
 def drug_top_reactions(names_key: str, role: str, quarters_key: str, top_n: int) -> pd.DataFrame:
     tables = dl.load_tables()
-    drug   = _filter_quarters(tables["drug"], quarters_key)
-    reac   = _filter_quarters(tables["reac"], quarters_key)
-    name_set = set(names_key.split("|"))
-    return ana.top_reactions_for_drug(drug, reac, name_set, role=role, top_n=top_n)
+    case_ids = _drug_case_ids(names_key, role, quarters_key)
+    total = len(case_ids)
+    if total == 0:
+        return pd.DataFrame(columns=["pt", "count", "pct"])
+
+    sub = tables["reac"][tables["reac"]["primaryid"].isin(case_ids)]
+    counts = sub["pt_norm"].value_counts().head(top_n).reset_index()
+    counts.columns = ["pt", "count"]
+    counts["pct"] = (counts["count"] / total * 100).round(1)
+    return counts
 
 
 @st.cache_data(show_spinner=False)
 def drug_outcomes(names_key: str, role: str, quarters_key: str) -> pd.DataFrame:
     tables = dl.load_tables()
-    drug   = _filter_quarters(tables["drug"], quarters_key)
-    outc   = _filter_quarters_by_demo(tables["outc"], tables["demo"], quarters_key)
-    name_set = set(names_key.split("|"))
-    return ana.outcomes_for_drug(drug, outc, name_set, role=role)
+    case_ids = _drug_case_ids(names_key, role, quarters_key)
+    total = len(case_ids)
+    if total == 0:
+        return pd.DataFrame(columns=["outcome_label", "count", "pct"])
+
+    outc_sub = tables["outc"][tables["outc"]["primaryid"].isin(case_ids)]
+    vc = outc_sub["outc_cod"].value_counts().reset_index()
+    vc.columns = ["outc_cod", "count"]
+    vc["outcome_label"] = vc["outc_cod"].map(ana.OUTCOME_LABELS).fillna(vc["outc_cod"])
+    vc["pct"] = (vc["count"] / total * 100).round(1)
+    return vc[["outcome_label", "count", "pct"]].sort_values("count", ascending=False)
 
 
 @st.cache_data(show_spinner=False)
 def drug_trend(names_key: str, role: str, quarters_key: str) -> pd.DataFrame:
     tables = dl.load_tables()
-    drug   = _filter_quarters(tables["drug"], quarters_key)
-    name_set = set(names_key.split("|"))
-    quarter_filter = quarters_key.split("|") if quarters_key != "ALL" else None
-    return ana.quarterly_trend_for_drug(name_set, drug, role=role, quarter_filter=quarter_filter)
+    case_ids = _drug_case_ids(names_key, role, quarters_key)
+    if not case_ids:
+        return pd.DataFrame(columns=["quarter", "case_count"])
+
+    demo = tables["demo"][tables["demo"]["primaryid"].isin(case_ids)]
+    trend = demo.groupby("quarter")["primaryid"].nunique().reset_index()
+    trend.columns = ["quarter", "case_count"]
+    return trend.sort_values("quarter")
 
 
 @st.cache_data(show_spinner=False)
 def drug_demographics(names_key: str, role: str, quarters_key: str) -> dict:
     tables = dl.load_tables()
-    drug   = _filter_quarters(tables["drug"], quarters_key)
-    demo   = _filter_quarters(tables["demo"], quarters_key)
-    name_set = set(names_key.split("|"))
-    return ana.demographics_for_drug(drug, demo, name_set, role=role)
+    case_ids = _drug_case_ids(names_key, role, quarters_key)
+    sub = tables["demo"][tables["demo"]["primaryid"].isin(case_ids)]
+
+    sex = sub["sex"].value_counts().reset_index()
+    sex.columns = ["sex_label", "count"]
+    sex["sex_label"] = sex["sex_label"].map(ana.SEX_LABELS).fillna(sex["sex_label"])
+
+    age = sub["age_grp"].value_counts().reset_index()
+    age.columns = ["age_group_label", "count"]
+    age["age_group_label"] = age["age_group_label"].map(ana.AGE_LABELS).fillna(age["age_group_label"])
+
+    rep = sub["occp_cod"].value_counts().reset_index()
+    rep.columns = ["reporter", "count"]
+    rep["reporter"] = rep["reporter"].map(ana.OCCP_LABELS).fillna(rep["reporter"])
+
+    return {"sex": sex, "age_grp": age, "reporter": rep}
 
 
 @st.cache_data(show_spinner=False)
 def drug_countries(names_key: str, role: str, quarters_key: str, top_n: int = 20) -> pd.DataFrame:
     """Top reporter countries for a drug's cases."""
     tables   = dl.load_tables()
-    drug     = _filter_quarters(tables["drug"], quarters_key)
-    demo     = _filter_quarters(tables["demo"], quarters_key)
-    name_set = set(names_key.split("|"))
-
-    mask = drug["canon"].isin(name_set)
-    if role != "all":
-        mask = mask & (drug["role_cod"] == role)
-    case_ids = set(drug.loc[mask, "primaryid"].unique())
-
-    sub = demo[demo["primaryid"].isin(case_ids)]
+    case_ids = _drug_case_ids(names_key, role, quarters_key)
+    sub = tables["demo"][tables["demo"]["primaryid"].isin(case_ids)]
     vc = sub["reporter_country"].value_counts().head(top_n).reset_index()
     vc.columns = ["iso2", "count"]
     vc["country"] = vc["iso2"].map(ISO2_NAMES).fillna(vc["iso2"])
@@ -140,9 +226,13 @@ def drug_countries(names_key: str, role: str, quarters_key: str, top_n: int = 20
 def drug_indications(names_key: str, role: str, quarters_key: str, top_n: int = 15) -> pd.DataFrame:
     """Top indications (what the drug was prescribed for)."""
     tables   = dl.load_tables()
-    drug     = _filter_quarters(tables["drug"], quarters_key)
-    indi     = _filter_quarters(tables["indi"], quarters_key)
+    case_ids = _drug_case_ids(names_key, role, quarters_key)
+    if not case_ids:
+        return pd.DataFrame(columns=["indication", "count", "pct"])
+
     name_set = set(names_key.split("|"))
+    drug = tables["drug"][tables["drug"]["primaryid"].isin(case_ids)]
+    indi = tables["indi"][tables["indi"]["primaryid"].isin(case_ids)]
 
     mask = drug["canon"].isin(name_set)
     if role != "all":
@@ -169,16 +259,11 @@ def drug_indications(names_key: str, role: str, quarters_key: str, top_n: int = 
 def drug_concomitants(names_key: str, role: str, quarters_key: str, top_n: int = 15) -> pd.DataFrame:
     """Other drugs most commonly reported alongside this drug."""
     tables   = dl.load_tables()
-    drug     = _filter_quarters(tables["drug"], quarters_key)
+    case_ids = _drug_case_ids(names_key, role, quarters_key)
     name_set = set(names_key.split("|"))
 
-    mask = drug["canon"].isin(name_set)
-    if role != "all":
-        mask = mask & (drug["role_cod"] == role)
-    case_ids = set(drug.loc[mask, "primaryid"].unique())
-
     # All drug records in those cases that are NOT our drug
-    other = drug[drug["primaryid"].isin(case_ids) & ~drug["canon"].isin(name_set)]
+    other = tables["drug"][tables["drug"]["primaryid"].isin(case_ids) & ~tables["drug"]["canon"].isin(name_set)]
     vc = other["canon"].value_counts().head(top_n).reset_index()
     vc.columns = ["drug", "count"]
     total = len(case_ids)
@@ -191,37 +276,71 @@ def drug_concomitants(names_key: str, role: str, quarters_key: str, top_n: int =
 @st.cache_data(show_spinner=False)
 def reaction_kpis(pts_key: str, quarters_key: str) -> dict:
     tables = dl.load_tables()
-    reac   = _filter_quarters(tables["reac"], quarters_key)
-    outc   = _filter_quarters_by_demo(tables["outc"], tables["demo"], quarters_key)
-    pt_set = set(pts_key.split("|"))
-    return ana.kpis_for_reaction(reac, outc, pt_set)
+    case_ids = _reaction_case_ids(pts_key, quarters_key)
+    n_cases = len(case_ids)
+    if n_cases == 0:
+        return {"n_cases": 0, "n_deaths": 0, "n_serious": 0}
+
+    outc_sub = tables["outc"][tables["outc"]["primaryid"].isin(case_ids)]
+    vc = outc_sub["outc_cod"].value_counts()
+    return {
+        "n_cases": n_cases,
+        "n_deaths": int(vc.get("DE", 0)),
+        "n_serious": int(outc_sub["primaryid"].nunique()),
+    }
 
 
 @st.cache_data(show_spinner=False)
 def reaction_top_drugs(pts_key: str, role: str, quarters_key: str, top_n: int) -> pd.DataFrame:
     tables = dl.load_tables()
-    drug   = _filter_quarters(tables["drug"], quarters_key)
-    reac   = _filter_quarters(tables["reac"], quarters_key)
-    pt_set = set(pts_key.split("|"))
-    return ana.top_drugs_for_reaction(drug, reac, pt_set, role=role, top_n=top_n)
+    case_ids = _reaction_case_ids(pts_key, quarters_key)
+    total = len(case_ids)
+    if total == 0:
+        return pd.DataFrame(columns=["drug_label", "case_count", "pct"])
+
+    drug_sub = tables["drug"][tables["drug"]["primaryid"].isin(case_ids)]
+    if role != "all":
+        drug_sub = drug_sub[drug_sub["role_cod"] == role]
+
+    counts = (
+        drug_sub.groupby("canon")["primaryid"]
+        .nunique()
+        .sort_values(ascending=False)
+        .head(top_n)
+        .reset_index()
+    )
+    counts.columns = ["drug_label", "case_count"]
+    counts["pct"] = (counts["case_count"] / total * 100).round(1)
+    return counts
 
 
 @st.cache_data(show_spinner=False)
 def reaction_outcomes(pts_key: str, quarters_key: str) -> pd.DataFrame:
     tables = dl.load_tables()
-    reac   = _filter_quarters(tables["reac"], quarters_key)
-    outc   = _filter_quarters_by_demo(tables["outc"], tables["demo"], quarters_key)
-    pt_set = set(pts_key.split("|"))
-    return ana.outcomes_for_reaction(reac, outc, pt_set)
+    case_ids = _reaction_case_ids(pts_key, quarters_key)
+    total = len(case_ids)
+    if total == 0:
+        return pd.DataFrame(columns=["outcome_label", "count", "pct"])
+
+    outc_sub = tables["outc"][tables["outc"]["primaryid"].isin(case_ids)]
+    vc = outc_sub["outc_cod"].value_counts().reset_index()
+    vc.columns = ["outc_cod", "count"]
+    vc["outcome_label"] = vc["outc_cod"].map(ana.OUTCOME_LABELS).fillna(vc["outc_cod"])
+    vc["pct"] = (vc["count"] / total * 100).round(1)
+    return vc[["outcome_label", "count", "pct"]].sort_values("count", ascending=False)
 
 
 @st.cache_data(show_spinner=False)
 def reaction_trend(pts_key: str, quarters_key: str) -> pd.DataFrame:
     tables = dl.load_tables()
-    reac   = _filter_quarters(tables["reac"], quarters_key)
-    pt_set = set(pts_key.split("|"))
-    quarter_filter = quarters_key.split("|") if quarters_key != "ALL" else None
-    return ana.quarterly_trend_for_reaction(pt_set, reac, quarter_filter=quarter_filter)
+    case_ids = _reaction_case_ids(pts_key, quarters_key)
+    if not case_ids:
+        return pd.DataFrame(columns=["quarter", "case_count"])
+
+    demo = tables["demo"][tables["demo"]["primaryid"].isin(case_ids)]
+    trend = demo.groupby("quarter")["primaryid"].nunique().reset_index()
+    trend.columns = ["quarter", "case_count"]
+    return trend.sort_values("quarter")
 
 
 # ── Global overview queries ───────────────────────────────────────────────────

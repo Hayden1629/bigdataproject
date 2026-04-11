@@ -23,6 +23,17 @@ import streamlit as st
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
+
+def _default_cache_dir(parquet_dir: str) -> str:
+    base = os.path.basename(os.path.normpath(parquet_dir))
+    if base == "parquet_recent":
+        cache_name = "cache_recent"
+    elif base == "parquet":
+        cache_name = "cache_full"
+    else:
+        cache_name = f"cache_{base}"
+    return os.path.join(_HERE, cache_name)
+
 # ── Path configuration ────────────────────────────────────────────────────────
 # Override with env vars for cloud deployment (Databricks DBFS, S3, ADLS, etc.)
 #   FAERS_PARQUET_DIR — path to the 7 FAERS parquet tables (demo, drug, reac, …)
@@ -33,7 +44,7 @@ _PARQUET_DIR = os.environ.get(
 )
 _CACHE_DIR = os.environ.get(
     "FAERS_CACHE_DIR",
-    os.path.join(_HERE, "cache"),
+    _default_cache_dir(_PARQUET_DIR),
 )
 
 TABLE_NAMES = ["demo", "drug", "reac", "outc", "rpsr", "ther", "indi"]
@@ -111,6 +122,48 @@ def load_tables() -> dict[str, pd.DataFrame]:
     return tables
 
 
+@st.cache_resource(show_spinner=False)
+def load_lookup_tables() -> dict[str, pd.DataFrame]:
+    """Build compact lookup tables used by the query layer.
+
+    These tables trade a small amount of startup work for much faster repeated
+    dashboard interactions by avoiding full scans of the large source tables.
+    """
+    tables = load_tables()
+
+    demo_quarters = (
+        tables["demo"][["quarter", "primaryid"]]
+        .drop_duplicates()
+        .sort_values(["quarter", "primaryid"])
+        .set_index("quarter")
+    )
+    drug_cases = (
+        tables["drug"][["canon", "primaryid"]]
+        .drop_duplicates()
+        .sort_values(["canon", "primaryid"])
+        .set_index("canon")
+    )
+    drug_role_cases = (
+        tables["drug"][["canon", "role_cod", "primaryid"]]
+        .drop_duplicates()
+        .sort_values(["canon", "role_cod", "primaryid"])
+        .set_index(["canon", "role_cod"])
+    )
+    reaction_cases = (
+        tables["reac"][["pt_norm", "primaryid"]]
+        .drop_duplicates()
+        .sort_values(["pt_norm", "primaryid"])
+        .set_index("pt_norm")
+    )
+
+    return {
+        "quarter_cases": demo_quarters,
+        "drug_cases": drug_cases,
+        "drug_role_cases": drug_role_cases,
+        "reaction_cases": reaction_cases,
+    }
+
+
 @st.cache_data(show_spinner=False)
 def get_all_reaction_terms() -> list[str]:
     """All unique MedDRA PTs present in the FAERS data, sorted."""
@@ -133,6 +186,21 @@ def get_quarters() -> list[str]:
 @st.cache_data(show_spinner=False)
 def get_n_total() -> int:
     return len(load_tables()["demo"])
+
+
+@st.cache_data(show_spinner=False)
+def get_dataset_profile() -> dict[str, str | int]:
+    demo = load_tables()["demo"]
+    quarters = sorted(demo["quarter"].dropna().unique().tolist())
+    mode = "Recent sample" if os.path.basename(os.path.normpath(_PARQUET_DIR)) == "parquet_recent" else "Full history"
+    return {
+        "mode": mode,
+        "parquet_dir": _PARQUET_DIR,
+        "cache_dir": _CACHE_DIR,
+        "quarter_start": quarters[0] if quarters else "Unknown",
+        "quarter_end": quarters[-1] if quarters else "Unknown",
+        "n_quarters": len(quarters),
+    }
 
 
 # ── Pre-computed cache tables ─────────────────────────────────────────────────
@@ -189,6 +257,7 @@ _warm_started: bool = False
 def warm_all_tables() -> None:
     """Call every cache_resource loader so data is in memory before any user arrives."""
     load_tables()
+    load_lookup_tables()
     load_prr_table()
     load_drug_summary()
     load_reac_summary()

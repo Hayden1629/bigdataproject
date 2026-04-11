@@ -29,8 +29,24 @@ import pandas as pd
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 HERE         = os.path.dirname(os.path.abspath(__file__))
-PARQUET_DIR  = os.path.abspath(os.path.join(HERE, "..", "data", "parquet_recent"))
-CACHE_DIR    = os.path.join(HERE, "cache")
+
+
+def _default_cache_dir(parquet_dir: str) -> str:
+    base = os.path.basename(os.path.normpath(parquet_dir))
+    if base == "parquet_recent":
+        cache_name = "cache_recent"
+    elif base == "parquet":
+        cache_name = "cache_full"
+    else:
+        cache_name = f"cache_{base}"
+    return os.path.join(HERE, cache_name)
+
+
+PARQUET_DIR  = os.environ.get(
+    "FAERS_PARQUET_DIR",
+    os.path.abspath(os.path.join(HERE, "..", "data", "parquet_recent")),
+)
+CACHE_DIR    = os.environ.get("FAERS_CACHE_DIR", _default_cache_dir(PARQUET_DIR))
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 TOP_DRUGS    = 500   # compute PRR for the N most-reported drugs
