@@ -17,6 +17,7 @@ python3 utils/run_dashboard.py --mode recent
 Open `http://localhost:8501` in your browser.
 
 > **Prerequisite:** a parquet dataset and matching cache must be built first. See [Setup](#setup) below.
+> For a Spark-oriented deployment on Databricks, see [DATABRICKS_DEPLOYMENT.md](/Users/hayden/coderepos_mac_mini/bigdataproject/DATABRICKS_DEPLOYMENT.md).
 
 ---
 
@@ -40,6 +41,12 @@ The dashboard answers questions like:
 ## Tab-by-Tab Guide
 
 The app has **five tabs**: Overview · Drug Explorer · Drug Comparison · Signal Intelligence · Reaction Explorer.
+
+The code is now organized as:
+- `app.py` for app composition only
+- `ui.py` for shared theme and chart helpers
+- `sidebar.py` for global filters
+- `views/` for tab-specific renderers
 
 **Sidebar filters** (visible on all tabs):
 - **Quarters** — multi-select to include/exclude specific quarters

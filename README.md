@@ -22,7 +22,7 @@ python3 utils/run_dashboard.py --mode recent
 
 Open `http://localhost:8501`.
 
-> For the full setup walkthrough (downloading raw FAERS data, Docker, cloud deployment), see **[dashboard/GUIDE.md](dashboard/GUIDE.md)**.
+> For the full setup walkthrough, see **[dashboard/GUIDE.md](dashboard/GUIDE.md)**. For Databricks + Spark deployment, see **[DATABRICKS_DEPLOYMENT.md](DATABRICKS_DEPLOYMENT.md)**.
 
 ---
 
@@ -87,7 +87,7 @@ python3 utils/run_dashboard.py --mode full
 bigdataproject/
 ├── README.md
 ├── dashboard/                   # Dashboard application (run from here)
-│   ├── app.py                   # Main Streamlit app — 5 tabs
+│   ├── app.py                   # Thin Streamlit entrypoint
 │   ├── queries.py               # Cached query layer backed by indexed case lookups
 │   ├── data_loader.py           # FAERS loading, deduplication, and reusable lookup tables
 │   ├── analytics.py             # Pure pandas KPIs and aggregations
@@ -101,6 +101,9 @@ bigdataproject/
 │   ├── Dockerfile
 │   ├── docker-compose.yml
 │   ├── GUIDE.md                 # Full developer and user guide
+│   ├── ui.py                    # Shared styling, UI helpers, and chart builders
+│   ├── sidebar.py               # Global filter/sidebar renderer
+│   ├── views/                   # One module per dashboard tab
 │   ├── .streamlit/config.toml   # Streamlit settings
 │   ├── cache_recent/            # Cache for recent parquet dataset
 │   └── cache_full/              # Cache for full parquet dataset
@@ -113,6 +116,7 @@ bigdataproject/
 │   ├── STARTHERE.py             # Build recent/full parquet datasets
 │   └── run_dashboard.py         # Launch dashboard with matching env vars
 ├── rubric_and_plan/             # Assignment materials
+├── DATABRICKS_DEPLOYMENT.md     # Databricks + Spark deployment guide
 ├── DATA_DICTIONARY.md           # FAERS column definitions
 └── flier/                       # Project flier
 ```
