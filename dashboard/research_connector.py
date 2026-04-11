@@ -5,6 +5,9 @@ Live connectors for external research databases:
   - ClinicalTrials.gov v2 API  (https://clinicaltrials.gov/api/v2/studies)
   - NCBI PubMed eutils          (https://eutils.ncbi.nlm.nih.gov/entrez/eutils/)
   - openFDA Drugs@FDA           (https://api.fda.gov/drug/drugsfda.json)
+  - NLM RxClass API             (https://rxnav.nlm.nih.gov/REST/rxclass/)
+  - openFDA Drug Label API      (https://api.fda.gov/drug/label.json)
+  - openFDA Drug Enforcement    (https://api.fda.gov/drug/enforcement.json)
 
 All endpoints are public and require no API key.
 Results are cached via Streamlit's @st.cache_data (TTL: 1 hour).
@@ -16,10 +19,13 @@ import streamlit as st
 import requests
 import pandas as pd
 
-CTGOV_BASE    = "https://clinicaltrials.gov/api/v2/studies"
-PUBMED_SEARCH = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
-PUBMED_SUMMARY = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+CTGOV_BASE       = "https://clinicaltrials.gov/api/v2/studies"
+PUBMED_SEARCH    = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+PUBMED_SUMMARY   = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
 OPENFDA_DRUGSFDA = "https://api.fda.gov/drug/drugsfda.json"
+OPENFDA_LABEL    = "https://api.fda.gov/drug/label.json"
+OPENFDA_ENFORCE  = "https://api.fda.gov/drug/enforcement.json"
+RXCLASS_BASE     = "https://rxnav.nlm.nih.gov/REST/rxclass"
 
 _REQUEST_TIMEOUT = 12
 
@@ -292,3 +298,157 @@ def _parse_fda_result(r: dict) -> dict:
         "fda_url": f"https://www.accessdata.fda.gov/scripts/cder/daf/index.cfm"
                    f"?event=overview.process&ApplNo={app_num[3:].lstrip('0')}",
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NLM RxClass — therapeutic drug classification (ATC, VA, MeSH)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=86400, show_spinner=False)
+def get_drug_class(rxcui: str) -> list[dict]:
+    """
+    Fetch therapeutic classifications for a drug via the NLM RxClass API.
+
+    Uses ATC (WHO Anatomical Therapeutic Chemical) and VA (Veterans Affairs)
+    class systems.  Returns a list of dicts, each with:
+        class_id, class_name, class_type, source
+
+    Results are cached for 24 hours (class mappings rarely change).
+    Returns an empty list on error or unknown RxCUI.
+    """
+    if not rxcui:
+        return []
+
+    results: list[dict] = []
+    for source in ("ATC", "VA"):
+        try:
+            resp = requests.get(
+                f"{RXCLASS_BASE}/class/byRxcui.json",
+                params={"rxcui": rxcui, "relaSource": source},
+                timeout=_REQUEST_TIMEOUT,
+            )
+            if resp.status_code != 200:
+                continue
+            data = resp.json()
+            classes = (
+                data.get("rxclassDrugInfoList", {})
+                    .get("rxclassDrugInfo", [])
+            )
+            for c in classes:
+                info = c.get("rxclassMinConceptItem", {})
+                results.append({
+                    "class_id":   info.get("classId", ""),
+                    "class_name": info.get("className", ""),
+                    "class_type": info.get("classType", ""),
+                    "source":     source,
+                })
+        except Exception:
+            continue
+
+    # Deduplicate by class_name
+    seen: set[str] = set()
+    unique: list[dict] = []
+    for r in results:
+        if r["class_name"] not in seen:
+            seen.add(r["class_name"])
+            unique.append(r)
+    return unique
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# openFDA Drug Label — boxed warnings and key safety sections
+# ─────────────────────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=86400, show_spinner=False)
+def get_drug_label(drug_name: str) -> dict:
+    """
+    Fetch structured product label data from openFDA for a drug.
+
+    Returns a dict with keys (all may be empty strings):
+        boxed_warning, warnings, indications, contraindications,
+        brand_name, generic_name, manufacturer
+
+    Tries brand name then generic name search.
+    Results are cached for 24 hours. Returns empty dict on error.
+    """
+    empty: dict = {
+        "boxed_warning": "", "warnings": "", "indications": "",
+        "contraindications": "", "brand_name": "", "generic_name": "",
+        "manufacturer": "",
+    }
+
+    def _first(lst: list) -> str:
+        return lst[0].strip() if lst else ""
+
+    for field in ("openfda.brand_name", "openfda.generic_name", "openfda.substance_name"):
+        try:
+            resp = requests.get(
+                OPENFDA_LABEL,
+                params={"search": f'{field}:"{drug_name}"', "limit": 1},
+                timeout=_REQUEST_TIMEOUT,
+            )
+            if resp.status_code != 200:
+                continue
+            results = resp.json().get("results", [])
+            if not results:
+                continue
+            r = results[0]
+            openfda = r.get("openfda", {})
+            return {
+                "boxed_warning":   _first(r.get("boxed_warning", [])),
+                "warnings":        _first(r.get("warnings", [])),
+                "indications":     _first(r.get("indications_and_usage", [])),
+                "contraindications": _first(r.get("contraindications", [])),
+                "brand_name":      _first(openfda.get("brand_name", [])),
+                "generic_name":    _first(openfda.get("generic_name", [])),
+                "manufacturer":    _first(openfda.get("manufacturer_name", [])),
+            }
+        except Exception:
+            continue
+    return empty
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# openFDA Drug Enforcement — recalls and enforcement actions
+# ─────────────────────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_drug_enforcement(drug_name: str, limit: int = 5) -> list[dict]:
+    """
+    Search openFDA Drug Enforcement database for recall/enforcement actions.
+
+    Returns a list of dicts, each with:
+        recall_number, status, recalling_firm, reason_for_recall,
+        product_description, classification, recall_initiation_date, termination_date
+
+    Classification: Class I (most serious) → Class III (least serious).
+    Results are cached for 1 hour. Returns empty list on error.
+    """
+    try:
+        resp = requests.get(
+            OPENFDA_ENFORCE,
+            params={
+                "search": f'product_description:"{drug_name}"',
+                "limit":  limit,
+                "sort":   "recall_initiation_date:desc",
+            },
+            timeout=_REQUEST_TIMEOUT,
+        )
+        if resp.status_code != 200:
+            return []
+        results = resp.json().get("results", [])
+        return [
+            {
+                "recall_number":         r.get("recall_number", ""),
+                "status":                r.get("status", ""),
+                "recalling_firm":        r.get("recalling_firm", ""),
+                "reason_for_recall":     r.get("reason_for_recall", "")[:200],
+                "product_description":   r.get("product_description", "")[:120],
+                "classification":        r.get("classification", ""),
+                "recall_initiation_date":r.get("recall_initiation_date", ""),
+                "termination_date":      r.get("termination_date", ""),
+            }
+            for r in results
+        ]
+    except Exception:
+        return []

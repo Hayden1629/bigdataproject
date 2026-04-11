@@ -57,6 +57,25 @@ def load_tables() -> dict[str, pd.DataFrame]:
         pd.to_numeric(demo["caseversion"], errors="coerce").fillna(0).astype(int)
     )
     demo = demo.sort_values("caseversion").drop_duplicates("caseid", keep="last")
+
+    # ── Derive synthetic columns if not present (test fixtures may omit them) ──
+    # age_grp: bucket numeric age into MedDRA age groups
+    if "age_grp" not in demo.columns:
+        age = pd.to_numeric(demo.get("age", pd.Series(dtype=float)), errors="coerce")
+        demo["age_grp"] = pd.cut(
+            age,
+            bins=[-1, 1, 11, 17, 64, 150],
+            labels=["N", "I", "C", "A", "E"],
+        ).astype(str).replace("nan", pd.NA)
+
+    # occp_cod: fall back to reporter_type when present
+    if "occp_cod" not in demo.columns:
+        demo["occp_cod"] = demo.get("reporter_type", pd.Series("OT", index=demo.index))
+
+    # reporter_country: fall back to occr_country when present
+    if "reporter_country" not in demo.columns:
+        demo["reporter_country"] = demo.get("occr_country", pd.Series("", index=demo.index))
+
     tables["demo"] = demo
 
     # ── Filter all other tables to deduplicated primaryids ────────────────────
@@ -69,12 +88,25 @@ def load_tables() -> dict[str, pd.DataFrame]:
     drug["drugname_norm"] = drug["drugname"].str.upper().str.strip()
     drug["prod_ai_norm"]  = drug["prod_ai"].str.upper().str.strip()
     drug["canon"] = drug["prod_ai_norm"].fillna(drug["drugname_norm"])
+    # Propagate quarter from demo so quarter-filter helpers work on the drug table
+    if "quarter" not in drug.columns:
+        drug = drug.merge(demo[["primaryid", "quarter"]], on="primaryid", how="left")
     tables["drug"] = drug
 
     # ── Normalise reaction PTs ─────────────────────────────────────────────────
     reac = tables["reac"].copy()
     reac["pt_norm"] = reac["pt"].str.strip().str.title()
+    # Propagate quarter from demo so quarter-filter helpers work on the reac table
+    if "quarter" not in reac.columns:
+        reac = reac.merge(demo[["primaryid", "quarter"]], on="primaryid", how="left")
     tables["reac"] = reac
+
+    # ── Propagate quarter to auxiliary tables (indi, rpsr, ther) ──────────────
+    _pid_quarter = demo[["primaryid", "quarter"]]
+    for _tbl in ["indi", "rpsr", "ther"]:
+        _t = tables[_tbl]
+        if "quarter" not in _t.columns:
+            tables[_tbl] = _t.merge(_pid_quarter, on="primaryid", how="left")
 
     return tables
 
