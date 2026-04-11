@@ -1,0 +1,56 @@
+Team 11 : Adverse Drug Event Analysis Using FDA FAERS Data [Approved]
+Members: Amogha Yalgi, Austin Ganje, Hannah Huang, Hayden Herstrom, Rachel Le 
+
+Abstract:
+Healthcare providers and regulators need to identify emerging patterns in adverse drug events, including unexpected drug interactions and side-effect trends. The FDA Adverse Event Reporting System (FAERS) contains millions of voluntary reports, but the data is messy, inconsistent, and partially unstructured, making large-scale analysis a challenge. In total about 31 million reports, about 250,000 added per quarter. 
+Business Value: An analyst-facing application that flags high-risk drug-event patterns
+Navigable UI for the FAERS database
+Beneficial for manufacturers, learn about competitors adverse events
+Outlier detection
+Semantic search for non clinically trained (searching headache returns results for Cephalalgia, migraine, etc)
+Pipeline: 
+Ingest quarterly FAERS files → clean and deduplicate in Spark → standardize drug and reaction terms → feature key ingredients, compute risk scoring → assign warning levels + alert anomaly (unique adverse effects) → surface results in a Streamlit dashboard
+DataSet sources: DA FAERS public quarterly data extracts (available at FDA FAERS)
+Each quarter contains reports across multiple relational files (demographics, drugs, reactions, outcomes, therapy dates). Total dataset spans 2004-present and is roughly 15GB.
+Tools/Technology used:
+Databricks and Spark (data cleaning, dedup, aggregation)
+Python for analysis and visualization, optional vector store
+LLM for the text normalization and summarization layer. Because FAERS is updated quarterly, streaming is not needed, but lots of compute is
+Streamlit for presentation layer (UI)
+Generative/Agentic AI used:
+Use an LLM to:
+Normalize messy free-text drug names to standardized identifiers
+Summarize clusters of related adverse events into human-readable safety signals
+Generate reviewer-facing explanations of why a case or signal was flagged
+GitHub URL: https://github.com/Hayden1629/bigdataproject 
+
+
+Task breakdown:
+Hayden & Austin: Dashboard Design
+Amogha: How to get data to Databricks + have everyone in a shared environment
+Rachel: Look into MedXN (mapping tool) + RxNorm 
+Hannah: Look into Gemma4 or other LLM to see if we could implement LLM into normalization instead
+
+Decide which quarters to use (2023, 2024)
+Start with latest two years, after finished perhaps scale to full
+Figure out how to get the data on databricks table
+Data storage format
+Decide which LLM for drug name normalization
+Is there any model accessible within Databricks free version
+We could use local Gemma4 or use api (openrouter)
+Dashboard search bar: Find drug name target + reaction term vocab 
+LLM? RxNorm? MedDrug
+MedDRA PTs
+Semantic Search for Reaction Terms
+Vector database
+When you type in drug/reaction terms, what charts are shown?
+Deaths reported
+Recent 
+Decide confidence threshold
+Dashboard scope
+FAERS Dashboard
+https://www.fda.gov/drugs/fda-adverse-event-monitoring-system-aems/fda-adverse-event-monitoring-system-aems-public-dashboard
+Click on the blue button in middle of page
+Presentation Day Deliverables
+1-page summary
+Presentation (posterboard or slide show)
