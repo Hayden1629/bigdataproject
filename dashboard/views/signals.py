@@ -5,6 +5,9 @@ import streamlit as st
 import data_loader as dl
 import signal_detection as sd
 from ui import add_prr_ci, kpi_card, prr_scatter, sec
+from logger import get_logger
+
+log = get_logger(__name__)
 
 
 def render() -> None:
@@ -30,6 +33,8 @@ def render() -> None:
     if pt_txt:
         mask = mask & prr_global["pt"].str.contains(pt_txt, na=False, case=False, regex=False)
     filtered = prr_global[mask].sort_values(["chi2", "N_DR"], ascending=[False, False])
+    log.info("Signal Intelligence: levels=%s  min_n=%d  drug_filter=%r  pt_filter=%r  → %d signals",
+             sig_levels, min_n_sig, drug_txt or None, pt_txt or None, len(filtered))
 
     sc = sd.signal_counts()
     sig_k = "".join(

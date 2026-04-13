@@ -15,8 +15,12 @@ shows a soft "unavailable" message.
 from __future__ import annotations
 
 import os
+import time
 import streamlit as st
 import pandas as pd
+from logger import get_logger
+
+log = get_logger(__name__)
 
 _PROMPT_TEMPLATE = (
     "You are a pharmacovigilance analyst summarising FDA FAERS adverse event signals.\n\n"
@@ -56,6 +60,8 @@ def interpret_signals(
     # ── 1. Try Anthropic ──────────────────────────────────────────────────────
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if anthropic_key:
+        log.info("interpret_signals: using Anthropic Claude Haiku for %r", drug_name)
+        t0 = time.perf_counter()
         try:
             import anthropic
             client = anthropic.Anthropic(api_key=anthropic_key)
@@ -64,13 +70,18 @@ def interpret_signals(
                 max_tokens=400,
                 messages=[{"role": "user", "content": prompt}],
             )
+            log.info("interpret_signals: Anthropic response for %r  (%.2fs)", drug_name, time.perf_counter() - t0)
             return resp.content[0].text.strip()
-        except Exception:
-            pass
+        except Exception as exc:
+            log.warning("interpret_signals: Anthropic failed for %r: %s", drug_name, exc)
+    else:
+        log.debug("interpret_signals: ANTHROPIC_API_KEY not set")
 
     # ── 2. Try Groq (free tier — llama-3.1-8b-instant) ───────────────────────
     groq_key = os.environ.get("GROQ_API_KEY", "")
     if groq_key:
+        log.info("interpret_signals: falling back to Groq Llama for %r", drug_name)
+        t0 = time.perf_counter()
         try:
             from groq import Groq
             client = Groq(api_key=groq_key)
@@ -79,8 +90,12 @@ def interpret_signals(
                 max_tokens=400,
                 messages=[{"role": "user", "content": prompt}],
             )
+            log.info("interpret_signals: Groq response for %r  (%.2fs)", drug_name, time.perf_counter() - t0)
             return resp.choices[0].message.content.strip()
-        except Exception:
-            pass
+        except Exception as exc:
+            log.warning("interpret_signals: Groq failed for %r: %s", drug_name, exc)
+    else:
+        log.debug("interpret_signals: GROQ_API_KEY not set")
 
+    log.warning("interpret_signals: no LLM available — returning empty for %r", drug_name)
     return ""

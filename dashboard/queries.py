@@ -13,6 +13,9 @@ import pandas as pd
 
 import data_loader as dl
 import analytics as ana
+from logger import get_logger
+
+log = get_logger(__name__)
 
 # ISO-3166-1 alpha-2 → country name (top FAERS countries)
 ISO2_NAMES: dict[str, str] = {
@@ -125,16 +128,18 @@ def _reaction_case_ids(pts_key: str, quarters_key: str) -> set[int]:
 
 @st.cache_data(show_spinner=False)
 def drug_kpis(names_key: str, role: str, quarters_key: str) -> dict:
+    log.info("drug_kpis: names=%r  role=%s  quarters=%s", names_key[:60], role, quarters_key[:40])
     tables = dl.load_tables()
     case_ids = _drug_case_ids(names_key, role, quarters_key)
     n_cases = len(case_ids)
     if n_cases == 0:
+        log.warning("drug_kpis: 0 cases matched for names=%r", names_key[:60])
         return {"n_cases": 0, "n_deaths": 0, "n_hosp": 0, "n_lt": 0, "n_serious": 0, "death_pct": 0.0}
 
     outc_sub = tables["outc"][tables["outc"]["primaryid"].isin(case_ids)]
     vc = outc_sub["outc_cod"].value_counts()
     n_deaths = int(vc.get("DE", 0))
-    return {
+    result = {
         "n_cases": n_cases,
         "n_deaths": n_deaths,
         "n_hosp": int(vc.get("HO", 0)),
@@ -142,6 +147,9 @@ def drug_kpis(names_key: str, role: str, quarters_key: str) -> dict:
         "n_serious": int(outc_sub["primaryid"].nunique()),
         "death_pct": round(n_deaths / n_cases * 100, 2),
     }
+    log.info("drug_kpis: %s cases, %s deaths (%.1f%%), %s hosp",
+             f"{n_cases:,}", f"{n_deaths:,}", result["death_pct"], f"{result['n_hosp']:,}")
+    return result
 
 
 @st.cache_data(show_spinner=False)
@@ -275,19 +283,23 @@ def drug_concomitants(names_key: str, role: str, quarters_key: str, top_n: int =
 
 @st.cache_data(show_spinner=False)
 def reaction_kpis(pts_key: str, quarters_key: str) -> dict:
+    log.info("reaction_kpis: pts=%r  quarters=%s", pts_key[:80], quarters_key[:40])
     tables = dl.load_tables()
     case_ids = _reaction_case_ids(pts_key, quarters_key)
     n_cases = len(case_ids)
     if n_cases == 0:
+        log.warning("reaction_kpis: 0 cases matched for pts=%r", pts_key[:80])
         return {"n_cases": 0, "n_deaths": 0, "n_serious": 0}
 
     outc_sub = tables["outc"][tables["outc"]["primaryid"].isin(case_ids)]
     vc = outc_sub["outc_cod"].value_counts()
-    return {
+    result = {
         "n_cases": n_cases,
         "n_deaths": int(vc.get("DE", 0)),
         "n_serious": int(outc_sub["primaryid"].nunique()),
     }
+    log.info("reaction_kpis: %s cases, %s deaths", f"{n_cases:,}", f"{result['n_deaths']:,}")
+    return result
 
 
 @st.cache_data(show_spinner=False)
@@ -347,6 +359,7 @@ def reaction_trend(pts_key: str, quarters_key: str) -> pd.DataFrame:
 
 @st.cache_data(show_spinner=False)
 def global_kpis() -> dict:
+    log.info("global_kpis: computing...")
     tables = dl.load_tables()
     demo   = tables["demo"]
     outc   = tables["outc"]
@@ -360,7 +373,7 @@ def global_kpis() -> dict:
     hosp     = int((outc["outc_cod"] == "HO").sum())
     lt       = int((outc["outc_cod"] == "LT").sum())
 
-    return {
+    result = {
         "n_cases":  n_cases,
         "n_deaths": n_deaths,
         "n_drugs":  n_drugs,
@@ -368,6 +381,9 @@ def global_kpis() -> dict:
         "n_hosp":   hosp,
         "n_lt":     lt,
     }
+    log.info("global_kpis: %s cases  %s deaths  %s drugs  %s PTs",
+             f"{n_cases:,}", f"{n_deaths:,}", f"{n_drugs:,}", f"{n_pts:,}")
+    return result
 
 
 @st.cache_data(show_spinner=False)
@@ -494,6 +510,8 @@ def global_country_choropleth() -> pd.DataFrame:
 @st.cache_data(show_spinner=False)
 def drug_comparison_kpis(names_key_a: str, names_key_b: str, role: str) -> tuple[dict, dict]:
     """Return KPI dicts for two drugs."""
+    log.info("drug_comparison_kpis: A=%r  B=%r  role=%s",
+             names_key_a[:40], names_key_b[:40], role)
     tables  = dl.load_tables()
     drug    = tables["drug"]
     outc    = tables["outc"]

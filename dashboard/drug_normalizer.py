@@ -14,8 +14,20 @@ Flow:
 import re
 import time
 import requests
-import streamlit as st
+from api_cache import disk_cache
+
+try:
+    import streamlit as st
+except ImportError:
+    from types import SimpleNamespace
+    def _noop(*args, **kwargs):
+        return args[0] if args and callable(args[0]) else (lambda f: f)
+    st = SimpleNamespace(cache_resource=_noop, cache_data=_noop)
+
 from rapidfuzz import process, fuzz
+from logger import get_logger
+
+log = get_logger(__name__)
 
 RXNORM_BASE = "https://rxnav.nlm.nih.gov/REST"
 _SESSION = requests.Session()
@@ -32,6 +44,7 @@ def _rxnorm_get(path: str, params: dict | None = None) -> dict:
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
+@disk_cache(ttl=86400)
 def rxnorm_lookup(drug_name: str) -> dict:
     """
     Return a dict with:
@@ -39,6 +52,8 @@ def rxnorm_lookup(drug_name: str) -> dict:
       canonical   - canonical RxNorm name for the RxCUI
       related     - list of related names (brands, generics, ingredients)
     """
+    t0 = time.perf_counter()
+    log.info("RxNorm lookup: %r", drug_name)
     result = {"rxcui": None, "canonical": None, "related": []}
 
     # Step 1: find RxCUI
@@ -54,12 +69,15 @@ def rxnorm_lookup(drug_name: str) -> dict:
                 if prop.get("rxcui"):
                     rxcuis.append((prop["rxcui"], prop.get("name", "")))
         if not rxcuis:
+            log.warning("RxNorm: no RxCUI found for %r", drug_name)
             return result
         # prefer the first ingredient-level hit
         rxcui, canonical = rxcuis[0]
         result["rxcui"] = rxcui
         result["canonical"] = canonical
-    except Exception:
+        log.debug("RxNorm: %r → RxCUI=%s canonical=%r", drug_name, rxcui, canonical)
+    except Exception as exc:
+        log.warning("RxNorm lookup failed for %r: %s", drug_name, exc)
         return result
 
     # Step 2: related names (BN=brand names, IN=ingredients, SBD=semantic branded drugs)
@@ -76,8 +94,9 @@ def rxnorm_lookup(drug_name: str) -> dict:
                 if name:
                     related_names.append(name.upper().strip())
         result["related"] = list(set(related_names))
-    except Exception:
-        pass
+        log.debug("RxNorm: %r → %d related names  (%.2fs)", drug_name, len(result["related"]), time.perf_counter() - t0)
+    except Exception as exc:
+        log.warning("RxNorm related lookup failed for RxCUI=%s: %s", rxcui, exc)
 
     return result
 
@@ -127,12 +146,16 @@ def find_faers_names(
       2. Exact / substring match those against FAERS names
       3. Fuzzy fallback for the original search term
     """
+    import time
+    t0 = time.perf_counter()
+    log.info("find_faers_names: searching for %r", search_term)
     search_up = search_term.upper().strip()
 
     # All unique FAERS drug name strings — filtered to valid names only
     faers_names_drug = set(drug_df["drugname_norm"].dropna().unique())
     faers_names_prod = set(drug_df["prod_ai_norm"].dropna().unique())
     all_faers = {n for n in (faers_names_drug | faers_names_prod) if _is_valid_drug_name(n)}
+    log.debug("FAERS name universe: %d unique names", len(all_faers))
 
     matched: set[str] = set()
 
@@ -140,6 +163,7 @@ def find_faers_names(
     for n in all_faers:
         if search_up in n or n in search_up:
             matched.add(n)
+    log.debug("Substring match: %d hits for %r", len(matched), search_up)
 
     # 2. RxNorm related names
     rxn = rxnorm_lookup(search_term)
@@ -147,14 +171,17 @@ def find_faers_names(
     rxnorm_names.update(rxn.get("related", []))
     rxnorm_names = {_tokenise(n) for n in rxnorm_names if n}
 
+    before_rxn = len(matched)
     for faers_name in all_faers:
         faers_tok = _tokenise(faers_name)
         for rxn_name in rxnorm_names:
             if rxn_name and (rxn_name in faers_tok or faers_tok in rxn_name):
                 matched.add(faers_name)
+    log.debug("RxNorm match: +%d hits (%d RxNorm names checked)", len(matched) - before_rxn, len(rxnorm_names))
 
     # 3. Fuzzy fallback on search term (catches misspellings)
     if not matched:
+        log.debug("No exact/RxNorm matches — falling back to fuzzy matching (threshold=%d)", fuzzy_threshold)
         hits = process.extract(
             search_up,
             list(all_faers),
@@ -163,8 +190,15 @@ def find_faers_names(
             score_cutoff=fuzzy_threshold,
         )
         matched.update(name for name, _, _ in hits)
+        log.debug("Fuzzy fallback: %d hits", len(matched))
 
-    return sorted(matched)
+    result = sorted(matched)
+    if result:
+        log.info("find_faers_names: %r → %d FAERS names  (%.2fs)  e.g. %s",
+                 search_term, len(result), time.perf_counter() - t0, result[:3])
+    else:
+        log.warning("find_faers_names: no FAERS matches for %r  (%.2fs)", search_term, time.perf_counter() - t0)
+    return result
 
 
 def filter_drug_df(drug_df, matched_names: list[str]):

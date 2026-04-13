@@ -29,11 +29,26 @@ def _paths_for_mode(mode: str) -> tuple[str, str]:
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the FAERS dashboard with recent or full data.")
     parser.add_argument("--mode", choices=["recent", "full"], default="recent")
+    parser.add_argument("--test", action="store_true", help="Run the test suite before launching the dashboard.")
     return parser.parse_args()
+
+
+def _run_tests() -> None:
+    tests_dir = os.path.join(PROJECT_ROOT, "dashboard", "tests")
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", tests_dir, "-v"],
+        check=False,
+    )
+    if result.returncode != 0:
+        raise SystemExit("Tests failed — dashboard not started. Fix failing tests and retry.")
 
 
 def main() -> None:
     args = _parse_args()
+
+    if args.test:
+        _run_tests()
+
     parquet_dir, cache_dir = _paths_for_mode(args.mode)
 
     env = os.environ.copy()

@@ -19,7 +19,18 @@ from __future__ import annotations
 
 import os
 import pandas as pd
-import streamlit as st
+
+try:
+    import streamlit as st
+except ImportError:
+    from types import SimpleNamespace
+    def _noop(*args, **kwargs):
+        return args[0] if args and callable(args[0]) else (lambda f: f)
+    st = SimpleNamespace(cache_resource=_noop, cache_data=_noop)
+
+from logger import get_logger
+
+log = get_logger(__name__)
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -57,17 +68,26 @@ def load_tables() -> dict[str, pd.DataFrame]:
     Uses cache_resource so the large DataFrames are shared across all user
     sessions rather than copied per-session (cache_data behaviour).
     """
+    import time
+    t0 = time.perf_counter()
+    log.info("Loading FAERS parquet tables from %s", _PARQUET_DIR)
+
     tables: dict[str, pd.DataFrame] = {}
     for name in TABLE_NAMES:
         path = os.path.join(_PARQUET_DIR, f"{name}.parquet")
+        t1 = time.perf_counter()
         tables[name] = pd.read_parquet(path)
+        log.debug("  Loaded %-6s  %9s rows  (%.2fs)", name, f"{len(tables[name]):,}", time.perf_counter() - t1)
 
     # ── Deduplicate demo ───────────────────────────────────────────────────────
     demo = tables["demo"].copy()
+    before_dedup = len(demo)
     demo["caseversion"] = (
         pd.to_numeric(demo["caseversion"], errors="coerce").fillna(0).astype(int)
     )
     demo = demo.sort_values("caseversion").drop_duplicates("caseid", keep="last")
+    log.info("demo dedup: %s → %s rows (removed %s duplicates)",
+             f"{before_dedup:,}", f"{len(demo):,}", f"{before_dedup - len(demo):,}")
 
     # ── Derive synthetic columns if not present (test fixtures may omit them) ──
     # age_grp: bucket numeric age into MedDRA age groups
@@ -92,7 +112,9 @@ def load_tables() -> dict[str, pd.DataFrame]:
     # ── Filter all other tables to deduplicated primaryids ────────────────────
     valid_pids = set(demo["primaryid"].unique())
     for name in ["drug", "reac", "outc", "rpsr", "ther", "indi"]:
+        before = len(tables[name])
         tables[name] = tables[name][tables[name]["primaryid"].isin(valid_pids)].copy()
+        log.debug("  Filtered %-6s  %s → %s rows", name, f"{before:,}", f"{len(tables[name]):,}")
 
     # ── Normalise drug names ───────────────────────────────────────────────────
     drug = tables["drug"].copy()
@@ -119,6 +141,9 @@ def load_tables() -> dict[str, pd.DataFrame]:
         if "quarter" not in _t.columns:
             tables[_tbl] = _t.merge(_pid_quarter, on="primaryid", how="left")
 
+    log.info("load_tables complete: %s cases, %s drug rows, %s reaction rows  (%.2fs total)",
+             f"{len(tables['demo']):,}", f"{len(tables['drug']):,}", f"{len(tables['reac']):,}",
+             time.perf_counter() - t0)
     return tables
 
 
@@ -129,6 +154,9 @@ def load_lookup_tables() -> dict[str, pd.DataFrame]:
     These tables trade a small amount of startup work for much faster repeated
     dashboard interactions by avoiding full scans of the large source tables.
     """
+    import time
+    t0 = time.perf_counter()
+    log.info("Building lookup tables...")
     tables = load_tables()
 
     demo_quarters = (
@@ -156,12 +184,16 @@ def load_lookup_tables() -> dict[str, pd.DataFrame]:
         .set_index("pt_norm")
     )
 
-    return {
+    result = {
         "quarter_cases": demo_quarters,
         "drug_cases": drug_cases,
         "drug_role_cases": drug_role_cases,
         "reaction_cases": reaction_cases,
     }
+    log.info("Lookup tables ready: %s quarters, %s drug entries, %s reaction entries  (%.2fs)",
+             len(demo_quarters.index.unique()), len(drug_cases), len(reaction_cases),
+             time.perf_counter() - t0)
+    return result
 
 
 @st.cache_data(show_spinner=False)
@@ -206,44 +238,38 @@ def get_dataset_profile() -> dict[str, str | int]:
 # ── Pre-computed cache tables ─────────────────────────────────────────────────
 # Also cache_resource: these are large parquet files loaded once and shared.
 
+def _load_cache_parquet(name: str, path: str) -> pd.DataFrame | None:
+    if os.path.exists(path):
+        df = pd.read_parquet(path)
+        log.info("Loaded cache table %-20s  %s rows", name, f"{len(df):,}")
+        return df
+    log.warning("Cache table not found: %s  (run precompute.py to build it)", path)
+    return None
+
+
 @st.cache_resource(show_spinner="Loading signal table…")
 def load_prr_table() -> pd.DataFrame | None:
-    path = os.path.join(_CACHE_DIR, "prr_table.parquet")
-    if os.path.exists(path):
-        return pd.read_parquet(path)
-    return None
+    return _load_cache_parquet("prr_table", os.path.join(_CACHE_DIR, "prr_table.parquet"))
 
 
 @st.cache_resource(show_spinner=False)
 def load_drug_summary() -> pd.DataFrame | None:
-    path = os.path.join(_CACHE_DIR, "drug_summary.parquet")
-    if os.path.exists(path):
-        return pd.read_parquet(path)
-    return None
+    return _load_cache_parquet("drug_summary", os.path.join(_CACHE_DIR, "drug_summary.parquet"))
 
 
 @st.cache_resource(show_spinner=False)
 def load_reac_summary() -> pd.DataFrame | None:
-    path = os.path.join(_CACHE_DIR, "reac_summary.parquet")
-    if os.path.exists(path):
-        return pd.read_parquet(path)
-    return None
+    return _load_cache_parquet("reac_summary", os.path.join(_CACHE_DIR, "reac_summary.parquet"))
 
 
 @st.cache_resource(show_spinner=False)
 def load_quarterly_drug() -> pd.DataFrame | None:
-    path = os.path.join(_CACHE_DIR, "quarterly_drug.parquet")
-    if os.path.exists(path):
-        return pd.read_parquet(path)
-    return None
+    return _load_cache_parquet("quarterly_drug", os.path.join(_CACHE_DIR, "quarterly_drug.parquet"))
 
 
 @st.cache_resource(show_spinner=False)
 def load_quarterly_reac() -> pd.DataFrame | None:
-    path = os.path.join(_CACHE_DIR, "quarterly_reac.parquet")
-    if os.path.exists(path):
-        return pd.read_parquet(path)
-    return None
+    return _load_cache_parquet("quarterly_reac", os.path.join(_CACHE_DIR, "quarterly_reac.parquet"))
 
 
 # ── Background cache warm-up ──────────────────────────────────────────────────
@@ -256,6 +282,9 @@ _warm_started: bool = False
 
 def warm_all_tables() -> None:
     """Call every cache_resource loader so data is in memory before any user arrives."""
+    import time
+    t0 = time.perf_counter()
+    log.info("Background cache warm-up starting...")
     load_tables()
     load_lookup_tables()
     load_prr_table()
@@ -263,3 +292,4 @@ def warm_all_tables() -> None:
     load_reac_summary()
     load_quarterly_drug()
     load_quarterly_reac()
+    log.info("Background cache warm-up complete (%.2fs)", time.perf_counter() - t0)

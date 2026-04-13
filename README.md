@@ -18,6 +18,9 @@ FAERS_PARQUET_DIR=data/parquet_recent FAERS_CACHE_DIR=dashboard/cache_recent pyt
 
 # Launch the dashboard on that dataset
 python3 utils/run_dashboard.py --mode recent
+
+# Run the test suite first, then launch (aborts on failure)
+python3 utils/run_dashboard.py --mode recent --test
 ```
 
 Open `http://localhost:8501`.
@@ -53,7 +56,7 @@ An exploratory pharmacovigilance platform built on deduplicated FDA FAERS advers
 | Literature search | PubMed eutils — real-time, supports MeSH field tags, no key required |
 | Deduplication | Max `caseversion` per `caseid` per FDA guidance |
 | Dataset modes | Run against a smaller recent parquet set for testing or the full parquet history for final analysis |
-| Performance | Pre-computed Parquet cache plus indexed lookup tables to reduce repeated full-table scans during interactive use |
+| Performance | Pre-computed Parquet cache, indexed lookup tables, and persistent disk cache for external API responses (RxNorm, openFDA, ClinicalTrials, PubMed) — repeated drug searches never hit the network after the first lookup |
 | Cloud-ready | Data paths configurable via `FAERS_PARQUET_DIR` / `FAERS_CACHE_DIR` env vars |
 | Containerized | Docker + docker-compose |
 
@@ -92,6 +95,7 @@ bigdataproject/
 │   ├── data_loader.py           # FAERS loading, deduplication, and reusable lookup tables
 │   ├── analytics.py             # Pure pandas KPIs and aggregations
 │   ├── signal_detection.py      # PRR signal retrieval from pre-computed table
+│   ├── api_cache.py             # Persistent disk cache for external API calls
 │   ├── drug_normalizer.py       # RxNorm API + fuzzy drug name matching
 │   ├── reaction_search.py       # Lay-term → MedDRA semantic search
 │   ├── signal_interpreter.py    # Claude Haiku AI signal summaries

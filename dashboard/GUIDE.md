@@ -288,6 +288,7 @@ python3 utils/run_dashboard.py --mode full
 |---|---|---|
 | `@st.cache_resource` | Large DataFrames (FAERS tables, PRR table) | One shared copy across all sessions and reruns. Never re-serialized. |
 | `@st.cache_data` | Derived query results (KPIs, charts, drug lookups) | Per unique set of arguments. Copied via Arrow on access. |
+| `@disk_cache` (`api_cache.py`) | External API responses (RxNorm, openFDA, ClinicalTrials, PubMed) | Pickle files in `cache/api/`. Persists across server restarts so repeated drug lookups never hit the network again. TTL configurable per function (1–24 h). |
 
 ### Background warm-up thread
 
@@ -319,10 +320,11 @@ query time — it only filters and sorts an in-memory DataFrame.
 | `data_loader.py` | Loads all 7 FAERS parquet tables, deduplicates by `caseversion`, normalizes drug names and reaction PTs. Path-configurable via env vars. Provides `warm_all_tables()` and `_warm_started` flag for background pre-loading. |
 | `analytics.py` | Pure pandas computation — no Streamlit state. KPIs, aggregations, trend series, demographic breakdowns, concomitant drugs, indications. |
 | `signal_detection.py` | Query interface over the pre-computed PRR table. `signals_for_drug`, `signals_for_reaction`, `global_top_signals`, `signal_counts`. |
+| `api_cache.py` | Persistent disk cache decorator (`@disk_cache`). Wraps external API calls so results survive server restarts. Stores pickle files under `cache/api/`. |
 | `drug_normalizer.py` | RxNorm REST API lookup for canonical names + RxCUI. Fuzzy matching (RapidFuzz) against FAERS drug name vocabulary. |
 | `reaction_search.py` | Maps plain-English symptoms to MedDRA Preferred Terms via a 128-entry curated synonym map with fuzzy fallback. |
 | `signal_interpreter.py` | LLM-based pharmacovigilance signal summaries. Tries Anthropic Claude Haiku first, then Groq Llama 3.1 as a free fallback. 1-hour cache. Returns empty string if no key is set. |
-| `research_connector.py` | Live REST connectors: ClinicalTrials.gov v2 API, PubMed eutils, and openFDA Drugs@FDA. All unauthenticated. 1-hour cache (24-hour for FDA data). |
+| `research_connector.py` | Live REST connectors: ClinicalTrials.gov v2 API, PubMed eutils, and openFDA Drugs@FDA. All unauthenticated. In-memory cache via `@st.cache_data` (1 h / 24 h) plus persistent disk cache via `@disk_cache`. |
 | `precompute.py` | One-time offline job: PRR/ROR/chi² for top 500 drugs × all 18K MedDRA PTs. Writes 5 parquet files to `cache/`. |
 | `.streamlit/config.toml` | Light theme (FDA blue/white), server settings (headless, maxUpload), fast reruns. |
 
