@@ -24,8 +24,14 @@ Signal criteria:
 
 import os
 import sys
+import time
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from logger import get_logger
+
+log = get_logger(__name__)
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 HERE         = os.path.dirname(os.path.abspath(__file__))
@@ -272,9 +278,15 @@ def build_prr_table(drug_df, reac_df, n_total, top_n=TOP_DRUGS):
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    t_start = time.perf_counter()
+    log.info("precompute starting  parquet=%s  cache=%s", PARQUET_DIR, CACHE_DIR)
+
     demo, drug, reac, outc, n_total = _load_and_dedup()
     build_drug_summary(drug, outc, n_total)
     build_reac_summary(reac, outc)
     build_quarterly_trends(drug, reac)
     build_prr_table(drug, reac, n_total, top_n=TOP_DRUGS)
-    print("\nPrecomputation complete. Cache files saved to claude_test/cache/")
+
+    elapsed = time.perf_counter() - t_start
+    log.info("precompute complete  total=%.1fs  cache=%s", elapsed, CACHE_DIR)
+    print(f"\nPrecomputation complete in {elapsed:.1f}s. Cache files saved to {CACHE_DIR}")

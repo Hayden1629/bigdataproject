@@ -10,6 +10,9 @@ from __future__ import annotations
 
 import pandas as pd
 from data_loader import load_quarterly_drug, load_quarterly_reac
+from logger import get_logger
+
+log = get_logger(__name__)
 
 OUTCOME_LABELS = {
     "DE": "Death",
@@ -122,13 +125,17 @@ def quarterly_trend_for_drug(
         sub = qd[qd["drug"].isin(name_set)]
         if role != "all":
             # Pre-computed table doesn't carry role_cod; fall back
+            log.debug("quarterly_trend_for_drug: role=%r → cache miss, using live fallback", role)
             sub = None
         if sub is not None and not sub.empty:
+            log.debug("quarterly_trend_for_drug: cache hit for %s", list(name_set)[:2])
             trend = sub.groupby("quarter")["n_cases"].sum().reset_index()
             trend.columns = ["quarter", "case_count"]
             if quarter_filter:
                 trend = trend[trend["quarter"].isin(quarter_filter)]
             return trend.sort_values("quarter")
+    else:
+        log.debug("quarterly_trend_for_drug: quarterly_drug cache not available, using live fallback")
 
     # Live fallback
     mask = drug_df["canon"].isin(name_set)
@@ -243,11 +250,14 @@ def quarterly_trend_for_reaction(
     if qr is not None:
         sub = qr[qr["pt"].isin(pt_set)]
         if not sub.empty:
+            log.debug("quarterly_trend_for_reaction: cache hit for %s", list(pt_set)[:2])
             trend = sub.groupby("quarter")["n_cases"].sum().reset_index()
             trend.columns = ["quarter", "case_count"]
             if quarter_filter:
                 trend = trend[trend["quarter"].isin(quarter_filter)]
             return trend.sort_values("quarter")
+    else:
+        log.debug("quarterly_trend_for_reaction: quarterly_reac cache not available, using live fallback")
 
     # Live fallback
     mask = reac_df["pt_norm"].isin(pt_set)

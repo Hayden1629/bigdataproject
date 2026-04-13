@@ -9,6 +9,9 @@ import drug_normalizer as drug_normalizer
 import queries as qr
 import signal_detection as sd
 from ui import C, bar_h, donut, multi_line, sec, theme
+from logger import get_logger
+
+log = get_logger(__name__)
 
 
 def render(*, tables: dict[str, pd.DataFrame], role_cod: str, top_n: int) -> None:
@@ -23,6 +26,9 @@ def render(*, tables: dict[str, pd.DataFrame], role_cod: str, top_n: int) -> Non
         drug_a_query = st.text_input("Drug A", placeholder="e.g. dupilumab, Keytruda, ozempic", key="cmp_drug_a")
     with cmp_c2:
         drug_b_query = st.text_input("Drug B", placeholder="e.g. tralokinumab, pembrolizumab, tirzepatide", key="cmp_drug_b")
+
+    if drug_a_query and drug_b_query:
+        log.info("Drug Comparison: %r vs %r  (role=%s)", drug_a_query, drug_b_query, role_cod)
 
     if not drug_a_query or not drug_b_query:
         sec("Suggested Comparison Pairs")

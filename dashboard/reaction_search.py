@@ -14,6 +14,9 @@ Why not a full MedDRA hierarchy lookup?
 """
 
 from rapidfuzz import process, fuzz
+from logger import get_logger
+
+log = get_logger(__name__)
 
 # ── Lay-term → MedDRA PT synonym map ─────────────────────────────────────────
 # Keys are lowercase plain English; values are MedDRA PTs (title case).
@@ -151,6 +154,10 @@ def search_reactions(
     Returns:
         List of (pt, score) sorted by score descending.
     """
+    import time
+    t0 = time.perf_counter()
+    log.info("Reaction search: %r  (%d PTs in vocabulary)", query, len(all_pts))
+
     query_lower = query.lower().strip()
     query_title = query.title()
     results: dict[str, float] = {}
@@ -161,10 +168,13 @@ def search_reactions(
             for pt in pts:
                 if pt in all_pts:
                     results[pt] = 100.0
+    if results:
+        log.debug("Synonym dict hit for %r: %s", query, list(results.keys()))
 
     # 2. Substring match in the PT vocabulary — tiered scoring
     #    98: exact match  |  95: PT contains query  |  90: query contains PT (partial)
     query_up = query.upper()
+    before_substr = len(results)
     for pt in all_pts:
         pt_up = pt.upper()
         existing = results.get(pt, 0)
@@ -175,9 +185,11 @@ def search_reactions(
                 results[pt] = 95.0
             elif pt_up in query_up:
                 results[pt] = 90.0
+    log.debug("Substring match added %d PTs for %r", len(results) - before_substr, query)
 
     # 3. Fuzzy fallback — use WRatio for better whole-phrase matching,
     #    avoiding false positives from shared single words (e.g. "attack")
+    before_fuzzy = len(results)
     hits = process.extract(
         query_title,
         all_pts,
@@ -188,6 +200,14 @@ def search_reactions(
     for pt, score, _ in hits:
         if pt not in results:
             results[pt] = float(score)
+    log.debug("Fuzzy match added %d PTs for %r", len(results) - before_fuzzy, query)
 
     sorted_results = sorted(results.items(), key=lambda x: -x[1])
-    return sorted_results[:max_results]
+    final = sorted_results[:max_results]
+
+    if final:
+        log.info("Reaction search %r → %d results  top: %s  (%.2fs)",
+                 query, len(final), [pt for pt, _ in final[:3]], time.perf_counter() - t0)
+    else:
+        log.warning("Reaction search %r → no results  (%.2fs)", query, time.perf_counter() - t0)
+    return final

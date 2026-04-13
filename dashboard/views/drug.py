@@ -13,6 +13,9 @@ import research_connector as research_connector
 import signal_detection as sd
 import signal_interpreter as signal_interpreter
 from ui import C, add_prr_ci, badge, bar_h, bar_v, donut, forest_plot, kpi_card, line_trend, sec, summary_note, quarter_delta_text
+from logger import get_logger
+
+log = get_logger(__name__)
 
 
 def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n: int) -> None:
@@ -23,6 +26,9 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
         key="drug_input",
         label_visibility="collapsed",
     )
+
+    if drug_query:
+        log.info("Drug Explorer: user searched for %r  (role=%s, q_key=%s)", drug_query, role_cod, q_key[:40])
 
     if not drug_query:
         st.markdown(
@@ -46,8 +52,10 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
         rxn = drug_normalizer.rxnorm_lookup(drug_query)
         matched = drug_normalizer.find_faers_names(drug_query, tables["drug"])
     if not matched:
+        log.warning("Drug Explorer: no FAERS matches for %r", drug_query)
         st.error(f"No FAERS records found for **{drug_query}**. Try a different spelling, the generic name, or a brand name.")
         return
+    log.info("Drug Explorer: %r → %d FAERS names  canon=%r", drug_query, len(matched), rxn.get("canonical"))
 
     nk = qr._names_key(matched)
     canon = rxn.get("canonical") or drug_query.title()

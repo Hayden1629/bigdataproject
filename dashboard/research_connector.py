@@ -15,9 +15,14 @@ Results are cached via Streamlit's @st.cache_data (TTL: 1 hour).
 
 from __future__ import annotations
 
+import time
 import streamlit as st
 import requests
 import pandas as pd
+from logger import get_logger
+from api_cache import disk_cache
+
+log = get_logger(__name__)
 
 CTGOV_BASE       = "https://clinicaltrials.gov/api/v2/studies"
 PUBMED_SEARCH    = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
@@ -35,6 +40,7 @@ _REQUEST_TIMEOUT = 12
 # ─────────────────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=3600, show_spinner=False)
+@disk_cache(ttl=3600)
 def search_clinical_trials(
     query: str,
     max_results: int = 25,
@@ -70,11 +76,15 @@ def search_clinical_trials(
     if status_filter:
         params["filter.overallStatus"] = status_filter
 
+    log.info("ClinicalTrials search: %r  mode=%s  status=%s", query, search_mode, status_filter)
+    t0 = time.perf_counter()
     try:
         resp = requests.get(CTGOV_BASE, params=params, timeout=_REQUEST_TIMEOUT)
         resp.raise_for_status()
         data = resp.json()
-    except Exception:
+        log.debug("ClinicalTrials response: %.2fs  status=%d", time.perf_counter() - t0, resp.status_code)
+    except Exception as exc:
+        log.warning("ClinicalTrials request failed for %r: %s", query, exc)
         return pd.DataFrame(), 0
 
     total = data.get("totalCount", 0)
@@ -110,6 +120,7 @@ def search_clinical_trials(
             "url":             f"https://clinicaltrials.gov/study/{nct}",
         })
 
+    log.info("ClinicalTrials: %r → %d/%d trials returned", query, len(rows), total)
     return pd.DataFrame(rows), int(total)
 
 
@@ -118,6 +129,7 @@ def search_clinical_trials(
 # ─────────────────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=3600, show_spinner=False)
+@disk_cache(ttl=3600)
 def search_pubmed(
     query: str,
     max_results: int = 20,
@@ -139,6 +151,8 @@ def search_pubmed(
     (DataFrame, total_count) — DataFrame columns:
         pmid, title, authors, journal, pub_date, pub_type, doi, url
     """
+    log.info("PubMed search: %r  sort=%s  date_filter=%s", query, sort, date_filter)
+    t0 = time.perf_counter()
     term = query
     if date_filter:
         term = f"({query}) AND {date_filter}"
@@ -175,7 +189,8 @@ def search_pubmed(
         sumr = requests.get(PUBMED_SUMMARY, params=sum_params, timeout=_REQUEST_TIMEOUT)
         sumr.raise_for_status()
         sum_data = sumr.json()
-    except Exception:
+    except Exception as exc:
+        log.warning("PubMed esummary failed for %r: %s", query, exc)
         return pd.DataFrame(), total
 
     result = sum_data.get("result", {})
@@ -210,6 +225,7 @@ def search_pubmed(
             "url":      f"https://pubmed.ncbi.nlm.nih.gov/{uid}/",
         })
 
+    log.info("PubMed: %r → %d/%d articles  (%.2fs)", query, len(rows), total, time.perf_counter() - t0)
     return pd.DataFrame(rows), total
 
 
@@ -218,6 +234,7 @@ def search_pubmed(
 # ─────────────────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=86400, show_spinner=False)
+@disk_cache(ttl=86400)
 def get_fda_approval_info(drug_name: str) -> list[dict]:
     """
     Query openFDA Drugs@FDA for regulatory approval information.
@@ -230,7 +247,8 @@ def get_fda_approval_info(drug_name: str) -> list[dict]:
     Results are cached for 24 hours (regulatory data changes infrequently).
     Returns an empty list on error or no match.
     """
-    # Try brand name first, fall back to generic name
+    log.info("FDA approval lookup: %r", drug_name)
+    t0 = time.perf_counter()
     for field in ("openfda.brand_name", "openfda.generic_name", "openfda.substance_name"):
         try:
             resp = requests.get(
@@ -242,9 +260,12 @@ def get_fda_approval_info(drug_name: str) -> list[dict]:
                 data = resp.json()
                 results = data.get("results", [])
                 if results:
+                    log.info("FDA approval: %r → %d records via %s  (%.2fs)",
+                             drug_name, len(results), field, time.perf_counter() - t0)
                     return [_parse_fda_result(r) for r in results]
-        except Exception:
-            pass
+        except Exception as exc:
+            log.warning("FDA approval request failed for %r (field=%s): %s", drug_name, field, exc)
+    log.info("FDA approval: no records found for %r  (%.2fs)", drug_name, time.perf_counter() - t0)
     return []
 
 
@@ -305,6 +326,7 @@ def _parse_fda_result(r: dict) -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=86400, show_spinner=False)
+@disk_cache(ttl=86400)
 def get_drug_class(rxcui: str) -> list[dict]:
     """
     Fetch therapeutic classifications for a drug via the NLM RxClass API.
@@ -319,6 +341,8 @@ def get_drug_class(rxcui: str) -> list[dict]:
     if not rxcui:
         return []
 
+    log.info("RxClass lookup: rxcui=%s", rxcui)
+    t0 = time.perf_counter()
     results: list[dict] = []
     for source in ("ATC", "VA"):
         try:
@@ -342,7 +366,8 @@ def get_drug_class(rxcui: str) -> list[dict]:
                     "class_type": info.get("classType", ""),
                     "source":     source,
                 })
-        except Exception:
+        except Exception as exc:
+            log.warning("RxClass request failed for rxcui=%s source=%s: %s", rxcui, source, exc)
             continue
 
     # Deduplicate by class_name
@@ -352,6 +377,7 @@ def get_drug_class(rxcui: str) -> list[dict]:
         if r["class_name"] not in seen:
             seen.add(r["class_name"])
             unique.append(r)
+    log.info("RxClass: rxcui=%s → %d classes  (%.2fs)", rxcui, len(unique), time.perf_counter() - t0)
     return unique
 
 
@@ -360,6 +386,7 @@ def get_drug_class(rxcui: str) -> list[dict]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=86400, show_spinner=False)
+@disk_cache(ttl=86400)
 def get_drug_label(drug_name: str) -> dict:
     """
     Fetch structured product label data from openFDA for a drug.
@@ -380,6 +407,8 @@ def get_drug_label(drug_name: str) -> dict:
     def _first(lst: list) -> str:
         return lst[0].strip() if lst else ""
 
+    log.info("FDA label lookup: %r", drug_name)
+    t0 = time.perf_counter()
     for field in ("openfda.brand_name", "openfda.generic_name", "openfda.substance_name"):
         try:
             resp = requests.get(
@@ -394,6 +423,9 @@ def get_drug_label(drug_name: str) -> dict:
                 continue
             r = results[0]
             openfda = r.get("openfda", {})
+            has_boxed = bool(r.get("boxed_warning"))
+            log.info("FDA label: %r found via %s  boxed_warning=%s  (%.2fs)",
+                     drug_name, field, has_boxed, time.perf_counter() - t0)
             return {
                 "boxed_warning":   _first(r.get("boxed_warning", [])),
                 "warnings":        _first(r.get("warnings", [])),
@@ -403,8 +435,10 @@ def get_drug_label(drug_name: str) -> dict:
                 "generic_name":    _first(openfda.get("generic_name", [])),
                 "manufacturer":    _first(openfda.get("manufacturer_name", [])),
             }
-        except Exception:
+        except Exception as exc:
+            log.warning("FDA label request failed for %r (field=%s): %s", drug_name, field, exc)
             continue
+    log.info("FDA label: no label found for %r  (%.2fs)", drug_name, time.perf_counter() - t0)
     return empty
 
 
@@ -413,6 +447,7 @@ def get_drug_label(drug_name: str) -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=3600, show_spinner=False)
+@disk_cache(ttl=3600)
 def get_drug_enforcement(drug_name: str, limit: int = 5) -> list[dict]:
     """
     Search openFDA Drug Enforcement database for recall/enforcement actions.
@@ -424,6 +459,8 @@ def get_drug_enforcement(drug_name: str, limit: int = 5) -> list[dict]:
     Classification: Class I (most serious) → Class III (least serious).
     Results are cached for 1 hour. Returns empty list on error.
     """
+    log.info("FDA enforcement lookup: %r", drug_name)
+    t0 = time.perf_counter()
     try:
         resp = requests.get(
             OPENFDA_ENFORCE,
@@ -435,8 +472,12 @@ def get_drug_enforcement(drug_name: str, limit: int = 5) -> list[dict]:
             timeout=_REQUEST_TIMEOUT,
         )
         if resp.status_code != 200:
+            log.info("FDA enforcement: no records for %r (status=%d)  (%.2fs)",
+                     drug_name, resp.status_code, time.perf_counter() - t0)
             return []
         results = resp.json().get("results", [])
+        log.info("FDA enforcement: %r → %d recall records  (%.2fs)",
+                 drug_name, len(results), time.perf_counter() - t0)
         return [
             {
                 "recall_number":         r.get("recall_number", ""),
@@ -450,5 +491,6 @@ def get_drug_enforcement(drug_name: str, limit: int = 5) -> list[dict]:
             }
             for r in results
         ]
-    except Exception:
+    except Exception as exc:
+        log.warning("FDA enforcement request failed for %r: %s", drug_name, exc)
         return []

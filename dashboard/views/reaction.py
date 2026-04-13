@@ -8,6 +8,9 @@ import queries as qr
 import reaction_search as reaction_search_module
 import signal_detection as sd
 from ui import C, bar_h, donut, forest_plot, kpi_card, line_trend, quarter_delta_text, sec, summary_note
+from logger import get_logger
+
+log = get_logger(__name__)
 
 
 def render(*, all_pts: list[str], q_key: str, role_cod: str, top_n: int) -> None:
@@ -18,6 +21,9 @@ def render(*, all_pts: list[str], q_key: str, role_cod: str, top_n: int) -> None
         key="reac_input",
         label_visibility="collapsed",
     )
+
+    if reac_query:
+        log.info("Reaction Explorer: user searched for %r  (role=%s, q_key=%s)", reac_query, role_cod, q_key[:40])
 
     if not reac_query:
         st.markdown(
@@ -41,8 +47,11 @@ def render(*, all_pts: list[str], q_key: str, role_cod: str, top_n: int) -> None
     with st.spinner("Mapping to MedDRA terms..."):
         pt_hits = reaction_search_module.search_reactions(reac_query, all_pts, max_results=25)
     if not pt_hits:
+        log.warning("Reaction Explorer: no MedDRA matches for %r", reac_query)
         st.error(f"No MedDRA terms matched **{reac_query}**. Try different phrasing.")
         return
+    log.info("Reaction Explorer: %r → %d MedDRA terms  top: %s",
+             reac_query, len(pt_hits), [p for p, _ in pt_hits[:3]])
 
     st.caption(f"{len(pt_hits)} MedDRA terms matched for '{reac_query}'.")
     col_sel, col_tbl = st.columns([3, 1])

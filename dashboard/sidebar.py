@@ -6,6 +6,9 @@ import data_loader as dl
 import queries as qr
 import signal_detection as sd
 from ui import C
+from logger import get_logger
+
+log = get_logger(__name__)
 
 
 def render_sidebar(all_quarters: list[str]) -> dict[str, str | int | list[str]]:
@@ -90,6 +93,8 @@ Drug normalization via RxNorm (NLM).
             unsafe_allow_html=True,
         )
 
+    log.info("Sidebar filters: quarters=%s  role=%s  top_n=%d",
+             q_key[:60], role_cod, top_n)
     return {
         "selected_quarters": sel_quarters,
         "q_key": q_key,
