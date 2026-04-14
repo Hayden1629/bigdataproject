@@ -15,6 +15,8 @@ import re
 import time
 import requests
 from api_cache import disk_cache
+#add on
+from llm_normalizer import llm_normalize
 
 try:
     import streamlit as st
@@ -191,7 +193,18 @@ def find_faers_names(
         )
         matched.update(name for name, _, _ in hits)
         log.debug("Fuzzy fallback: %d hits", len(matched))
+        
+        # add: 4. LLM fallback
+        if not matched:
+            llm_name = llm_normalize(search_term)
+            llm_up = _tokenise(llm_name)
+            if llm_up and llm_up != search_up:
+                for faers_name in all_faers:
+                    faers_tok = _tokenise(faers_name)
+                    if llm_up in faers_tok or faers_tok in llm_up:
+                        matched.add(faers_name)
 
+  
     result = sorted(matched)
     if result:
         log.info("find_faers_names: %r → %d FAERS names  (%.2fs)  e.g. %s",
