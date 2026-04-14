@@ -81,15 +81,39 @@ def _download(start: str | None = None, end: str | None = None) -> None:
 
 def _save_parquets(tables: dict[str, pd.DataFrame], parquet_dir: str) -> None:
     os.makedirs(parquet_dir, exist_ok=True)
+
+    # ── Deduplicate demo by caseversion (FDA guidance: keep latest version per case) ──
+    demo = tables["demo"].copy()
+    before_dedup = len(demo)
+    demo["caseversion"] = (
+        pd.to_numeric(demo["caseversion"], errors="coerce").fillna(0).astype(int)
+    )
+    demo = demo.sort_values("caseversion").drop_duplicates("caseid", keep="last")
+    print(f"  demo dedup: {before_dedup:,} → {len(demo):,} rows "
+          f"(removed {before_dedup - len(demo):,} superseded case versions)")
+    tables["demo"] = demo
+
+    # ── Filter all other tables to the surviving primaryids ──
+    valid_pids = set(demo["primaryid"].unique())
+    for name in ["drug", "reac", "outc", "rpsr", "ther", "indi"]:
+        before = len(tables[name])
+        tables[name] = tables[name][tables[name]["primaryid"].isin(valid_pids)].copy()
+        removed = before - len(tables[name])
+        if removed:
+            print(f"  {name}: removed {removed:,} rows linked to superseded cases "
+                  f"-> {len(tables[name]):,} rows")
+
     for name, df in tables.items():
         if name in ["drug", "ther", "indi"]:
             before = len(df)
             df = df.drop_duplicates()
             after = len(df)
-            print(f"  Dropped {before - after:,} duplicates from {name} -> {after:,} rows")
+            if before - after:
+                print(f"  Dropped {before - after:,} exact duplicates from {name} -> {after:,} rows")
+            tables[name] = df
         path = os.path.join(parquet_dir, f"{name}.parquet")
-        print(f"  Saving {name} ({len(df):,} rows) -> {path}")
-        df.to_parquet(path, index=False)
+        print(f"  Saving {name} ({len(tables[name]):,} rows) -> {path}")
+        tables[name].to_parquet(path, index=False)
 
 
 def _parse_args() -> argparse.Namespace:

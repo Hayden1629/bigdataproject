@@ -38,7 +38,7 @@ def render(*, all_pts: list[str], q_key: str, role_cod: str, top_n: int) -> None
             top20r.columns = [c.replace("_", " ").title() for c in top20r.columns]
             st.dataframe(
                 top20r.style.format({"N Cases": "{:,}", "N Deaths": "{:,}", "Death Pct": "{:.2f}%"}),
-                use_container_width=True,
+                width='stretch',
                 hide_index=True,
                 height=580,
             )
@@ -64,7 +64,7 @@ def render(*, all_pts: list[str], q_key: str, role_cod: str, top_n: int) -> None
     with col_tbl:
         match_tbl = pd.DataFrame(pt_hits[:12], columns=["Preferred Term", "Score"])
         match_tbl["Score"] = match_tbl["Score"].round(0).astype(int)
-        st.dataframe(match_tbl, use_container_width=True, hide_index=True, height=260)
+        st.dataframe(match_tbl, width='stretch', hide_index=True, height=260)
 
     if not selected_pts:
         st.info("Select at least one Preferred Term.")
@@ -95,13 +95,13 @@ def render(*, all_pts: list[str], q_key: str, role_cod: str, top_n: int) -> None
     cl, cr = st.columns([3, 2])
     with cl:
         sec(f"Top Associated Drugs (role: {role_cod})")
-        st.plotly_chart(bar_h(top_d, "case_count", "drug_label", [[0, "#7c3aed"], [1, "#c4b5fd"]], h=max(400, top_n * 22 + 80)), use_container_width=True)
+        st.plotly_chart(bar_h(top_d, "case_count", "drug_label", [[0, "#7c3aed"], [1, "#c4b5fd"]], h=max(400, top_n * 22 + 80)), width='stretch')
     with cr:
         sec("Outcome Distribution")
-        st.plotly_chart(donut(outc_r, "count", "outcome_label", h=340), use_container_width=True)
+        st.plotly_chart(donut(outc_r, "count", "outcome_label", h=340), width='stretch')
 
     sec("Quarterly Report Volume")
-    st.plotly_chart(line_trend(tr, "quarter", "case_count", "Reports", color=C["purple"]), use_container_width=True)
+    st.plotly_chart(line_trend(tr, "quarter", "case_count", "Reports", color=C["purple"]), width='stretch')
 
     sec("Drug Signals for This Reaction (PRR)")
     if not reac_sigs.empty:
@@ -110,7 +110,7 @@ def render(*, all_pts: list[str], q_key: str, role_cod: str, top_n: int) -> None
             sd_disp = reac_sigs.rename(columns={"drug": "Drug", "N_DR": "N (D+R)", "PRR": "PRR", "chi2": "Chi-sq", "signal": "Signal"})
             st.dataframe(
                 sd_disp[["Signal", "Drug", "PRR", "N (D+R)", "Chi-sq"]],
-                use_container_width=True,
+                width='stretch',
                 hide_index=True,
                 height=360,
                 column_config={
@@ -123,6 +123,6 @@ def render(*, all_pts: list[str], q_key: str, role_cod: str, top_n: int) -> None
             if "N_total" not in fp_df.columns:
                 fp_df["N_total"] = dl.get_n_total()
             st.markdown('<div style="font-size:.68rem;color:#8b949e;margin-bottom:4px;">FOREST PLOT — drugs with elevated PRR for this reaction</div>', unsafe_allow_html=True)
-            st.plotly_chart(forest_plot(fp_df, h=360), use_container_width=True)
+            st.plotly_chart(forest_plot(fp_df, h=360), width='stretch')
     else:
         st.info("No elevated PRR signals found for the selected terms.")

@@ -79,15 +79,11 @@ def load_tables() -> dict[str, pd.DataFrame]:
         tables[name] = pd.read_parquet(path)
         log.debug("  Loaded %-6s  %9s rows  (%.2fs)", name, f"{len(tables[name]):,}", time.perf_counter() - t1)
 
-    # ── Deduplicate demo ───────────────────────────────────────────────────────
+    # ── Deduplication is done at build time by STARTHERE.py ──────────────────
+    # demo.parquet already contains only the latest caseversion per caseid, and
+    # all other tables have already been filtered to matching primaryids.
+
     demo = tables["demo"].copy()
-    before_dedup = len(demo)
-    demo["caseversion"] = (
-        pd.to_numeric(demo["caseversion"], errors="coerce").fillna(0).astype(int)
-    )
-    demo = demo.sort_values("caseversion").drop_duplicates("caseid", keep="last")
-    log.info("demo dedup: %s → %s rows (removed %s duplicates)",
-             f"{before_dedup:,}", f"{len(demo):,}", f"{before_dedup - len(demo):,}")
 
     # ── Derive synthetic columns if not present (test fixtures may omit them) ──
     # age_grp: bucket numeric age into MedDRA age groups
@@ -108,13 +104,6 @@ def load_tables() -> dict[str, pd.DataFrame]:
         demo["reporter_country"] = demo.get("occr_country", pd.Series("", index=demo.index))
 
     tables["demo"] = demo
-
-    # ── Filter all other tables to deduplicated primaryids ────────────────────
-    valid_pids = set(demo["primaryid"].unique())
-    for name in ["drug", "reac", "outc", "rpsr", "ther", "indi"]:
-        before = len(tables[name])
-        tables[name] = tables[name][tables[name]["primaryid"].isin(valid_pids)].copy()
-        log.debug("  Filtered %-6s  %s → %s rows", name, f"{before:,}", f"{len(tables[name]):,}")
 
     # ── Normalise drug names ───────────────────────────────────────────────────
     drug = tables["drug"].copy()

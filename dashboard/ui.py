@@ -293,9 +293,9 @@ def add_prr_ci(df: pd.DataFrame) -> pd.DataFrame:
     nt = df["N_total"].to_numpy(dtype=float)
     se = np.sqrt(
         1 / a
-        + np.where(nd - a > 0, 1 / (nd - a), 0)
-        + np.where(nr - a > 0, 1 / (nr - a), 0)
-        + np.where(nt - nd - nr + a > 0, 1 / (nt - nd - nr + a), 0)
+        + np.where(nd - a > 0, 1 / np.maximum(nd - a, 1e-10), 0)
+        + np.where(nr - a > 0, 1 / np.maximum(nr - a, 1e-10), 0)
+        + np.where(nt - nd - nr + a > 0, 1 / np.maximum(nt - nd - nr + a, 1e-10), 0)
     )
     ln_prr = np.log(df["PRR"].clip(lower=0.01))
     out = df.copy()

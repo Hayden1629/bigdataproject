@@ -29,3 +29,7 @@ Outcomes table:
 
 Indications table:
 - indi_pt <- Preferred Term for what the drug is being used to treat (e.g. type 2 diabetes)
+
+
+Deaths:
+Show whether the death was the main suspect "Role code" field

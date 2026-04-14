@@ -58,6 +58,10 @@ def rxnorm_lookup(drug_name: str) -> dict:
     log.info("RxNorm lookup: %r", drug_name)
     result = {"rxcui": None, "canonical": None, "related": []}
 
+    # Preferred term type order: simple names first, complex product strings last
+    _TTY_PRIORITY = {"IN": 1, "PIN": 2, "MIN": 3, "BN": 4, "SCDF": 5, "SCD": 6,
+                     "SBD": 7, "BPCK": 8, "GPCK": 9}
+
     # Step 1: find RxCUI
     try:
         data = _rxnorm_get("drugs.json", params={"name": drug_name})
@@ -65,16 +69,40 @@ def rxnorm_lookup(drug_name: str) -> dict:
             data.get("drugGroup", {})
                 .get("conceptGroup", [])
         )
-        rxcuis = []
+        names_by_tty: dict[str, list[tuple[str, str]]] = {}
         for group in concept_group:
+            tty = group.get("tty", "")
             for prop in group.get("conceptProperties", []):
                 if prop.get("rxcui"):
-                    rxcuis.append((prop["rxcui"], prop.get("name", "")))
-        if not rxcuis:
+                    names_by_tty.setdefault(tty, []).append(
+                        (prop["rxcui"], prop.get("name", ""))
+                    )
+        if not names_by_tty:
             log.warning("RxNorm: no RxCUI found for %r", drug_name)
             return result
-        # prefer the first ingredient-level hit
-        rxcui, canonical = rxcuis[0]
+
+        # Build a human-friendly canonical: "Brand (ingredient)" when available,
+        # otherwise the best single name we can find.
+        in_names = names_by_tty.get("IN", []) or names_by_tty.get("PIN", []) or names_by_tty.get("MIN", [])
+        bn_names = names_by_tty.get("BN", [])
+
+        if in_names and bn_names:
+            rxcui = in_names[0][0]
+            brand = bn_names[0][1].title()
+            ingredient = in_names[0][1].lower()
+            canonical = f"{brand} ({ingredient})"
+        elif in_names:
+            rxcui, name = in_names[0]
+            canonical = name.title()
+        elif bn_names:
+            rxcui, name = bn_names[0]
+            canonical = name.title()
+        else:
+            # Fall back to the highest-priority tty available
+            best_tty = min(names_by_tty.keys(), key=lambda t: _TTY_PRIORITY.get(t, 99))
+            rxcui, name = names_by_tty[best_tty][0]
+            canonical = name.title()
+
         result["rxcui"] = rxcui
         result["canonical"] = canonical
         log.debug("RxNorm: %r → RxCUI=%s canonical=%r", drug_name, rxcui, canonical)
