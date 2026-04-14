@@ -132,3 +132,443 @@
 2026-04-13 14:32:57  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 216249 signals
 2026-04-13 14:33:25  INFO      faers.data_loader               Lookup tables ready: 8 quarters, 8441339 drug entries, 9038460 reaction entries  (31.54s)
 2026-04-13 14:33:25  INFO      faers.data_loader               Background cache warm-up complete (200.16s)
+2026-04-13 15:02:05  INFO      faers.__main__                  Starting background cache warm-up thread
+2026-04-13 15:02:05  INFO      faers.data_loader               Background cache warm-up starting...
+2026-04-13 15:02:05  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-13 15:02:05  INFO      faers.data_loader               Loading FAERS parquet tables from /Users/haydenherstrom/codeprojects/bigdataproject/data/parquet_recent
+2026-04-13 15:02:39  INFO      faers.data_loader               demo dedup: 3,236,210 → 2,850,424 rows (removed 385,786 duplicates)
+2026-04-13 15:05:09  INFO      faers.data_loader               load_tables complete: 2,850,424 cases, 12,069,844 drug rows, 9,147,324 reaction rows  (183.66s total)
+2026-04-13 15:05:09  INFO      faers.data_loader               Building lookup tables...
+2026-04-13 15:05:10  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-13 15:05:10  INFO      faers.queries                   global_kpis: computing...
+2026-04-13 15:05:11  INFO      faers.queries                   global_kpis: 2,850,424 cases  223,591 deaths  87,845 drugs  18,401 PTs
+2026-04-13 15:05:11  INFO      faers.data_loader               Loaded cache table prr_table             511,218 rows
+2026-04-13 15:05:11  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=PS  top_n=20
+2026-04-13 15:05:11  INFO      faers.data_loader               Loaded cache table drug_summary          87,845 rows
+2026-04-13 15:05:11  INFO      faers.data_loader               Loaded cache table reac_summary          18,401 rows
+2026-04-13 15:05:11  INFO      faers.data_loader               Loaded cache table quarterly_drug        164,158 rows
+2026-04-13 15:05:11  INFO      faers.data_loader               Loaded cache table quarterly_reac        95,762 rows
+2026-04-13 15:05:12  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 216249 signals
+2026-04-13 15:05:39  INFO      faers.data_loader               Lookup tables ready: 8 quarters, 8441339 drug entries, 9038460 reaction entries  (29.65s)
+2026-04-13 15:05:39  INFO      faers.data_loader               Background cache warm-up complete (213.66s)
+2026-04-13 15:12:32  INFO      faers.__main__                  Starting background cache warm-up thread
+2026-04-13 15:12:32  INFO      faers.data_loader               Background cache warm-up starting...
+2026-04-13 15:12:32  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-13 15:12:32  INFO      faers.data_loader               Loading FAERS parquet tables from /Users/haydenherstrom/codeprojects/bigdataproject/dashboard/tests/fixtures
+2026-04-13 15:12:32  INFO      faers.data_loader               load_tables complete: 600 cases, 1,166 drug rows, 1,213 reaction rows  (0.02s total)
+2026-04-13 15:12:32  INFO      faers.data_loader               Building lookup tables...
+2026-04-13 15:12:32  INFO      faers.__main__                  App startup complete: 4 quarters, 10 reaction terms
+2026-04-13 15:12:32  INFO      faers.queries                   global_kpis: computing...
+2026-04-13 15:12:32  INFO      faers.queries                   global_kpis: 600 cases  25 deaths  7 drugs  10 PTs
+2026-04-13 15:12:32  INFO      faers.data_loader               Loaded cache table prr_table             8 rows
+2026-04-13 15:12:32  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2  role=PS  top_n=20
+2026-04-13 15:12:32  INFO      faers.data_loader               Loaded cache table drug_summary          7 rows
+2026-04-13 15:12:32  INFO      faers.data_loader               Lookup tables ready: 4 quarters, 1166 drug entries, 1213 reaction entries  (0.02s)
+2026-04-13 15:12:32  INFO      faers.data_loader               Loaded cache table reac_summary          10 rows
+2026-04-13 15:12:32  INFO      faers.data_loader               Loaded cache table quarterly_drug        28 rows
+2026-04-13 15:12:32  INFO      faers.data_loader               Loaded cache table quarterly_reac        40 rows
+2026-04-13 15:12:32  INFO      faers.data_loader               Background cache warm-up complete (0.04s)
+2026-04-13 15:12:32  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 1 signals
+2026-04-13 15:12:32  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-13 15:12:32  INFO      faers.__main__                  App startup complete: 4 quarters, 10 reaction terms
+2026-04-13 15:12:32  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2  role=PS  top_n=20
+2026-04-13 15:12:32  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 1 signals
+2026-04-13 15:12:32  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-13 15:12:32  INFO      faers.__main__                  App startup complete: 4 quarters, 10 reaction terms
+2026-04-13 15:12:32  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2  role=PS  top_n=20
+2026-04-13 15:12:32  INFO      faers.views/drug                Drug Explorer: user searched for 'ASPIRIN'  (role=PS, q_key=2023Q3|2023Q4|2024Q1|2024Q2)
+2026-04-13 15:12:32  INFO      faers.drug_normalizer           find_faers_names: searching for 'ASPIRIN'
+2026-04-13 15:12:32  INFO      faers.drug_normalizer           find_faers_names: 'ASPIRIN' → 1 FAERS names  (0.00s)  e.g. ['ASPIRIN']
+2026-04-13 15:12:32  INFO      faers.views/drug                Drug Explorer: 'ASPIRIN' → 1 FAERS names  canon='ASPIRIN'
+2026-04-13 15:12:32  INFO      faers.queries                   drug_kpis: names='ASPIRIN'  role=PS  quarters=2023Q3|2023Q4|2024Q1|2024Q2
+2026-04-13 15:12:32  INFO      faers.queries                   drug_kpis: 157 cases, 10 deaths (6.4%), 32 hosp
+2026-04-13 15:12:32  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['ASPIRIN']  {'LOW': 1}
+2026-04-13 15:12:32  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 1 signals
+2026-04-13 15:12:32  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-13 15:12:32  INFO      faers.__main__                  App startup complete: 4 quarters, 10 reaction terms
+2026-04-13 15:12:32  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2  role=PS  top_n=20
+2026-04-13 15:12:32  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 1 signals
+2026-04-13 15:12:32  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-13 15:12:32  INFO      faers.__main__                  App startup complete: 4 quarters, 10 reaction terms
+2026-04-13 15:12:32  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2  role=PS  top_n=20
+2026-04-13 15:12:32  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 1 signals
+2026-04-13 15:12:32  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-13 15:12:32  INFO      faers.__main__                  App startup complete: 4 quarters, 10 reaction terms
+2026-04-13 15:12:32  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2  role=PS  top_n=20
+2026-04-13 15:12:32  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 1 signals
+2026-04-13 15:12:32  INFO      faers.drug_normalizer           find_faers_names: searching for 'ASPIRIN'
+2026-04-13 15:12:32  INFO      faers.drug_normalizer           find_faers_names: 'ASPIRIN' → 2 FAERS names  (0.00s)  e.g. ['ASPIRIN', 'ASPIRIN 81MG']
+2026-04-13 15:12:32  INFO      faers.drug_normalizer           find_faers_names: searching for 'COUMADIN'
+2026-04-13 15:12:32  INFO      faers.drug_normalizer           find_faers_names: 'COUMADIN' → 2 FAERS names  (0.00s)  e.g. ['COUMADIN', 'WARFARIN']
+2026-04-13 15:12:32  INFO      faers.drug_normalizer           find_faers_names: searching for 'ASIRIN'
+2026-04-13 15:12:32  INFO      faers.drug_normalizer           find_faers_names: 'ASIRIN' → 2 FAERS names  (0.00s)  e.g. ['ASPIRIN', 'ASPIRIN 81MG']
+2026-04-13 15:12:32  INFO      faers.drug_normalizer           find_faers_names: searching for 'COMPLETELY_MADE_UP_DRUG_ZZZ'
+2026-04-13 15:12:32  WARNING   faers.drug_normalizer           find_faers_names: no FAERS matches for 'COMPLETELY_MADE_UP_DRUG_ZZZ'  (0.00s)
+2026-04-13 15:12:32  INFO      faers.drug_normalizer           find_faers_names: searching for 'ASPIRIN'
+2026-04-13 15:12:32  INFO      faers.drug_normalizer           find_faers_names: 'ASPIRIN' → 2 FAERS names  (0.00s)  e.g. ['ASPIRIN', 'ASPIRIN 81MG']
+2026-04-13 15:12:32  INFO      faers.drug_normalizer           find_faers_names: searching for 'ASPIRIN'
+2026-04-13 15:12:32  INFO      faers.drug_normalizer           find_faers_names: 'ASPIRIN' → 2 FAERS names  (0.00s)  e.g. ['ASPIRIN', 'ASPIRIN 81MG']
+2026-04-13 15:12:32  INFO      faers.drug_normalizer           find_faers_names: searching for 'X'
+2026-04-13 15:12:32  WARNING   faers.drug_normalizer           find_faers_names: no FAERS matches for 'X'  (0.00s)
+2026-04-13 15:12:32  INFO      faers.drug_normalizer           find_faers_names: searching for 'TYLENOL'
+2026-04-13 15:12:32  INFO      faers.drug_normalizer           find_faers_names: 'TYLENOL' → 2 FAERS names  (0.00s)  e.g. ['ACETAMINOPHEN', 'TYLENOL']
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'nausea'  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search 'nausea' → 2 results  top: ['Nausea', 'Nausea And Vomiting']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'nausea'  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search 'nausea' → 2 results  top: ['Nausea', 'Nausea And Vomiting']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'headache'  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search 'headache' → 1 results  top: ['Headache']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'a'  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search 'a' → 3 results  top: ['Nausea', 'Diarrhoea', 'Myocardial Infarction']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: ''  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search '' → 19 results  top: ['Nausea', 'Vomiting', 'Diarrhoea']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'nausea'  (0 PTs in vocabulary)
+2026-04-13 15:12:32  WARNING   faers.reaction_search           Reaction search 'nausea' → no results  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'nausea'  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search 'nausea' → 2 results  top: ['Nausea', 'Nausea And Vomiting']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'nausea'  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search 'nausea' → 2 results  top: ['Nausea', 'Nausea And Vomiting']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'throwing up'  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search 'throwing up' → 1 results  top: ['Vomiting']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'bleeding'  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search 'bleeding' → 3 results  top: ['Haemorrhage', 'Gastrointestinal Haemorrhage', 'Bleeding']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'diarrhea'  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search 'diarrhea' → 1 results  top: ['Diarrhoea']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'fainting'  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search 'fainting' → 1 results  top: ['Syncope']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'shortness of breath'  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search 'shortness of breath' → 1 results  top: ['Dyspnoea']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'Thrombosis'  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search 'Thrombosis' → 1 results  top: ['Thrombosis']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'HEADACHE'  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search 'HEADACHE' → 1 results  top: ['Headache']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'Nausea'  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search 'Nausea' → 2 results  top: ['Nausea', 'Nausea And Vomiting']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'hedache'  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search 'hedache' → 1 results  top: ['Headache']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'dizzy'  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search 'dizzy' → 1 results  top: ['Dizziness']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search: 'dizzy'  (19 PTs in vocabulary)
+2026-04-13 15:12:32  INFO      faers.reaction_search           Reaction search 'dizzy' → 1 results  top: ['Dizziness']  (0.00s)
+2026-04-13 15:12:32  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['ASPIRIN']  {'LOW': 1}
+2026-04-13 15:12:32  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['ASPIRIN']  {'LOW': 1}
+2026-04-13 15:12:32  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['ASPIRIN']  {'LOW': 1}
+2026-04-13 15:12:32  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['ASPIRIN']  {'LOW': 1}
+2026-04-13 15:12:32  INFO      faers.signal_detection          signals_for_drug: no signals found for ['TOTALLY_UNKNOWN_DRUG_XYZ_999'] (min_signal=LOW, min_n_dr=5)
+2026-04-13 15:12:32  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['ASPIRIN']  {'LOW': 1}
+2026-04-13 15:12:32  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['ASPIRIN']  {'LOW': 1}
+2026-04-13 15:12:32  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['WARFARIN']  {'MEDIUM': 1}
+2026-04-13 15:12:32  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['ASPIRIN']  {'LOW': 1}
+2026-04-13 15:12:32  INFO      faers.signal_detection          signals_for_drug: 0 signals for ['ASPIRIN']  {}
+2026-04-13 15:12:32  WARNING   faers.signal_detection          signals_for_drug: PRR table unavailable
+2026-04-13 15:12:32  WARNING   faers.signal_detection          signals_for_drug: PRR table unavailable
+2026-04-13 15:12:32  INFO      faers.signal_detection          signals_for_reaction: 1 signals for PTs=['Bleeding']
+2026-04-13 15:12:32  INFO      faers.signal_detection          signals_for_reaction: 1 signals for PTs=['Bleeding']
+2026-04-13 15:12:32  INFO      faers.signal_detection          signals_for_reaction: no signals found for PTs=['TOTALLY_UNKNOWN_REACTION_XYZ_9999']
+2026-04-13 15:12:36  INFO      faers.__main__                  Starting background cache warm-up thread
+2026-04-13 15:12:36  INFO      faers.data_loader               Background cache warm-up starting...
+2026-04-13 15:12:36  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-13 15:12:36  INFO      faers.data_loader               Loading FAERS parquet tables from /Users/haydenherstrom/codeprojects/bigdataproject/data/parquet_recent
+2026-04-13 15:12:44  INFO      faers.data_loader               load_tables complete: 2,850,424 cases, 12,069,844 drug rows, 9,147,324 reaction rows  (7.92s total)
+2026-04-13 15:12:44  INFO      faers.data_loader               Building lookup tables...
+2026-04-13 15:12:45  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-13 15:12:45  INFO      faers.queries                   global_kpis: computing...
+2026-04-13 15:12:46  INFO      faers.queries                   global_kpis: 2,850,424 cases  223,591 deaths  87,845 drugs  18,401 PTs
+2026-04-13 15:12:46  INFO      faers.data_loader               Loaded cache table prr_table             511,218 rows
+2026-04-13 15:12:46  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=PS  top_n=20
+2026-04-13 15:12:46  INFO      faers.data_loader               Loaded cache table drug_summary          87,845 rows
+2026-04-13 15:12:46  INFO      faers.data_loader               Loaded cache table reac_summary          18,401 rows
+2026-04-13 15:12:47  INFO      faers.data_loader               Loaded cache table quarterly_drug        164,158 rows
+2026-04-13 15:12:47  INFO      faers.data_loader               Loaded cache table quarterly_reac        95,762 rows
+2026-04-13 15:12:47  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 216249 signals
+2026-04-13 15:12:53  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-13 15:12:53  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-13 15:12:53  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=PS  top_n=20
+2026-04-13 15:12:54  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 216249 signals
+2026-04-13 15:13:19  INFO      faers.data_loader               Lookup tables ready: 8 quarters, 8441339 drug entries, 9038460 reaction entries  (34.68s)
+2026-04-13 15:13:19  INFO      faers.data_loader               Background cache warm-up complete (42.73s)
+2026-04-13 15:13:19  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-13 15:13:19  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-13 15:13:19  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=PS  top_n=20
+2026-04-13 15:13:19  INFO      faers.views/drug                Drug Explorer: user searched for 'skyrizi'  (role=PS, q_key=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q)
+2026-04-13 15:13:19  INFO      faers.drug_normalizer           RxNorm lookup: 'skyrizi'
+2026-04-13 15:13:21  WARNING   faers.drug_normalizer           RxNorm related lookup failed for RxCUI=2540695: 400 Client Error: Bad Request for url: https://rxnav.nlm.nih.gov/REST/rxcui/2540695/related.json?tty=BN%2BIN%2BSCDF%2BSBD%2BMIN
+2026-04-13 15:13:21  INFO      faers.drug_normalizer           find_faers_names: searching for 'skyrizi'
+2026-04-13 15:13:23  INFO      faers.drug_normalizer           find_faers_names: 'skyrizi' → 13 FAERS names  (2.32s)  e.g. ['RISANKIZUMAB', 'RISANKIZUMAB-RZAA', 'RIZI']
+2026-04-13 15:13:23  INFO      faers.views/drug                Drug Explorer: 'skyrizi' → 13 FAERS names  canon='1 ML risankizumab-rzaa 150 MG/ML Auto-Injector [Skyrizi]'
+2026-04-13 15:13:23  INFO      faers.research_connector        RxClass lookup: rxcui=2540695
+2026-04-13 15:13:24  INFO      faers.research_connector        RxClass: rxcui=2540695 → 2 classes  (1.48s)
+2026-04-13 15:13:24  INFO      faers.research_connector        FDA approval lookup: '1 ML risankizumab-rzaa 150 MG/ML Auto-Injector [Skyrizi]'
+2026-04-13 15:13:26  INFO      faers.research_connector        FDA approval: no records found for '1 ML risankizumab-rzaa 150 MG/ML Auto-Injector [Skyrizi]'  (1.72s)
+2026-04-13 15:13:26  INFO      faers.research_connector        FDA label lookup: '1 ML risankizumab-rzaa 150 MG/ML Auto-Injector [Skyrizi]'
+2026-04-13 15:13:28  INFO      faers.research_connector        FDA label: no label found for '1 ML risankizumab-rzaa 150 MG/ML Auto-Injector [Skyrizi]'  (1.99s)
+2026-04-13 15:13:28  INFO      faers.queries                   drug_kpis: names='RISANKIZUMAB|RISANKIZUMAB-RZAA|RIZI|SKYRIZI|SKYRIZI 150 MG, '  role=PS  quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q
+2026-04-13 15:13:35  INFO      faers.queries                   drug_kpis: 30,845 cases, 1,207 deaths (3.9%), 8,357 hosp
+2026-04-13 15:14:59  INFO      faers.signal_detection          signals_for_drug: 25 signals for ['RISANKIZUMAB', 'RISANKIZUMAB-RZAA']  {'HIGH': 25}
+2026-04-13 15:15:00  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 216249 signals
+2026-04-13 15:19:41  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-13 15:19:41  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-13 15:19:41  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=SS  top_n=20
+2026-04-13 15:19:42  INFO      faers.views/drug                Drug Explorer: user searched for 'skyrizi'  (role=SS, q_key=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q)
+2026-04-13 15:19:42  INFO      faers.drug_normalizer           find_faers_names: searching for 'skyrizi'
+2026-04-13 15:19:45  INFO      faers.drug_normalizer           find_faers_names: 'skyrizi' → 13 FAERS names  (3.46s)  e.g. ['RISANKIZUMAB', 'RISANKIZUMAB-RZAA', 'RIZI']
+2026-04-13 15:19:45  INFO      faers.views/drug                Drug Explorer: 'skyrizi' → 13 FAERS names  canon='1 ML risankizumab-rzaa 150 MG/ML Auto-Injector [Skyrizi]'
+2026-04-13 15:19:45  INFO      faers.queries                   drug_kpis: names='RISANKIZUMAB|RISANKIZUMAB-RZAA|RIZI|SKYRIZI|SKYRIZI 150 MG, '  role=SS  quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q
+2026-04-13 15:19:52  INFO      faers.queries                   drug_kpis: 7,449 cases, 122 deaths (1.6%), 2,496 hosp
+2026-04-13 15:20:22  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-13 15:20:22  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-13 15:20:22  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=SS  top_n=20
+2026-04-13 15:20:22  INFO      faers.views/drug                Drug Explorer: user searched for 'skyrizi'  (role=SS, q_key=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q)
+2026-04-13 15:20:22  INFO      faers.drug_normalizer           find_faers_names: searching for 'skyrizi'
+2026-04-13 15:20:26  INFO      faers.drug_normalizer           find_faers_names: 'skyrizi' → 13 FAERS names  (3.47s)  e.g. ['RISANKIZUMAB', 'RISANKIZUMAB-RZAA', 'RIZI']
+2026-04-13 15:20:26  INFO      faers.views/drug                Drug Explorer: 'skyrizi' → 13 FAERS names  canon='1 ML risankizumab-rzaa 150 MG/ML Auto-Injector [Skyrizi]'
+2026-04-13 15:21:11  INFO      faers.signal_detection          signals_for_drug: 25 signals for ['RISANKIZUMAB', 'RISANKIZUMAB-RZAA']  {'HIGH': 25}
+2026-04-13 15:21:12  INFO      faers.signal_detection          signals_for_drug: 25 signals for ['RISANKIZUMAB', 'RISANKIZUMAB-RZAA']  {'HIGH': 25}
+2026-04-13 15:21:12  INFO      faers.research_connector        ClinicalTrials search: 'Skyrizi'  mode=intervention  status=None
+2026-04-13 15:21:12  INFO      faers.research_connector        ClinicalTrials: 'Skyrizi' → 8/60 trials returned
+2026-04-13 15:21:12  INFO      faers.research_connector        PubMed search: 'Skyrizi adverse events'  sort=relevance  date_filter=None
+2026-04-13 15:21:15  INFO      faers.research_connector        PubMed: 'Skyrizi adverse events' → 8/171 articles  (2.23s)
+2026-04-13 15:21:15  INFO      faers.research_connector        FDA enforcement lookup: 'Skyrizi'
+2026-04-13 15:21:15  INFO      faers.research_connector        FDA enforcement: no records for 'Skyrizi' (status=404)  (0.52s)
+2026-04-13 15:21:15  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 216249 signals
+2026-04-13 15:22:20  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-13 15:22:20  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-13 15:22:20  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=all  top_n=20
+2026-04-13 15:22:20  INFO      faers.views/drug                Drug Explorer: user searched for 'skyrizi'  (role=all, q_key=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q)
+2026-04-13 15:22:20  INFO      faers.drug_normalizer           find_faers_names: searching for 'skyrizi'
+2026-04-13 15:22:22  INFO      faers.drug_normalizer           find_faers_names: 'skyrizi' → 13 FAERS names  (2.03s)  e.g. ['RISANKIZUMAB', 'RISANKIZUMAB-RZAA', 'RIZI']
+2026-04-13 15:22:22  INFO      faers.views/drug                Drug Explorer: 'skyrizi' → 13 FAERS names  canon='1 ML risankizumab-rzaa 150 MG/ML Auto-Injector [Skyrizi]'
+2026-04-13 15:22:22  INFO      faers.queries                   drug_kpis: names='RISANKIZUMAB|RISANKIZUMAB-RZAA|RIZI|SKYRIZI|SKYRIZI 150 MG, '  role=all  quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q
+2026-04-13 15:22:28  INFO      faers.queries                   drug_kpis: 32,301 cases, 1,225 deaths (3.8%), 8,700 hosp
+2026-04-13 15:23:33  INFO      faers.signal_detection          signals_for_drug: 25 signals for ['RISANKIZUMAB', 'RISANKIZUMAB-RZAA']  {'HIGH': 25}
+2026-04-13 15:23:34  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 216249 signals
+2026-04-13 15:23:43  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-13 15:23:43  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-13 15:23:43  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=all  top_n=20
+2026-04-13 15:23:43  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 216249 signals
+2026-04-13 15:23:47  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-13 15:23:47  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-13 15:23:47  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=all  top_n=20
+2026-04-13 15:23:47  INFO      faers.views/drug                Drug Explorer: user searched for 'keytruda'  (role=all, q_key=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q)
+2026-04-13 15:23:47  INFO      faers.drug_normalizer           RxNorm lookup: 'keytruda'
+2026-04-13 15:23:48  WARNING   faers.drug_normalizer           RxNorm related lookup failed for RxCUI=1657751: 400 Client Error: Bad Request for url: https://rxnav.nlm.nih.gov/REST/rxcui/1657751/related.json?tty=BN%2BIN%2BSCDF%2BSBD%2BMIN
+2026-04-13 15:23:48  INFO      faers.drug_normalizer           find_faers_names: searching for 'keytruda'
+2026-04-13 15:23:50  INFO      faers.drug_normalizer           find_faers_names: 'keytruda' → 15 FAERS names  (1.79s)  e.g. ['/ KEYTRUDA 25 MG/ML, SOLUTION FOR DILUTED INFUSION', 'ION K', 'KEYTRUDA']
+2026-04-13 15:23:50  INFO      faers.views/drug                Drug Explorer: 'keytruda' → 15 FAERS names  canon='4 ML pembrolizumab 25 MG/ML Injection [Keytruda]'
+2026-04-13 15:23:50  INFO      faers.research_connector        RxClass lookup: rxcui=1657751
+2026-04-13 15:23:52  INFO      faers.research_connector        RxClass: rxcui=1657751 → 2 classes  (1.36s)
+2026-04-13 15:23:52  INFO      faers.research_connector        FDA approval lookup: '4 ML pembrolizumab 25 MG/ML Injection [Keytruda]'
+2026-04-13 15:23:53  INFO      faers.research_connector        FDA approval: no records found for '4 ML pembrolizumab 25 MG/ML Injection [Keytruda]'  (1.63s)
+2026-04-13 15:23:53  INFO      faers.research_connector        FDA label lookup: '4 ML pembrolizumab 25 MG/ML Injection [Keytruda]'
+2026-04-13 15:23:55  INFO      faers.research_connector        FDA label: no label found for '4 ML pembrolizumab 25 MG/ML Injection [Keytruda]'  (1.70s)
+2026-04-13 15:23:55  INFO      faers.queries                   drug_kpis: names='/ KEYTRUDA 25 MG/ML, SOLUTION FOR DILUTED INFUSION|ION K|KEY'  role=all  quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q
+2026-04-13 15:23:57  INFO      faers.queries                   drug_kpis: 35,853 cases, 5,092 deaths (14.2%), 15,689 hosp
+2026-04-13 15:24:50  INFO      faers.signal_detection          signals_for_drug: 25 signals for ['/ KEYTRUDA 25 MG/ML, SOLUTION FOR DILUTED INFUSION', 'ION K']  {'HIGH': 25}
+2026-04-13 15:24:51  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 216249 signals
+2026-04-14 14:27:24  INFO      faers.__main__                  Starting background cache warm-up thread
+2026-04-14 14:27:24  INFO      faers.data_loader               Background cache warm-up starting...
+2026-04-14 14:27:24  INFO      faers.data_loader               Loading FAERS parquet tables from /Users/haydenherstrom/codeprojects/bigdataproject/dashboard/tests/fixtures
+2026-04-14 14:27:24  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-14 14:27:24  INFO      faers.data_loader               load_tables complete: 600 cases, 1,166 drug rows, 1,213 reaction rows  (0.14s total)
+2026-04-14 14:27:24  INFO      faers.data_loader               Building lookup tables...
+2026-04-14 14:27:25  INFO      faers.__main__                  App startup complete: 4 quarters, 10 reaction terms
+2026-04-14 14:27:25  INFO      faers.queries                   global_kpis: computing...
+2026-04-14 14:27:25  INFO      faers.queries                   global_kpis: 600 cases  25 deaths  7 drugs  10 PTs
+2026-04-14 14:27:25  INFO      faers.data_loader               Lookup tables ready: 4 quarters, 1166 drug entries, 1213 reaction entries  (0.05s)
+2026-04-14 14:27:25  INFO      faers.data_loader               Loaded cache table prr_table             8 rows
+2026-04-14 14:27:25  INFO      faers.data_loader               Loaded cache table drug_summary          7 rows
+2026-04-14 14:27:25  INFO      faers.data_loader               Loaded cache table reac_summary          10 rows
+2026-04-14 14:27:25  INFO      faers.data_loader               Loaded cache table quarterly_drug        28 rows
+2026-04-14 14:27:25  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2  role=PS  top_n=20
+2026-04-14 14:27:25  INFO      faers.data_loader               Loaded cache table quarterly_reac        40 rows
+2026-04-14 14:27:25  INFO      faers.data_loader               Background cache warm-up complete (0.22s)
+2026-04-14 14:27:25  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 1 signals
+2026-04-14 14:27:25  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-14 14:27:25  INFO      faers.__main__                  App startup complete: 4 quarters, 10 reaction terms
+2026-04-14 14:27:25  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2  role=PS  top_n=20
+2026-04-14 14:27:25  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 1 signals
+2026-04-14 14:27:25  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-14 14:27:25  INFO      faers.__main__                  App startup complete: 4 quarters, 10 reaction terms
+2026-04-14 14:27:25  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2  role=PS  top_n=20
+2026-04-14 14:27:25  INFO      faers.views/drug                Drug Explorer: user searched for 'ASPIRIN'  (role=PS, q_key=2023Q3|2023Q4|2024Q1|2024Q2)
+2026-04-14 14:27:25  INFO      faers.drug_normalizer           find_faers_names: searching for 'ASPIRIN'
+2026-04-14 14:27:25  INFO      faers.drug_normalizer           find_faers_names: 'ASPIRIN' → 1 FAERS names  (0.00s)  e.g. ['ASPIRIN']
+2026-04-14 14:27:25  INFO      faers.views/drug                Drug Explorer: 'ASPIRIN' → 1 FAERS names  canon='ASPIRIN'
+2026-04-14 14:27:25  INFO      faers.queries                   drug_kpis: names='ASPIRIN'  role=PS  quarters=2023Q3|2023Q4|2024Q1|2024Q2
+2026-04-14 14:27:25  INFO      faers.queries                   drug_kpis: 157 cases, 10 deaths (6.4%), 32 hosp
+2026-04-14 14:27:26  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['ASPIRIN']  {'LOW': 1}
+2026-04-14 14:27:26  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 1 signals
+2026-04-14 14:27:26  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-14 14:27:26  INFO      faers.__main__                  App startup complete: 4 quarters, 10 reaction terms
+2026-04-14 14:27:26  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2  role=PS  top_n=20
+2026-04-14 14:27:26  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 1 signals
+2026-04-14 14:27:26  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-14 14:27:26  INFO      faers.__main__                  App startup complete: 4 quarters, 10 reaction terms
+2026-04-14 14:27:26  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2  role=PS  top_n=20
+2026-04-14 14:27:26  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 1 signals
+2026-04-14 14:27:26  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-14 14:27:26  INFO      faers.__main__                  App startup complete: 4 quarters, 10 reaction terms
+2026-04-14 14:27:26  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2  role=PS  top_n=20
+2026-04-14 14:27:26  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 1 signals
+2026-04-14 14:27:26  INFO      faers.drug_normalizer           find_faers_names: searching for 'ASPIRIN'
+2026-04-14 14:27:26  INFO      faers.drug_normalizer           find_faers_names: 'ASPIRIN' → 2 FAERS names  (0.01s)  e.g. ['ASPIRIN', 'ASPIRIN 81MG']
+2026-04-14 14:27:26  INFO      faers.drug_normalizer           find_faers_names: searching for 'COUMADIN'
+2026-04-14 14:27:26  INFO      faers.drug_normalizer           find_faers_names: 'COUMADIN' → 2 FAERS names  (0.00s)  e.g. ['COUMADIN', 'WARFARIN']
+2026-04-14 14:27:26  INFO      faers.drug_normalizer           find_faers_names: searching for 'ASIRIN'
+2026-04-14 14:27:26  INFO      faers.drug_normalizer           find_faers_names: 'ASIRIN' → 2 FAERS names  (0.00s)  e.g. ['ASPIRIN', 'ASPIRIN 81MG']
+2026-04-14 14:27:26  INFO      faers.drug_normalizer           find_faers_names: searching for 'COMPLETELY_MADE_UP_DRUG_ZZZ'
+2026-04-14 14:27:26  WARNING   faers.drug_normalizer           find_faers_names: no FAERS matches for 'COMPLETELY_MADE_UP_DRUG_ZZZ'  (0.01s)
+2026-04-14 14:27:26  INFO      faers.drug_normalizer           find_faers_names: searching for 'ASPIRIN'
+2026-04-14 14:27:26  INFO      faers.drug_normalizer           find_faers_names: 'ASPIRIN' → 2 FAERS names  (0.00s)  e.g. ['ASPIRIN', 'ASPIRIN 81MG']
+2026-04-14 14:27:26  INFO      faers.drug_normalizer           find_faers_names: searching for 'ASPIRIN'
+2026-04-14 14:27:26  INFO      faers.drug_normalizer           find_faers_names: 'ASPIRIN' → 2 FAERS names  (0.00s)  e.g. ['ASPIRIN', 'ASPIRIN 81MG']
+2026-04-14 14:27:26  INFO      faers.drug_normalizer           find_faers_names: searching for 'X'
+2026-04-14 14:27:26  WARNING   faers.drug_normalizer           find_faers_names: no FAERS matches for 'X'  (0.01s)
+2026-04-14 14:27:26  INFO      faers.drug_normalizer           find_faers_names: searching for 'TYLENOL'
+2026-04-14 14:27:26  INFO      faers.drug_normalizer           find_faers_names: 'TYLENOL' → 2 FAERS names  (0.00s)  e.g. ['ACETAMINOPHEN', 'TYLENOL']
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'nausea'  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search 'nausea' → 2 results  top: ['Nausea', 'Nausea And Vomiting']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'nausea'  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search 'nausea' → 2 results  top: ['Nausea', 'Nausea And Vomiting']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'headache'  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search 'headache' → 1 results  top: ['Headache']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'a'  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search 'a' → 3 results  top: ['Nausea', 'Diarrhoea', 'Myocardial Infarction']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: ''  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search '' → 19 results  top: ['Nausea', 'Vomiting', 'Diarrhoea']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'nausea'  (0 PTs in vocabulary)
+2026-04-14 14:27:26  WARNING   faers.reaction_search           Reaction search 'nausea' → no results  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'nausea'  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search 'nausea' → 2 results  top: ['Nausea', 'Nausea And Vomiting']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'nausea'  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search 'nausea' → 2 results  top: ['Nausea', 'Nausea And Vomiting']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'throwing up'  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search 'throwing up' → 1 results  top: ['Vomiting']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'bleeding'  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search 'bleeding' → 3 results  top: ['Haemorrhage', 'Gastrointestinal Haemorrhage', 'Bleeding']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'diarrhea'  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search 'diarrhea' → 1 results  top: ['Diarrhoea']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'fainting'  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search 'fainting' → 1 results  top: ['Syncope']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'shortness of breath'  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search 'shortness of breath' → 1 results  top: ['Dyspnoea']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'Thrombosis'  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search 'Thrombosis' → 1 results  top: ['Thrombosis']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'HEADACHE'  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search 'HEADACHE' → 1 results  top: ['Headache']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'Nausea'  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search 'Nausea' → 2 results  top: ['Nausea', 'Nausea And Vomiting']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'hedache'  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search 'hedache' → 1 results  top: ['Headache']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'dizzy'  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search 'dizzy' → 1 results  top: ['Dizziness']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search: 'dizzy'  (19 PTs in vocabulary)
+2026-04-14 14:27:26  INFO      faers.reaction_search           Reaction search 'dizzy' → 1 results  top: ['Dizziness']  (0.00s)
+2026-04-14 14:27:26  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['ASPIRIN']  {'LOW': 1}
+2026-04-14 14:27:26  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['ASPIRIN']  {'LOW': 1}
+2026-04-14 14:27:26  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['ASPIRIN']  {'LOW': 1}
+2026-04-14 14:27:26  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['ASPIRIN']  {'LOW': 1}
+2026-04-14 14:27:27  INFO      faers.signal_detection          signals_for_drug: no signals found for ['TOTALLY_UNKNOWN_DRUG_XYZ_999'] (min_signal=LOW, min_n_dr=5)
+2026-04-14 14:27:27  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['ASPIRIN']  {'LOW': 1}
+2026-04-14 14:27:27  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['ASPIRIN']  {'LOW': 1}
+2026-04-14 14:27:27  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['WARFARIN']  {'MEDIUM': 1}
+2026-04-14 14:27:27  INFO      faers.signal_detection          signals_for_drug: 1 signals for ['ASPIRIN']  {'LOW': 1}
+2026-04-14 14:27:27  INFO      faers.signal_detection          signals_for_drug: 0 signals for ['ASPIRIN']  {}
+2026-04-14 14:27:27  WARNING   faers.signal_detection          signals_for_drug: PRR table unavailable
+2026-04-14 14:27:27  WARNING   faers.signal_detection          signals_for_drug: PRR table unavailable
+2026-04-14 14:27:27  INFO      faers.signal_detection          signals_for_reaction: 1 signals for PTs=['Bleeding']
+2026-04-14 14:27:27  INFO      faers.signal_detection          signals_for_reaction: 1 signals for PTs=['Bleeding']
+2026-04-14 14:27:27  INFO      faers.signal_detection          signals_for_reaction: no signals found for PTs=['TOTALLY_UNKNOWN_REACTION_XYZ_9999']
+2026-04-14 14:27:45  INFO      faers.__main__                  Starting background cache warm-up thread
+2026-04-14 14:27:45  INFO      faers.data_loader               Background cache warm-up starting...
+2026-04-14 14:27:45  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-14 14:27:45  INFO      faers.data_loader               Loading FAERS parquet tables from /Users/haydenherstrom/codeprojects/bigdataproject/data/parquet_recent
+2026-04-14 14:27:58  INFO      faers.data_loader               load_tables complete: 2,850,424 cases, 12,069,844 drug rows, 9,147,324 reaction rows  (12.76s total)
+2026-04-14 14:27:58  INFO      faers.data_loader               Building lookup tables...
+2026-04-14 14:28:01  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-14 14:28:03  INFO      faers.queries                   global_kpis: computing...
+2026-04-14 14:28:06  INFO      faers.queries                   global_kpis: 2,850,424 cases  223,591 deaths  87,845 drugs  18,401 PTs
+2026-04-14 14:28:07  INFO      faers.data_loader               Loaded cache table prr_table             511,218 rows
+2026-04-14 14:28:07  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=PS  top_n=20
+2026-04-14 14:28:08  INFO      faers.data_loader               Loaded cache table drug_summary          87,845 rows
+2026-04-14 14:28:08  INFO      faers.data_loader               Loaded cache table reac_summary          18,401 rows
+2026-04-14 14:28:10  INFO      faers.data_loader               Loaded cache table quarterly_drug        164,158 rows
+2026-04-14 14:28:10  INFO      faers.data_loader               Loaded cache table quarterly_reac        95,762 rows
+2026-04-14 14:28:11  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 216249 signals
+2026-04-14 14:28:45  INFO      faers.data_loader               Lookup tables ready: 8 quarters, 8441339 drug entries, 9038460 reaction entries  (46.96s)
+2026-04-14 14:28:45  INFO      faers.data_loader               Background cache warm-up complete (60.44s)
+2026-04-14 14:30:55  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-14 14:30:55  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-14 14:30:55  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=PS  top_n=20
+2026-04-14 14:30:55  INFO      faers.views/drug                Drug Explorer: user searched for 'semaglutide'  (role=PS, q_key=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q)
+2026-04-14 14:30:55  INFO      faers.drug_normalizer           RxNorm lookup: 'semaglutide'
+2026-04-14 14:30:56  WARNING   faers.drug_normalizer           RxNorm related lookup failed for RxCUI=1991311: 400 Client Error: Bad Request for url: https://rxnav.nlm.nih.gov/REST/rxcui/1991311/related.json?tty=BN%2BIN%2BSCDF%2BSBD%2BMIN
+2026-04-14 14:30:56  INFO      faers.drug_normalizer           find_faers_names: searching for 'semaglutide'
+2026-04-14 14:31:01  INFO      faers.drug_normalizer           find_faers_names: 'semaglutide' → 33 FAERS names  (5.03s)  e.g. ['CYANOCOBALAMIN\\GLYCINE\\SEMAGLUTIDE', 'CYANOCOBALAMIN\\LEVOCARNITINE\\SEMAGLUTIDE', 'CYANOCOBALAMIN\\SEMAGLUTIDE']
+2026-04-14 14:31:01  INFO      faers.views/drug                Drug Explorer: 'semaglutide' → 33 FAERS names  canon='0.25 MG, 0.5 MG Dose 1.5 ML semaglutide 1.34 MG/ML Pen Injector [Ozempic]'
+2026-04-14 14:31:01  INFO      faers.research_connector        RxClass lookup: rxcui=1991311
+2026-04-14 14:31:02  INFO      faers.research_connector        RxClass: rxcui=1991311 → 2 classes  (0.53s)
+2026-04-14 14:31:02  INFO      faers.research_connector        FDA approval lookup: '0.25 MG, 0.5 MG Dose 1.5 ML semaglutide 1.34 MG/ML Pen Injector [Ozempic]'
+2026-04-14 14:31:03  INFO      faers.research_connector        FDA approval: no records found for '0.25 MG, 0.5 MG Dose 1.5 ML semaglutide 1.34 MG/ML Pen Injector [Ozempic]'  (1.34s)
+2026-04-14 14:31:03  INFO      faers.research_connector        FDA label lookup: '0.25 MG, 0.5 MG Dose 1.5 ML semaglutide 1.34 MG/ML Pen Injector [Ozempic]'
+2026-04-14 14:31:04  INFO      faers.research_connector        FDA label: no label found for '0.25 MG, 0.5 MG Dose 1.5 ML semaglutide 1.34 MG/ML Pen Injector [Ozempic]'  (1.46s)
+2026-04-14 14:31:04  INFO      faers.queries                   drug_kpis: names='CYANOCOBALAMIN\\GLYCINE\\SEMAGLUTIDE|CYANOCOBALAMIN\\LEVOCARNIT'  role=PS  quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q
+2026-04-14 14:31:18  INFO      faers.queries                   drug_kpis: 23,638 cases, 396 deaths (1.7%), 4,979 hosp
+2026-04-14 14:33:32  INFO      faers.signal_detection          signals_for_drug: 25 signals for ['CYANOCOBALAMIN\\GLYCINE\\SEMAGLUTIDE', 'CYANOCOBALAMIN\\LEVOCARNITINE\\SEMAGLUTIDE']  {'HIGH': 21, 'MEDIUM': 4}
+2026-04-14 14:33:32  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 216249 signals
+2026-04-14 14:39:18  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-14 14:39:18  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-14 14:39:18  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=PS  top_n=20
+2026-04-14 14:39:19  INFO      faers.views/drug                Drug Explorer: user searched for 'elevidys'  (role=PS, q_key=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q)
+2026-04-14 14:39:19  INFO      faers.drug_normalizer           RxNorm lookup: 'elevidys'
+2026-04-14 14:39:19  WARNING   faers.drug_normalizer           RxNorm related lookup failed for RxCUI=2641688: 400 Client Error: Bad Request for url: https://rxnav.nlm.nih.gov/REST/rxcui/2641688/related.json?tty=BN%2BIN%2BSCDF%2BSBD%2BMIN
+2026-04-14 14:39:19  INFO      faers.drug_normalizer           find_faers_names: searching for 'elevidys'
+2026-04-14 14:39:21  INFO      faers.drug_normalizer           find_faers_names: 'elevidys' → 7 FAERS names  (2.01s)  e.g. ['DELANDISTROGENE MOXEPARVOVEC', 'DELANDISTROGENE MOXEPARVOVEC ROKL', 'DELANDISTROGENE MOXEPARVOVEC-ROKL']
+2026-04-14 14:39:21  INFO      faers.views/drug                Drug Explorer: 'elevidys' → 7 FAERS names  canon='{10 (10 ML delandistrogene moxeparvovec-rokl 13300000000000 VECTOR-GENOMES/ML Injection [Elevidys]) } Pack [Elevidys Kit 10.0 - 10.4 KG]'
+2026-04-14 14:39:21  INFO      faers.research_connector        RxClass lookup: rxcui=2641688
+2026-04-14 14:39:22  INFO      faers.research_connector        RxClass: rxcui=2641688 → 1 classes  (0.48s)
+2026-04-14 14:39:22  INFO      faers.research_connector        FDA approval lookup: '{10 (10 ML delandistrogene moxeparvovec-rokl 13300000000000 VECTOR-GENOMES/ML Injection [Elevidys]) } Pack [Elevidys Kit 10.0 - 10.4 KG]'
+2026-04-14 14:39:23  INFO      faers.research_connector        FDA approval: no records found for '{10 (10 ML delandistrogene moxeparvovec-rokl 13300000000000 VECTOR-GENOMES/ML Injection [Elevidys]) } Pack [Elevidys Kit 10.0 - 10.4 KG]'  (1.69s)
+2026-04-14 14:39:23  INFO      faers.research_connector        FDA label lookup: '{10 (10 ML delandistrogene moxeparvovec-rokl 13300000000000 VECTOR-GENOMES/ML Injection [Elevidys]) } Pack [Elevidys Kit 10.0 - 10.4 KG]'
+2026-04-14 14:39:25  INFO      faers.research_connector        FDA label: no label found for '{10 (10 ML delandistrogene moxeparvovec-rokl 13300000000000 VECTOR-GENOMES/ML Injection [Elevidys]) } Pack [Elevidys Kit 10.0 - 10.4 KG]'  (1.44s)
+2026-04-14 14:39:25  INFO      faers.queries                   drug_kpis: names='DELANDISTROGENE MOXEPARVOVEC|DELANDISTROGENE MOXEPARVOVEC RO'  role=PS  quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q
+2026-04-14 14:39:29  INFO      faers.queries                   drug_kpis: 167 cases, 4 deaths (2.4%), 85 hosp
+2026-04-14 14:40:25  INFO      faers.signal_detection          signals_for_drug: no signals found for ['DELANDISTROGENE MOXEPARVOVEC', 'DELANDISTROGENE MOXEPARVOVEC ROKL', 'DELANDISTROGENE MOXEPARVOVEC-ROKL'] (min_signal=LOW, min_n_dr=10)
+2026-04-14 14:40:25  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 216249 signals
+2026-04-14 14:53:01  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-14 14:53:01  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-14 14:53:01  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=PS  top_n=20
+2026-04-14 14:53:01  INFO      faers.views/drug                Drug Explorer: user searched for 'elevidys'  (role=PS, q_key=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q)
+2026-04-14 14:53:01  INFO      faers.drug_normalizer           find_faers_names: searching for 'elevidys'
+2026-04-14 14:53:03  INFO      faers.drug_normalizer           find_faers_names: 'elevidys' → 7 FAERS names  (1.93s)  e.g. ['DELANDISTROGENE MOXEPARVOVEC', 'DELANDISTROGENE MOXEPARVOVEC ROKL', 'DELANDISTROGENE MOXEPARVOVEC-ROKL']
+2026-04-14 14:53:03  INFO      faers.views/drug                Drug Explorer: 'elevidys' → 7 FAERS names  canon='{10 (10 ML delandistrogene moxeparvovec-rokl 13300000000000 VECTOR-GENOMES/ML Injection [Elevidys]) } Pack [Elevidys Kit 10.0 - 10.4 KG]'
+2026-04-14 14:53:03  INFO      faers.signal_detection          signals_for_drug: no signals found for ['DELANDISTROGENE MOXEPARVOVEC', 'DELANDISTROGENE MOXEPARVOVEC ROKL', 'DELANDISTROGENE MOXEPARVOVEC-ROKL'] (min_signal=LOW, min_n_dr=10)
+2026-04-14 14:53:03  INFO      faers.research_connector        ClinicalTrials search: 'Elevidys'  mode=intervention  status=None
+2026-04-14 14:53:04  INFO      faers.research_connector        ClinicalTrials: 'Elevidys' → 8/10 trials returned
+2026-04-14 14:53:04  INFO      faers.research_connector        PubMed search: 'Elevidys adverse events'  sort=relevance  date_filter=None
+2026-04-14 14:53:04  INFO      faers.research_connector        PubMed: 'Elevidys adverse events' → 8/13 articles  (0.53s)
+2026-04-14 14:53:04  INFO      faers.research_connector        FDA enforcement lookup: 'Elevidys'
+2026-04-14 14:53:05  INFO      faers.research_connector        FDA enforcement: no records for 'Elevidys' (status=404)  (0.55s)
+2026-04-14 14:53:05  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 216249 signals
+2026-04-14 15:12:45  INFO      faers.__main__                  Starting background cache warm-up thread
+2026-04-14 15:12:45  INFO      faers.data_loader               Background cache warm-up starting...
+2026-04-14 15:12:45  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-14 15:12:45  INFO      faers.data_loader               Background cache warm-up complete (0.00s)
+2026-04-14 15:12:45  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-14 15:12:45  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=PS  top_n=20
+2026-04-14 15:12:46  INFO      faers.views/drug                Drug Explorer: user searched for 'rinvoq'  (role=PS, q_key=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q)
+2026-04-14 15:12:46  INFO      faers.drug_normalizer           RxNorm lookup: 'rinvoq'
+2026-04-14 15:12:46  WARNING   faers.drug_normalizer           RxNorm related lookup failed for RxCUI=2196900: 400 Client Error: Bad Request for url: https://rxnav.nlm.nih.gov/REST/rxcui/2196900/related.json?tty=BN%2BIN%2BSCDF%2BSBD%2BMIN
+2026-04-14 15:12:46  INFO      faers.drug_normalizer           find_faers_names: searching for 'rinvoq'
+2026-04-14 15:12:51  INFO      faers.drug_normalizer           find_faers_names: 'rinvoq' → 7 FAERS names  (4.63s)  e.g. ['RINVOQ', 'RINVOQ 15MG ER TAB', 'RINVOQ 30MG TAB']
+2026-04-14 15:12:51  INFO      faers.views/drug                Drug Explorer: 'rinvoq' → 7 FAERS names  canon='24 Hr Upadacitinib 15 Mg Extended Release Oral Tablet [Rinvoq]'
+2026-04-14 15:12:51  INFO      faers.research_connector        RxClass lookup: rxcui=2196900
+2026-04-14 15:12:52  INFO      faers.research_connector        RxClass: rxcui=2196900 → 2 classes  (0.50s)
+2026-04-14 15:12:52  INFO      faers.research_connector        FDA approval lookup: '24 Hr Upadacitinib 15 Mg Extended Release Oral Tablet [Rinvoq]'
+2026-04-14 15:12:53  INFO      faers.research_connector        FDA approval: no records found for '24 Hr Upadacitinib 15 Mg Extended Release Oral Tablet [Rinvoq]'  (1.48s)
+2026-04-14 15:12:53  INFO      faers.research_connector        FDA label lookup: '24 Hr Upadacitinib 15 Mg Extended Release Oral Tablet [Rinvoq]'
+2026-04-14 15:12:54  INFO      faers.research_connector        FDA label: no label found for '24 Hr Upadacitinib 15 Mg Extended Release Oral Tablet [Rinvoq]'  (1.36s)
+2026-04-14 15:12:54  INFO      faers.queries                   drug_kpis: names='RINVOQ|RINVOQ 15MG ER TAB|RINVOQ 30MG TAB|RINVOQ ER|RINVOQ L'  role=PS  quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q
+2026-04-14 15:12:59  INFO      faers.queries                   drug_kpis: 28,481 cases, 1,139 deaths (4.0%), 8,038 hosp
+2026-04-14 15:14:03  INFO      faers.signal_detection          signals_for_drug: 25 signals for ['RINVOQ', 'RINVOQ 15MG ER TAB']  {'HIGH': 25}
+2026-04-14 15:14:03  INFO      faers.views/signals             Signal Intelligence: levels=['HIGH', 'MEDIUM']  min_n=10  drug_filter=None  pt_filter=None  → 216249 signals

@@ -51,7 +51,7 @@ def render() -> None:
 
     sec("Signal Landscape — PRR vs. Report Volume")
     sample = filtered.sample(min(len(filtered), 4000), random_state=42) if len(filtered) > 4000 else filtered
-    st.plotly_chart(prr_scatter(sample, h=430), use_container_width=True)
+    st.plotly_chart(prr_scatter(sample, h=430), width='stretch')
     st.caption(
         f"{len(sample):,} of {len(filtered):,} signals shown. "
         "Dotted line = PRR of 2 (Evans threshold). "
@@ -76,7 +76,7 @@ def render() -> None:
     )
     st.dataframe(
         disp[["Signal", "Drug", "Preferred Term", "PRR", "CI Low", "CI High", "N (D+R)", "N (Drug)", "N (Reaction)", "Chi-sq"]],
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
         height=520,
         column_config={

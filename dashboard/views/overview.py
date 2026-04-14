@@ -49,7 +49,7 @@ def render() -> None:
                 )
             )
             fig_td.update_layout(yaxis=dict(categoryorder="total ascending"), xaxis_title=None)
-            st.plotly_chart(theme(fig_td, 420), use_container_width=True)
+            st.plotly_chart(theme(fig_td, 420), width='stretch')
 
     with col_b:
         sec("Top 15 Reactions by Report Volume")
@@ -69,7 +69,7 @@ def render() -> None:
                 )
             )
             fig_tr.update_layout(yaxis=dict(categoryorder="total ascending"), xaxis_title=None)
-            st.plotly_chart(theme(fig_tr, 420), use_container_width=True)
+            st.plotly_chart(theme(fig_tr, 420), width='stretch')
 
     sec("Pharmacovigilance Signal Summary")
     sig_html = "".join(
@@ -89,7 +89,7 @@ def render() -> None:
     )
 
     sec("Reports Per Quarter")
-    st.plotly_chart(line_trend(global_trend, "quarter", "case_count", "Cases"), use_container_width=True)
+    st.plotly_chart(line_trend(global_trend, "quarter", "case_count", "Cases"), width='stretch')
 
     sec("Quarter-over-Quarter Trends")
     trend_d = qr.trending_drugs(top_n=10)
@@ -114,7 +114,7 @@ def render() -> None:
                 )
             )
             fig_td2.update_layout(yaxis=dict(categoryorder="total ascending"), xaxis_title="Case increase")
-            st.plotly_chart(theme(fig_td2, 320), use_container_width=True)
+            st.plotly_chart(theme(fig_td2, 320), width='stretch')
     with t2:
         if not trend_r.empty:
             prev_q_lbl = trend_r["prev_q"].iloc[0]
@@ -134,7 +134,7 @@ def render() -> None:
                 )
             )
             fig_tr2.update_layout(yaxis=dict(categoryorder="total ascending"), xaxis_title="Case increase")
-            st.plotly_chart(theme(fig_tr2, 320), use_container_width=True)
+            st.plotly_chart(theme(fig_tr2, 320), width='stretch')
 
     sec("Top Elevated Signals (HIGH, N ≥ 50)")
     top_sigs = sd.global_top_signals(min_signal="HIGH", min_n_dr=50, top_n=10)
@@ -144,7 +144,7 @@ def render() -> None:
         st.dataframe(
             disp,
             hide_index=True,
-            use_container_width=True,
+            width='stretch',
             column_config={
                 "PRR": st.column_config.NumberColumn("PRR", format="%.2f"),
                 "Chi-sq": st.column_config.NumberColumn("Chi-sq", format="%.1f"),
