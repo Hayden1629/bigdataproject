@@ -1,0 +1,31 @@
+Here are some FAERS data fields or operations that may be of interest to downstream business stakeholders and medical professionals (users of the dashboard):
+
+FYI ** means we should definitely has this included
+
+Demographic table:
+- event_dt <- when the event occurred
+- mfr_sndr <- manufacturer who submitted report (good for pharmaceutical companies)
+- occr_country <- where the event happened
+- lit_ref <- literature reference if the case came from academic journal (good for medical professionals)
+- age_grp <- which age group the patient belonged to
+- sex <- patient sex
+- wt <- patient weight
+
+Drug Table:
+- role_cod <- role of drug in the event; has specific ID codes
+**- drugname <- name of the drug; FREE text -- use LLM here
+- prod_ai <- active ingredient of product
+- route <- how drug was administered
+- dose_vbm <- Dose as reported by submitter; FREE text -- use LLM here maybe
+-- -- could also use dose_amt and dose_unit in tandem instead
+- dose_form <- form factor of the drug (e.g. tablet, capsule, solution)
+- dose_freq <- how often drug was taken
+
+Reactions table:
+**- pt <- medical description of the adverse event
+
+Outcomes table:
+- outc_cod <- code for the outcome of the event (e.g. death, life-threatening, hospitalization)
+
+Indications table:
+- indi_pt <- Preferred Term for what the drug is being used to treat (e.g. type 2 diabetes)
