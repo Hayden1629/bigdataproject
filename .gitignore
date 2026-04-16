@@ -1,6 +1,7 @@
 /data
 claude_test/cache/
 dashboard/cache/
+dashboard/cache_*/
 # uv
 .venv/
 .uv/
@@ -9,5 +10,4 @@ __pycache__/
 *.DS_Store
 .claude-overnight/
 claude_test/__pycache__/
-*.parquet
 dashboard/faers_dashboard.log

@@ -172,6 +172,98 @@ def build_quarterly_trends(drug_df, reac_df):
     print(f"  Saved {len(qr):,} rows -> {path}")
 
 
+# ── App-optimised fact tables --------------------------------------------------
+
+def build_app_fact_tables(demo_df, drug_df, reac_df, outc_df):
+    """
+    Build slim, app-optimised fact tables for the dashboard:
+    - fact_drug_quarter.parquet  (drug_canon, quarter, primaryid, outc_cod)
+    - fact_reac_quarter.parquet  (reaction_pt_norm, quarter, primaryid, outc_cod)
+    - demo_slim.parquet          (primaryid, quarter, age_grp, sex, reporter_country, occp_cod)
+    """
+    print("Building app-optimised fact tables...")
+
+    demo = demo_df.copy()
+    drug = drug_df.copy()
+    reac = reac_df.copy()
+    outc = outc_df.copy()
+
+    # Ensure canonical names and normalised PTs exist
+    drug["prod_ai_norm"] = drug["prod_ai"].str.upper().str.strip()
+    drug["drugname_norm"] = drug["drugname"].str.upper().str.strip()
+    drug["canon"] = drug["prod_ai_norm"].fillna(drug["drugname_norm"])
+
+    reac["pt_norm"] = reac["pt"].str.strip().str.title()
+
+    # Ensure quarter is available on all tables
+    if "quarter" not in drug.columns:
+        drug = drug.merge(demo[["primaryid", "quarter"]], on="primaryid", how="left")
+    if "quarter" not in reac.columns:
+        reac = reac.merge(demo[["primaryid", "quarter"]], on="primaryid", how="left")
+    if "quarter" not in outc.columns:
+        outc = outc.merge(demo[["primaryid", "quarter"]], on="primaryid", how="left")
+
+    # Minimal outcome info per case
+    outc_min = outc[["primaryid", "outc_cod", "quarter"]].copy()
+
+    # Drug-centric fact table
+    fd = (
+        drug[["canon", "primaryid", "quarter"]]
+        .dropna(subset=["canon"])
+        .drop_duplicates()
+        .merge(outc_min, on=["primaryid", "quarter"], how="left")
+    )
+    fd = fd.rename(columns={"canon": "drug_canon"})
+    path_fd = os.path.join(CACHE_DIR, "fact_drug_quarter.parquet")
+    fd.to_parquet(path_fd, index=False)
+    print(f"  Saved {len(fd):,} rows -> {path_fd}")
+
+    # Reaction-centric fact table
+    fr = (
+        reac[["pt_norm", "primaryid", "quarter"]]
+        .dropna(subset=["pt_norm"])
+        .drop_duplicates()
+        .merge(outc_min, on=["primaryid", "quarter"], how="left")
+    )
+    fr = fr.rename(columns={"pt_norm": "reaction_pt_norm"})
+    path_fr = os.path.join(CACHE_DIR, "fact_reac_quarter.parquet")
+    fr.to_parquet(path_fr, index=False)
+    print(f"  Saved {len(fr):,} rows -> {path_fr}")
+
+    # Slimmed demo slice for demographics
+    demo_slim = demo[["primaryid", "quarter"]].copy()
+    # age_grp
+    if "age_grp" not in demo_slim.columns and "age" in demo.columns:
+        age = pd.to_numeric(demo["age"], errors="coerce")
+        demo_slim["age_grp"] = pd.cut(
+            age,
+            bins=[-1, 1, 11, 17, 64, 150],
+            labels=["N", "I", "C", "A", "E"],
+        )
+    else:
+        demo_slim["age_grp"] = demo.get("age_grp")
+    # sex
+    demo_slim["sex"] = demo.get("sex")
+    # reporter_country and occp_cod
+    demo_slim["reporter_country"] = demo.get("reporter_country")
+    demo_slim["occp_cod"] = demo.get("occp_cod")
+
+    path_demo_slim = os.path.join(CACHE_DIR, "demo_slim.parquet")
+    demo_slim.to_parquet(path_demo_slim, index=False)
+    print(f"  Saved {len(demo_slim):,} rows -> {path_demo_slim}")
+
+    # Slim drug-name lookup table for fast search-term normalization without
+    # loading the full raw drug table at app startup.
+    drug_name_lookup = (
+        drug[["drugname_norm", "prod_ai_norm", "canon"]]
+        .drop_duplicates()
+        .reset_index(drop=True)
+    )
+    path_name_lookup = os.path.join(CACHE_DIR, "drug_name_lookup.parquet")
+    drug_name_lookup.to_parquet(path_name_lookup, index=False)
+    print(f"  Saved {len(drug_name_lookup):,} rows -> {path_name_lookup}")
+
+
 # ── PRR computation ───────────────────────────────────────────────────────────
 
 def build_prr_table(drug_df, reac_df, n_total, top_n=TOP_DRUGS):
@@ -286,6 +378,7 @@ if __name__ == "__main__":
     build_reac_summary(reac, outc)
     build_quarterly_trends(drug, reac)
     build_prr_table(drug, reac, n_total, top_n=TOP_DRUGS)
+    build_app_fact_tables(demo, drug, reac, outc)
 
     elapsed = time.perf_counter() - t_start
     log.info("precompute complete  total=%.1fs  cache=%s", elapsed, CACHE_DIR)

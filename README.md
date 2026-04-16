@@ -94,11 +94,9 @@ bigdataproject/
 │   ├── queries.py               # Cached query layer backed by indexed case lookups
 │   ├── data_loader.py           # FAERS loading, deduplication, and reusable lookup tables
 │   ├── analytics.py             # Pure pandas KPIs and aggregations
-│   ├── signal_detection.py      # PRR signal retrieval from pre-computed table
 │   ├── api_cache.py             # Persistent disk cache for external API calls
 │   ├── drug_normalizer.py       # RxNorm API + fuzzy drug name matching
 │   ├── reaction_search.py       # Lay-term → MedDRA semantic search
-│   ├── signal_interpreter.py    # Claude Haiku AI signal summaries
 │   ├── research_connector.py    # ClinicalTrials.gov + PubMed live connectors
 │   ├── precompute.py            # One-time cache builder (run before first launch)
 │   ├── requirements.txt

@@ -2268,3 +2268,203 @@
 2026-04-16 13:28:09  INFO      faers.reaction_search           Reaction search 'dizzy' → 1 results  top: ['Dizziness']  (0.00s)
 2026-04-16 13:28:09  INFO      faers.reaction_search           Reaction search: 'dizzy'  (19 PTs in vocabulary)
 2026-04-16 13:28:09  INFO      faers.reaction_search           Reaction search 'dizzy' → 1 results  top: ['Dizziness']  (0.00s)
+2026-04-16 14:15:29  INFO      faers.__main__                  Starting background cache warm-up thread
+2026-04-16 14:15:29  INFO      faers.data_loader               Background cache warm-up starting...
+2026-04-16 14:15:29  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-16 14:15:29  INFO      faers.data_loader               Loading FAERS parquet tables from /Users/haydenherstrom/codeprojects/bigdataproject/dashboard/tests/fixtures
+2026-04-16 14:15:29  INFO      faers.data_loader               load_tables complete: 580 cases, 1,131 drug rows, 1,174 reaction rows  (0.04s total)
+2026-04-16 14:15:29  INFO      faers.__main__                  App startup complete: 4 quarters, 10 reaction terms
+2026-04-16 14:15:29  INFO      faers.data_loader               Loading lookup tables from disk cache...
+2026-04-16 14:15:29  INFO      faers.queries                   global_kpis: computing...
+2026-04-16 14:15:29  INFO      faers.queries                   global_kpis: 580 cases  24 deaths  7 drugs  10 PTs
+2026-04-16 14:15:29  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2  role=PS  top_n=20
+2026-04-16 14:15:29  INFO      faers.data_loader               Loaded cache table drug_summary          7 rows
+2026-04-16 14:15:29  INFO      faers.data_loader               Loaded cache table reac_summary          10 rows
+2026-04-16 14:15:29  INFO      faers.data_loader               Lookup tables loaded from disk: 4 quarters, 1131 drug entries, 1174 reaction entries  (0.03s)
+2026-04-16 14:15:29  INFO      faers.data_loader               Loaded cache table prr_table             8 rows
+2026-04-16 14:15:29  INFO      faers.data_loader               Loaded cache table quarterly_drug        28 rows
+2026-04-16 14:15:29  INFO      faers.data_loader               Loaded cache table quarterly_reac        40 rows
+2026-04-16 14:15:29  INFO      faers.data_loader               Background cache warm-up complete (0.08s)
+2026-04-16 14:15:29  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-16 14:15:29  INFO      faers.__main__                  App startup complete: 4 quarters, 10 reaction terms
+2026-04-16 14:15:29  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2  role=PS  top_n=20
+2026-04-16 14:15:29  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-16 14:15:29  INFO      faers.__main__                  App startup complete: 4 quarters, 10 reaction terms
+2026-04-16 14:15:29  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2  role=PS  top_n=20
+2026-04-16 14:15:29  INFO      faers.views/drug                Drug Explorer: user searched for 'ASPIRIN'  (role=PS, q_key=2023Q3|2023Q4|2024Q1|2024Q2)
+2026-04-16 14:15:29  INFO      faers.drug_normalizer           find_faers_names: searching for 'ASPIRIN'
+2026-04-16 14:15:29  INFO      faers.drug_normalizer           find_faers_names: 'ASPIRIN' → 1 FAERS names  (0.00s)  e.g. ['ASPIRIN']
+2026-04-16 14:15:29  INFO      faers.views/drug                Drug Explorer: 'ASPIRIN' → 1 FAERS names  canon='ASPIRIN'
+2026-04-16 14:15:29  INFO      faers.views/drug                Drug Explorer: loading query bundle and external context for 'ASPIRIN'
+2026-04-16 14:15:29  INFO      faers.queries                   drug_query_bundle: start names='ASPIRIN'  role=PS  quarters=2023Q3|2023Q4|2024Q1|2024Q2
+2026-04-16 14:15:29  INFO      faers.queries                   _drug_case_ids: names=1 role=PS quarters=2023Q3|2023Q4|2024Q1|2024Q2 raw=144 filtered=144  (0.01s)
+2026-04-16 14:15:29  INFO      faers.queries                   drug_query_bundle: case ids resolved: 144  (0.01s)
+2026-04-16 14:15:29  INFO      faers.queries                   PrimaryID indexes ready: demo=580, drug=1,131, reac=1,174, outc=350, indi=409  (0.00s)
+2026-04-16 14:15:29  INFO      faers.queries                   drug_query_bundle: subset rows demo=144 drug=313 reac=285 outc=96 indi=104  (0.01s)
+2026-04-16 14:15:29  INFO      faers.queries                   drug_query_bundle: derived metrics for 144 cases in 0.02s; total 0.03s
+2026-04-16 14:15:29  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-16 14:15:29  INFO      faers.__main__                  App startup complete: 4 quarters, 10 reaction terms
+2026-04-16 14:15:29  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2  role=PS  top_n=20
+2026-04-16 14:15:29  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-16 14:15:29  INFO      faers.__main__                  App startup complete: 4 quarters, 10 reaction terms
+2026-04-16 14:15:29  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2  role=PS  top_n=20
+2026-04-16 14:15:29  INFO      faers.drug_normalizer           find_faers_names: searching for 'ASPIRIN'
+2026-04-16 14:15:29  INFO      faers.drug_normalizer           find_faers_names: 'ASPIRIN' → 2 FAERS names  (0.00s)  e.g. ['ASPIRIN', 'ASPIRIN 81MG']
+2026-04-16 14:15:29  INFO      faers.drug_normalizer           find_faers_names: searching for 'COUMADIN'
+2026-04-16 14:15:29  INFO      faers.drug_normalizer           find_faers_names: 'COUMADIN' → 2 FAERS names  (0.00s)  e.g. ['COUMADIN', 'WARFARIN']
+2026-04-16 14:15:29  INFO      faers.drug_normalizer           find_faers_names: searching for 'ASIRIN'
+2026-04-16 14:15:29  INFO      faers.drug_normalizer           find_faers_names: 'ASIRIN' → 2 FAERS names  (0.00s)  e.g. ['ASPIRIN', 'ASPIRIN 81MG']
+2026-04-16 14:15:29  INFO      faers.drug_normalizer           find_faers_names: searching for 'COMPLETELY_MADE_UP_DRUG_ZZZ'
+2026-04-16 14:15:29  WARNING   faers.drug_normalizer           find_faers_names: no FAERS matches for 'COMPLETELY_MADE_UP_DRUG_ZZZ'  (0.00s)
+2026-04-16 14:15:29  INFO      faers.drug_normalizer           find_faers_names: searching for 'ASPIRIN'
+2026-04-16 14:15:29  INFO      faers.drug_normalizer           find_faers_names: 'ASPIRIN' → 2 FAERS names  (0.00s)  e.g. ['ASPIRIN', 'ASPIRIN 81MG']
+2026-04-16 14:15:29  INFO      faers.drug_normalizer           find_faers_names: searching for 'ASPIRIN'
+2026-04-16 14:15:29  INFO      faers.drug_normalizer           find_faers_names: 'ASPIRIN' → 2 FAERS names  (0.00s)  e.g. ['ASPIRIN', 'ASPIRIN 81MG']
+2026-04-16 14:15:29  INFO      faers.drug_normalizer           find_faers_names: searching for 'X'
+2026-04-16 14:15:29  WARNING   faers.drug_normalizer           find_faers_names: no FAERS matches for 'X'  (0.00s)
+2026-04-16 14:15:29  INFO      faers.drug_normalizer           find_faers_names: searching for 'TYLENOL'
+2026-04-16 14:15:29  INFO      faers.drug_normalizer           find_faers_names: 'TYLENOL' → 2 FAERS names  (0.00s)  e.g. ['ACETAMINOPHEN', 'TYLENOL']
+2026-04-16 14:15:29  INFO      faers.queries                   drug_query_bundle: start names='ASPIRIN'  role=PS  quarters=ALL
+2026-04-16 14:15:29  INFO      faers.queries                   _drug_case_ids: names=1 role=PS quarters=ALL raw=144 filtered=144  (0.00s)
+2026-04-16 14:15:29  INFO      faers.queries                   drug_query_bundle: case ids resolved: 144  (0.00s)
+2026-04-16 14:15:29  INFO      faers.queries                   drug_query_bundle: subset rows demo=144 drug=313 reac=285 outc=96 indi=104  (0.00s)
+2026-04-16 14:15:30  INFO      faers.queries                   drug_query_bundle: derived metrics for 144 cases in 0.04s; total 0.05s
+2026-04-16 14:15:30  INFO      faers.queries                   _drug_case_ids: names=1 role=PS quarters=ALL raw=144 filtered=144  (0.00s)
+2026-04-16 14:15:30  INFO      faers.queries                   drug_query_bundle: start names='WARFARIN'  role=all  quarters=ALL
+2026-04-16 14:15:30  INFO      faers.queries                   _drug_case_ids: names=1 role=all quarters=ALL raw=197 filtered=197  (0.00s)
+2026-04-16 14:15:30  INFO      faers.queries                   drug_query_bundle: case ids resolved: 197  (0.00s)
+2026-04-16 14:15:30  INFO      faers.queries                   drug_query_bundle: subset rows demo=197 drug=428 reac=422 outc=112 indi=135  (0.00s)
+2026-04-16 14:15:30  INFO      faers.queries                   drug_query_bundle: derived metrics for 197 cases in 0.04s; total 0.05s
+2026-04-16 14:15:30  INFO      faers.queries                   _drug_case_ids: names=1 role=all quarters=ALL raw=197 filtered=197  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'nausea'  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search 'nausea' → 2 results  top: ['Nausea', 'Nausea And Vomiting']  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'nausea'  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search 'nausea' → 2 results  top: ['Nausea', 'Nausea And Vomiting']  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'headache'  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search 'headache' → 1 results  top: ['Headache']  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'a'  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search 'a' → 3 results  top: ['Nausea', 'Diarrhoea', 'Myocardial Infarction']  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: ''  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search '' → 19 results  top: ['Nausea', 'Vomiting', 'Diarrhoea']  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'nausea'  (0 PTs in vocabulary)
+2026-04-16 14:15:30  WARNING   faers.reaction_search           Reaction search 'nausea' → no results  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'nausea'  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search 'nausea' → 2 results  top: ['Nausea', 'Nausea And Vomiting']  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'nausea'  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search 'nausea' → 2 results  top: ['Nausea', 'Nausea And Vomiting']  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'throwing up'  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search 'throwing up' → 1 results  top: ['Vomiting']  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'bleeding'  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search 'bleeding' → 3 results  top: ['Haemorrhage', 'Gastrointestinal Haemorrhage', 'Bleeding']  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'diarrhea'  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search 'diarrhea' → 1 results  top: ['Diarrhoea']  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'fainting'  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search 'fainting' → 1 results  top: ['Syncope']  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'shortness of breath'  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search 'shortness of breath' → 1 results  top: ['Dyspnoea']  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'Thrombosis'  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search 'Thrombosis' → 1 results  top: ['Thrombosis']  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'HEADACHE'  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search 'HEADACHE' → 1 results  top: ['Headache']  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'Nausea'  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search 'Nausea' → 2 results  top: ['Nausea', 'Nausea And Vomiting']  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'hedache'  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search 'hedache' → 1 results  top: ['Headache']  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'dizzy'  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search 'dizzy' → 1 results  top: ['Dizziness']  (0.00s)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search: 'dizzy'  (19 PTs in vocabulary)
+2026-04-16 14:15:30  INFO      faers.reaction_search           Reaction search 'dizzy' → 1 results  top: ['Dizziness']  (0.00s)
+2026-04-16 14:15:40  INFO      faers.__main__                  Starting background cache warm-up thread
+2026-04-16 14:15:40  INFO      faers.data_loader               Background cache warm-up starting...
+2026-04-16 14:15:40  INFO      faers.data_loader               Loading FAERS parquet tables from /Users/haydenherstrom/codeprojects/bigdataproject/data/parquet_recent
+2026-04-16 14:15:40  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-16 14:18:09  INFO      faers.data_loader               load_tables complete: 2,850,424 cases, 12,069,844 drug rows, 9,147,324 reaction rows  (148.90s total)
+2026-04-16 14:18:11  INFO      faers.data_loader               Loading lookup tables from disk cache...
+2026-04-16 14:18:12  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-16 14:18:12  INFO      faers.queries                   global_kpis: computing...
+2026-04-16 14:18:14  INFO      faers.queries                   global_kpis: 2,850,424 cases  223,591 deaths  87,845 drugs  18,401 PTs
+2026-04-16 14:18:14  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=PS  top_n=20
+2026-04-16 14:18:15  INFO      faers.data_loader               Loaded cache table drug_summary          87,845 rows
+2026-04-16 14:18:15  INFO      faers.data_loader               Loaded cache table reac_summary          18,401 rows
+2026-04-16 14:18:16  INFO      faers.data_loader               Lookup tables loaded from disk: 8 quarters, 8441339 drug entries, 9038460 reaction entries  (5.42s)
+2026-04-16 14:18:16  INFO      faers.data_loader               Loaded cache table prr_table             511,218 rows
+2026-04-16 14:18:16  INFO      faers.data_loader               Loaded cache table quarterly_drug        164,158 rows
+2026-04-16 14:18:16  INFO      faers.data_loader               Loaded cache table quarterly_reac        95,762 rows
+2026-04-16 14:18:16  INFO      faers.data_loader               Background cache warm-up complete (155.86s)
+2026-04-16 14:19:12  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-16 14:19:12  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-16 14:19:12  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=PS  top_n=20
+2026-04-16 14:19:12  INFO      faers.views/drug                Drug Explorer: user searched for 'skyrizi'  (role=PS, q_key=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q)
+2026-04-16 14:19:12  INFO      faers.drug_normalizer           find_faers_names: searching for 'skyrizi'
+2026-04-16 14:19:42  INFO      faers.drug_normalizer           find_faers_names: 'skyrizi' → 12 FAERS names  (29.66s)  e.g. ['RISANKIZUMAB-RZAA', 'RIZI', 'SKYRIZI']
+2026-04-16 14:19:42  INFO      faers.views/drug                Drug Explorer: 'skyrizi' → 12 FAERS names  canon='Skyrizi'
+2026-04-16 14:19:42  INFO      faers.views/drug                Drug Explorer: loading query bundle and external context for 'skyrizi'
+2026-04-16 14:19:42  INFO      faers.queries                   drug_query_bundle: start names='RISANKIZUMAB-RZAA|RIZI|SKYRIZI|SKYRIZI 150 MG, SOLUTION INJE'  role=PS  quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q
+2026-04-16 14:19:53  INFO      faers.queries                   _drug_case_ids: names=12 role=PS quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q raw=29,300 filtered=29,300  (10.33s)
+2026-04-16 14:19:53  INFO      faers.queries                   drug_query_bundle: case ids resolved: 29,300  (10.34s)
+2026-04-16 14:21:43  INFO      faers.queries                   PrimaryID indexes ready: demo=2,850,424, drug=12,069,844, reac=9,147,324, outc=2,090,255, indi=7,746,844  (110.44s)
+2026-04-16 14:23:19  INFO      faers.queries                   drug_query_bundle: subset rows demo=29,300 drug=61,995 reac=82,388 outc=27,357 indi=55,781  (206.84s)
+2026-04-16 14:23:21  INFO      faers.queries                   drug_query_bundle: derived metrics for 29,300 cases in 1.31s; total 218.50s
+2026-04-16 14:24:57  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-16 14:24:57  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-16 14:24:57  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-16 14:24:57  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=PS  top_n=20
+2026-04-16 14:24:57  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-16 14:24:57  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=PS  top_n=20
+2026-04-16 14:25:08  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-16 14:25:08  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-16 14:25:08  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=PS  top_n=20
+2026-04-16 14:25:08  INFO      faers.views/drug                Drug Explorer: user searched for 'skyrizi'  (role=PS, q_key=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q)
+2026-04-16 14:25:08  INFO      faers.drug_normalizer           find_faers_names: searching for 'skyrizi'
+2026-04-16 14:25:41  INFO      faers.drug_normalizer           find_faers_names: 'skyrizi' → 12 FAERS names  (32.56s)  e.g. ['RISANKIZUMAB-RZAA', 'RIZI', 'SKYRIZI']
+2026-04-16 14:25:41  INFO      faers.views/drug                Drug Explorer: 'skyrizi' → 12 FAERS names  canon='Skyrizi'
+2026-04-16 14:25:41  INFO      faers.views/drug                Drug Explorer: loading query bundle and external context for 'skyrizi'
+2026-04-16 14:27:16  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-16 14:27:16  INFO      faers.__main__                  App startup complete: 8 quarters, 18401 reaction terms
+2026-04-16 14:27:16  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2  role=PS  top_n=20
+2026-04-16 14:27:16  INFO      faers.views/drug                Drug Explorer: user searched for 'ozempic'  (role=PS, q_key=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q)
+2026-04-16 14:27:16  INFO      faers.drug_normalizer           RxNorm lookup: 'ozempic'
+2026-04-16 14:27:17  WARNING   faers.drug_normalizer           RxNorm related lookup failed for RxCUI=1991311: 404 Client Error: Not Found for url: https://rxnav.nlm.nih.gov/REST/rxcui/1991311/allRelatedInfo.json
+2026-04-16 14:27:17  INFO      faers.drug_normalizer           find_faers_names: searching for 'ozempic'
+2026-04-16 14:27:30  INFO      faers.drug_normalizer           find_faers_names: 'ozempic' → 47 FAERS names  (12.71s)  e.g. ['OZEMPIC', 'OZEMPIC .25 OR 0.5 PEN INJCTR', 'OZEMPIC 0,25 MG']
+2026-04-16 14:27:30  INFO      faers.views/drug                Drug Explorer: 'ozempic' → 47 FAERS names  canon='Ozempic'
+2026-04-16 14:27:30  INFO      faers.views/drug                Drug Explorer: loading query bundle and external context for 'ozempic'
+2026-04-16 14:27:30  INFO      faers.queries                   drug_query_bundle: start names='OZEMPIC|OZEMPIC .25 OR 0.5 PEN INJCTR|OZEMPIC 0,25 MG|OZEMPI'  role=PS  quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q
+2026-04-16 14:27:30  INFO      faers.research_connector        FDA approval lookup: 'Ozempic'
+2026-04-16 14:27:30  INFO      faers.research_connector        RxClass lookup: rxcui=1991311
+2026-04-16 14:27:30  INFO      faers.research_connector        FDA label lookup: 'Ozempic'
+2026-04-16 14:27:32  INFO      faers.research_connector        FDA approval: 'Ozempic' → 2 records via openfda.brand_name  (1.75s)
+2026-04-16 14:27:32  INFO      faers.research_connector        FDA label: 'Ozempic' found via openfda.brand_name  boxed_warning=True  (2.08s)
+2026-04-16 14:27:33  INFO      faers.research_connector        RxClass: rxcui=1991311 → 2 classes  (3.51s)
+2026-04-16 14:27:49  INFO      faers.queries                   _drug_case_ids: names=47 role=PS quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q raw=23,542 filtered=23,542  (19.39s)
+2026-04-16 14:27:49  INFO      faers.queries                   drug_query_bundle: case ids resolved: 23,542  (19.39s)
+2026-04-16 14:29:31  INFO      faers.__main__                  Starting background cache warm-up thread
+2026-04-16 14:29:31  INFO      faers.data_loader               Background cache warm-up starting...
+2026-04-16 14:29:31  INFO      faers.__main__                  App startup: loading tables, reaction terms, and quarters
+2026-04-16 14:29:31  INFO      faers.data_loader               Loading FAERS parquet tables from /Users/haydenherstrom/codeprojects/bigdataproject/data/parquet_recent
+2026-04-16 14:51:58  INFO      faers.__main__                  precompute starting  parquet=data/parquet  cache=dashboard/cache_full
+2026-04-16 14:59:25  INFO      faers.__main__                  precompute complete  total=446.1s  cache=dashboard/cache_full
+2026-04-16 15:01:41  INFO      faers.__main__                  Starting background cache warm-up thread
+2026-04-16 15:01:41  INFO      faers.data_loader               Background cache warm-up starting (light)...
+2026-04-16 15:01:41  INFO      faers.__main__                  App startup: loading reaction terms and quarters
+2026-04-16 15:01:44  INFO      faers.data_loader               Loaded fact_drug_quarter  13,313,150 rows
+2026-04-16 15:01:46  INFO      faers.data_loader               Loaded fact_reac_quarter  14,173,097 rows
+2026-04-16 15:01:48  INFO      faers.data_loader               Loaded demo_slim cache  3,196,263 rows
+2026-04-16 15:01:48  INFO      faers.data_loader               Loaded cache table drug_summary          98,553 rows
+2026-04-16 15:01:48  INFO      faers.data_loader               Loaded cache table reac_summary          18,823 rows
+2026-04-16 15:01:48  INFO      faers.data_loader               Loaded cache table quarterly_drug        187,325 rows
+2026-04-16 15:01:48  INFO      faers.data_loader               Loaded cache table quarterly_reac        107,981 rows
+2026-04-16 15:01:48  INFO      faers.data_loader               Building lookup tables (will save to disk for future restarts)...
+2026-04-16 15:01:48  INFO      faers.data_loader               Loading FAERS parquet tables from /Users/haydenherstrom/codeprojects/bigdataproject/data/parquet
+2026-04-16 15:01:54  INFO      faers.__main__                  App startup complete: 9 quarters, 18823 reaction terms
+2026-04-16 15:01:54  INFO      faers.queries                   global_kpis: computing...
+2026-04-16 15:03:33  INFO      faers.data_loader               load_tables complete: 3,196,263 cases, 13,485,605 drug rows, 10,236,932 reaction rows  (105.45s total)
+2026-04-16 15:03:42  INFO      faers.queries                   global_kpis: 3,196,263 cases  248,085 deaths  98,553 drugs  18,823 PTs
+2026-04-16 15:03:44  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2|2025  role=PS  top_n=20
+2026-04-16 15:05:39  INFO      faers.data_loader               Lookup tables built and saved to disk: 9 quarters, 9445023 drug entries, 10116645 reaction entries  (231.43s)
+2026-04-16 15:05:39  INFO      faers.data_loader               Background cache warm-up complete (238.60s)
+2026-04-16 15:30:52  INFO      faers.__main__                  App startup: loading reaction terms and quarters
+2026-04-16 15:30:52  INFO      faers.__main__                  App startup complete: 9 quarters, 18823 reaction terms
+2026-04-16 15:30:52  INFO      faers.sidebar                   Sidebar filters: quarters=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q4|2025Q1|2025Q2|2025  role=PS  top_n=20
+2026-04-16 15:30:52  INFO      faers.views/drug                Drug Explorer: user searched for 'skyrizi'  (role=PS, q_key=2023Q3|2023Q4|2024Q1|2024Q2|2024Q3|2024Q)
+2026-04-16 15:33:15  INFO      faers.__main__                  precompute starting  parquet=data/parquet  cache=dashboard/cache_full

@@ -1,25 +1,13 @@
-"""
-test_app_smoke.py
+"""Headless smoke tests for the Streamlit app using streamlit.testing.v1.AppTest.
 
-Headless smoke tests using streamlit.testing.v1.AppTest.
-
-These tests verify that the app renders without exceptions and that the
-critical UI elements (title, tabs, KPI metrics, charts) are present.
-All external API calls (RxNorm, openFDA, PubMed, ClinicalTrials, LLM) are
-stubbed so the suite runs fully offline.
-
-Performance note
-----------------
-Each AppTest.run() re-executes the entire app script.  We reuse one AppTest
-instance per test class where possible (class-level fixture), and limit
-AppTest runs to the minimum needed to verify a feature path.
+The tests assert that the app renders without exceptions, core UI elements
+exist, and external API calls are stubbed so the suite can run fully offline.
 """
 
 from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -48,7 +36,7 @@ _RXNORM_STUB = {
     "related": ["ASPIRIN", "BAYER ASPIRIN"],
 }
 
-_DRUG_LABEL_STUB: dict[str, Any] = {
+_DRUG_LABEL_STUB = {
     "boxed_warning": "",
     "warnings": "Avoid in patients with aspirin allergy.",
     "indications": "Pain, fever, anti-platelet therapy.",
@@ -96,7 +84,6 @@ def _make_patches() -> list:
         patch("research_connector.get_drug_class",       return_value=_DRUG_CLASS_STUB),
         patch("research_connector.search_clinical_trials", return_value=_TRIALS_STUB),
         patch("research_connector.search_pubmed",        return_value=_PUBMED_STUB),
-        patch("signal_interpreter.interpret_signals",    return_value=""),
     ]
 
 
@@ -168,11 +155,7 @@ class TestDrugExplorerTab:
 # ── All tabs render without st.stop() leak ────────────────────────────────────
 
 class TestAllTabsRender:
-    """
-    After refactoring _render_drug_tab → functions, all 5 tabs should render
-    in a single run().  We verify by checking that the total number of rendered
-    elements grows — if st.stop() still leaked, later tabs would add nothing.
-    """
+    """All tabs should render in a single run without an st.stop() leak."""
 
     @pytest.fixture(scope="class")
     def at(self) -> "AppTest":
@@ -208,20 +191,3 @@ class TestGlobalFilters:
         """The quarters filter should render as individual checkboxes."""
         assert len(at.checkbox) >= 1, "Expected at least one quarter checkbox"
 
-
-# ── Signal Intelligence tab ───────────────────────────────────────────────────
-
-class TestSignalIntelligenceTab:
-    @pytest.fixture(scope="class")
-    def at(self) -> "AppTest":
-        app = _build_at()
-        return _run_with_stubs(app)
-
-    def test_no_exception(self, at: "AppTest") -> None:
-        assert not at.exception
-
-    def test_dataframe_or_table_present(self, at: "AppTest") -> None:
-        """Signal table should render as a dataframe."""
-        assert len(at.dataframe) >= 1 or len(at.table) >= 1, (
-            "Expected at least one dataframe/table on Signal Intelligence tab"
-        )

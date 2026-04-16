@@ -5,7 +5,6 @@ import streamlit as st
 
 import data_loader as dl
 import queries as qr
-# import signal_detection as sd  # commented out — signal intelligence beyond current scope
 from ui import kpi_card, line_trend, sec, theme
 
 
@@ -15,7 +14,6 @@ def render() -> None:
         global_trend = qr.global_quarterly_trend()
         drug_sum = dl.load_drug_summary()
         reac_sum = dl.load_reac_summary()
-        # sc = sd.signal_counts()  # commented out — signal intelligence beyond current scope
 
     death_pct_global = round(gk["n_deaths"] / gk["n_cases"] * 100, 2) if gk["n_cases"] else 0
     kpis_html = "".join(
@@ -71,24 +69,6 @@ def render() -> None:
             fig_tr.update_layout(yaxis=dict(categoryorder="total ascending"), xaxis_title=None)
             st.plotly_chart(theme(fig_tr, 420), width='stretch')
 
-    # -- Signal intelligence commented out — beyond current scope --
-    # sec("Pharmacovigilance Signal Summary")
-    # sig_html = "".join(
-    #     [
-    #         kpi_card("HIGH Signals", f"{sc['HIGH']:,}", "PRR ≥ 4, N ≥ 5, χ² ≥ 4", "kpi-danger"),
-    #         kpi_card("MEDIUM Signals", f"{sc['MEDIUM']:,}", "PRR ≥ 2, N ≥ 3, χ² ≥ 4", "kpi-warn"),
-    #         kpi_card("LOW Signals", f"{sc['LOW']:,}", "PRR ≥ 1.5, N ≥ 3", "kpi-ok"),
-    #     ]
-    # )
-    # st.markdown(f'<div class="kpi-row">{sig_html}</div>', unsafe_allow_html=True)
-    # st.markdown(
-    #     '<div class="note">Signal detection uses the Proportional Reporting Ratio (PRR) method '
-    #     '(Evans et al. 2001, <i>Pharmacoepidemiol Drug Saf</i>). '
-    #     'A signal is elevated when PRR ≥ 2, chi-squared ≥ 4, and co-occurrences ≥ 3. '
-    #     'FAERS is a spontaneous reporting database; signals do not establish causality.</div>',
-    #     unsafe_allow_html=True,
-    # )
-
     sec("Quarter-over-Quarter Trends")
     trend_d = qr.trending_drugs(top_n=10)
     trend_r = qr.trending_reactions(top_n=10)
@@ -133,21 +113,6 @@ def render() -> None:
             )
             fig_tr2.update_layout(yaxis=dict(categoryorder="total ascending"), xaxis_title="Case increase")
             st.plotly_chart(theme(fig_tr2, 320), width='stretch')
-
-    # sec("Top Elevated Signals (HIGH, N ≥ 50)")
-    # top_sigs = sd.global_top_signals(min_signal="HIGH", min_n_dr=50, top_n=10)
-    # if not top_sigs.empty:
-    #     disp = top_sigs[["drug", "pt", "N_DR", "PRR", "chi2", "signal"]].copy()
-    #     disp.columns = ["Drug", "Preferred Term", "Co-occurrences", "PRR", "Chi-sq", "Signal"]
-    #     st.dataframe(
-    #         disp,
-    #         hide_index=True,
-    #         width='stretch',
-    #         column_config={
-    #             "PRR": st.column_config.NumberColumn("PRR", format="%.2f"),
-    #             "Chi-sq": st.column_config.NumberColumn("Chi-sq", format="%.1f"),
-    #         },
-    #     )
 
     sec("Reports Per Quarter")
     st.plotly_chart(line_trend(global_trend, "quarter", "case_count", "Cases"), width='stretch')

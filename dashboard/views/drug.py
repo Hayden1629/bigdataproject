@@ -50,7 +50,13 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
     # ── 1. Drug lookup ────────────────────────────────────────────────────────
     with st.spinner("Searching names…"):
         rxn = drug_normalizer.rxnorm_lookup(drug_query)
-        matched = drug_normalizer.find_faers_names(drug_query, tables["drug"])
+        drug_name_lookup = tables.get("drug")
+        if drug_name_lookup is None:
+            drug_name_lookup = dl.load_drug_name_lookup()
+        if drug_name_lookup is None:
+            # Backwards-compatible fallback when the slim cache has not been built yet.
+            drug_name_lookup = dl.load_tables()["drug"][["drugname_norm", "prod_ai_norm", "canon"]].drop_duplicates()
+        matched = drug_normalizer.find_faers_names(drug_query, drug_name_lookup)
 
     if not matched:
         log.warning("Drug Explorer: no FAERS matches for %r", drug_query)
@@ -221,11 +227,28 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
                 appr_q = f"{dt.year}Q{(dt.month - 1) // 3 + 1}"
                 quarters_list = trend["quarter"].tolist()
                 if appr_q in quarters_list:
-                    trend_fig.add_vline(x=quarters_list.index(appr_q), line=dict(color=C["accent"], dash="dash", width=1.5), annotation_text=f"FDA Approved ({appr_q})", annotation_position="top left", annotation_font=dict(size=10, color=C["accent"]))
+                    trend_fig.add_vline(
+                        x=quarters_list.index(appr_q),
+                        line=dict(color=C["accent"], dash="dash", width=1.5),
+                        annotation_text=f"FDA Approved ({appr_q})",
+                        annotation_position="top left",
+                        annotation_font=dict(size=10, color=C["accent"]),
+                    )
                 elif appr_q < quarters_list[0]:
-                    trend_fig.add_annotation(x=quarters_list[0], y=1, xref="x", yref="paper", text=f"FDA Approved {appr_raw[:7]}", showarrow=False, xanchor="left", font=dict(size=9, color=C["muted"]), bgcolor=C["surface"], borderpad=3)
-            except Exception:
-                pass
+                    trend_fig.add_annotation(
+                        x=quarters_list[0],
+                        y=1,
+                        xref="x",
+                        yref="paper",
+                        text=f"FDA Approved {appr_raw[:7]}",
+                        showarrow=False,
+                        xanchor="left",
+                        font=dict(size=9, color=C["muted"]),
+                        bgcolor=C["surface"],
+                        borderpad=3,
+                    )
+            except Exception as exc:
+                log.warning("Drug Explorer: failed to overlay FDA approval marker %r: %s", appr_raw, exc)
     st.plotly_chart(trend_fig, width='stretch', key=f"trend_{nk[:40]}")
 
     # ── 6. Demographics ───────────────────────────────────────────────────────
