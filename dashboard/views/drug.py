@@ -73,21 +73,24 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
     # ── Parallel fetch: all downstream data at once ───────────────────────────
     rxcui_str = rxn.get("rxcui", "") or ""
     with st.spinner("Loading drug data…"):
-        with ThreadPoolExecutor(max_workers=12) as ex:
+        log.info("Drug Explorer: loading query bundle and external context for %r", drug_query)
+        with ThreadPoolExecutor(max_workers=8) as ex:
             f_classes   = ex.submit(research_connector.get_drug_class, rxcui_str)
             f_fda       = ex.submit(research_connector.get_fda_approval_info, canon)
             f_fda_ing   = ex.submit(research_connector.get_fda_approval_info, fda_ingredient) if fda_ingredient else None
             f_label     = ex.submit(research_connector.get_drug_label, canon)
             f_label_ing = ex.submit(research_connector.get_drug_label, fda_ingredient) if fda_ingredient else None
-            f_kpi      = ex.submit(qr.drug_kpis, nk, role_cod, q_key)
-            f_trend    = ex.submit(qr.drug_trend, nk, role_cod, q_key)
-            f_reac     = ex.submit(qr.drug_top_reactions, nk, role_cod, q_key, top_n)
-            f_outc     = ex.submit(qr.drug_outcomes, nk, role_cod, q_key)
-            f_demog    = ex.submit(qr.drug_demographics, nk, role_cod, q_key)
-            f_ctry     = ex.submit(qr.drug_countries, nk, role_cod, q_key, top_n=10)
-            f_indi     = ex.submit(qr.drug_indications, nk, role_cod, q_key, top_n=12)
-            f_comed    = ex.submit(qr.drug_concomitants, nk, role_cod, q_key, top_n=12)
-            f_recent   = ex.submit(qr.drug_recent_records, nk, role_cod, q_key)
+            f_bundle    = ex.submit(
+                qr.drug_query_bundle,
+                nk,
+                role_cod,
+                q_key,
+                top_n_reactions=top_n,
+                top_n_countries=10,
+                top_n_indications=12,
+                top_n_concomitants=12,
+                recent_limit=100,
+            )
 
         drug_classes = f_classes.result()
         # Use brand-name FDA result; fall back to ingredient-name result if brand returns nothing
@@ -96,15 +99,16 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
         label_ing    = f_label_ing.result() if f_label_ing else None
         # Prefer label with a boxed warning; otherwise take whichever has content
         label = label_brand if (label_brand.get("boxed_warning") or not label_ing or not label_ing.get("boxed_warning")) else label_ing
-        kpi          = f_kpi.result()
-        trend        = f_trend.result()
-        reac_df      = f_reac.result()
-        outc_df      = f_outc.result()
-        demog        = f_demog.result()
-        ctry_df      = f_ctry.result()
-        indi_df      = f_indi.result()
-        comed_df     = f_comed.result()
-        recent_df    = f_recent.result()
+        bundle       = f_bundle.result()
+        kpi          = bundle["kpi"]
+        trend        = bundle["trend"]
+        reac_df      = bundle["top_reactions"]
+        outc_df      = bundle["outcomes"]
+        demog        = bundle["demographics"]
+        ctry_df      = bundle["countries"]
+        indi_df      = bundle["indications"]
+        comed_df     = bundle["concomitants"]
+        recent_df    = bundle["recent_records"]
 
     # Drug class + header
     class_tag = ""
