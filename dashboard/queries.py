@@ -216,11 +216,11 @@ def drug_query_bundle(
 
     step_t0 = time.perf_counter()
     indexed = _primaryid_indexed_tables()
-    demo_sub = _subset_by_primaryids(indexed["demo"], case_ids)
-    drug_sub = _subset_by_primaryids(indexed["drug"], case_ids)
-    reac_sub = _subset_by_primaryids(indexed["reac"], case_ids)
-    outc_sub = _subset_by_primaryids(indexed["outc"], case_ids)
-    indi_sub = _subset_by_primaryids(indexed["indi"], case_ids)
+    demo_sub = _subset_by_primaryids(indexed["demo"], case_ids).reset_index(drop=True)
+    drug_sub = _subset_by_primaryids(indexed["drug"], case_ids).reset_index(drop=True)
+    reac_sub = _subset_by_primaryids(indexed["reac"], case_ids).reset_index(drop=True)
+    outc_sub = _subset_by_primaryids(indexed["outc"], case_ids).reset_index(drop=True)
+    indi_sub = _subset_by_primaryids(indexed["indi"], case_ids).reset_index(drop=True)
     log.info(
         "drug_query_bundle: subset rows demo=%s drug=%s reac=%s outc=%s indi=%s  (%.2fs)",
         f"{len(demo_sub):,}",
