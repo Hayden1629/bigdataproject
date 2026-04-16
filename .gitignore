@@ -10,3 +10,4 @@ __pycache__/
 .claude-overnight/
 claude_test/__pycache__/
 *.parquet
+dashboard/faers_dashboard.log
