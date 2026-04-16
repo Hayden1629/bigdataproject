@@ -85,6 +85,24 @@ def load_tables() -> dict[str, pd.DataFrame]:
 
     demo = tables["demo"].copy()
 
+    # ── Deduplicate demo: keep highest caseversion per caseid ─────────────────
+    # In production, STARTHERE.py pre-deduplicates the parquet files, so this
+    # is normally a no-op.  We apply it defensively so test fixtures (which
+    # intentionally include duplicate caseversions) behave consistently with
+    # the conftest normalisation and the `_primaryid_indexed_tables` path.
+    if "caseid" in demo.columns and "caseversion" in demo.columns:
+        demo["caseversion"] = pd.to_numeric(demo["caseversion"], errors="coerce").fillna(0).astype(int)
+        demo = demo.sort_values("caseversion").drop_duplicates("caseid", keep="last")
+
+    tables["demo"] = demo
+
+    # Filter every other table to valid primaryids so superseded case versions
+    # don't leak into drug/reac/outc subsets or lookup indexes.
+    valid_pids = set(demo["primaryid"].unique())
+    for _tbl in ["drug", "reac", "outc", "indi", "rpsr", "ther"]:
+        if _tbl in tables and not tables[_tbl].empty:
+            tables[_tbl] = tables[_tbl][tables[_tbl]["primaryid"].isin(valid_pids)].copy()
+
     # ── Derive synthetic columns if not present (test fixtures may omit them) ──
     # age_grp: bucket numeric age into MedDRA age groups
     if "age_grp" not in demo.columns:
