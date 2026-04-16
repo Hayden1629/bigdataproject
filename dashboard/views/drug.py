@@ -11,8 +11,6 @@ import data_loader as dl
 import drug_normalizer as drug_normalizer
 import queries as qr
 import research_connector as research_connector
-import signal_detection as sd
-import signal_interpreter as signal_interpreter
 from ui import C, add_prr_ci, badge, bar_h, bar_v, donut, forest_plot, kpi_card, line_trend, sec, summary_note, quarter_delta_text
 from logger import get_logger
 
@@ -66,6 +64,9 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
     # Simpler display title: strip the "(ingredient)" part when a brand name is present
     _bracket = re.match(r'^(.+?)\s*\(.*\)$', canon_full)
     canon = _bracket.group(1).strip() if _bracket else canon_full
+    # Ingredient name for FDA fallback — extracted from "Brand (ingredient)" canonical
+    _ing_match = re.search(r'\(([^)]+)\)', canon_full)
+    fda_ingredient = _ing_match.group(1).strip().title() if _ing_match else None
     related = rxn.get("related", [])
     rxcui_tag = f" &nbsp;·&nbsp; RxCUI `{rxn['rxcui']}`" if rxn.get("rxcui") else ""
 
@@ -73,9 +74,11 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
     rxcui_str = rxn.get("rxcui", "") or ""
     with st.spinner("Loading drug data…"):
         with ThreadPoolExecutor(max_workers=12) as ex:
-            f_classes  = ex.submit(research_connector.get_drug_class, rxcui_str)
-            f_fda      = ex.submit(research_connector.get_fda_approval_info, canon)
-            f_label    = ex.submit(research_connector.get_drug_label, canon)
+            f_classes   = ex.submit(research_connector.get_drug_class, rxcui_str)
+            f_fda       = ex.submit(research_connector.get_fda_approval_info, canon)
+            f_fda_ing   = ex.submit(research_connector.get_fda_approval_info, fda_ingredient) if fda_ingredient else None
+            f_label     = ex.submit(research_connector.get_drug_label, canon)
+            f_label_ing = ex.submit(research_connector.get_drug_label, fda_ingredient) if fda_ingredient else None
             f_kpi      = ex.submit(qr.drug_kpis, nk, role_cod, q_key)
             f_trend    = ex.submit(qr.drug_trend, nk, role_cod, q_key)
             f_reac     = ex.submit(qr.drug_top_reactions, nk, role_cod, q_key, top_n)
@@ -84,12 +87,15 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
             f_ctry     = ex.submit(qr.drug_countries, nk, role_cod, q_key, top_n=10)
             f_indi     = ex.submit(qr.drug_indications, nk, role_cod, q_key, top_n=12)
             f_comed    = ex.submit(qr.drug_concomitants, nk, role_cod, q_key, top_n=12)
-            f_sig      = ex.submit(sd.signals_for_drug, matched, min_signal="LOW", top_n=25, min_n_dr=10)
             f_recent   = ex.submit(qr.drug_recent_records, nk, role_cod, q_key)
 
         drug_classes = f_classes.result()
-        fda_records  = f_fda.result()
-        label        = f_label.result()
+        # Use brand-name FDA result; fall back to ingredient-name result if brand returns nothing
+        fda_records  = f_fda.result() or (f_fda_ing.result() if f_fda_ing else [])
+        label_brand  = f_label.result()
+        label_ing    = f_label_ing.result() if f_label_ing else None
+        # Prefer label with a boxed warning; otherwise take whichever has content
+        label = label_brand if (label_brand.get("boxed_warning") or not label_ing or not label_ing.get("boxed_warning")) else label_ing
         kpi          = f_kpi.result()
         trend        = f_trend.result()
         reac_df      = f_reac.result()
@@ -98,7 +104,6 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
         ctry_df      = f_ctry.result()
         indi_df      = f_indi.result()
         comed_df     = f_comed.result()
-        sig_df       = f_sig.result()
         recent_df    = f_recent.result()
 
     # Drug class + header
@@ -252,11 +257,9 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
         else:
             st.caption("No concomitant drug data found.")
 
-    # ── 8. Pharmacovigilance signals ──────────────────────────────────────────
-    # Now that we have all data, render the At A Glance summary
+    # ── 8. At A Glance summary ────────────────────────────────────────────────
     top_indication = f"Most common linked indication: {indi_df.iloc[0]['indication']}." if not indi_df.empty else ""
-    strongest_signal = f"Strongest PRR signal: {sig_df.iloc[0]['pt']} (PRR {sig_df.iloc[0]['PRR']:.2f}, N={int(sig_df.iloc[0]['N_DR']):,}, {sig_df.iloc[0]['signal'].lower()})." if not sig_df.empty else ""
-    summary_note("At A Glance", [lead_reaction, recent_change, strongest_signal, top_indication])
+    summary_note("At A Glance", [lead_reaction, recent_change, top_indication])
 
     # sec("Pharmacovigilance Signals (PRR)")
     # if not sig_df.empty:
@@ -287,18 +290,7 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
 
     # ── 9. Optional external context (on demand) ──────────────────────────────
     with st.expander("Optional External Context", expanded=False):
-        load_ai = bool(sig_df is not None and not sig_df.empty) and st.toggle("Generate AI interpretation", value=False, key=f"ai_{canon}", help="Uses an external model only when you turn this on.")
         load_research = st.toggle("Load live research and FDA enforcement context", value=False, key=f"research_{canon}", help="Fetches ClinicalTrials.gov, PubMed, and openFDA enforcement data on demand.")
-
-        if load_ai:
-            st.markdown("**AI Signal Interpretation**")
-            with st.spinner("Generating signal summary..."):
-                signals_csv_str = sig_df[["pt", "N_DR", "PRR", "chi2", "signal"]].head(15).to_csv(index=False)
-                ai_summary = signal_interpreter.interpret_signals(drug_name=canon, signals_csv=signals_csv_str, n_cases=kpi["n_cases"], n_deaths=kpi["n_deaths"])
-            if ai_summary:
-                st.markdown(f'<div class="note" style="font-size:.80rem;color:{C["text"]};line-height:1.7;">{ai_summary}</div>', unsafe_allow_html=True)
-            else:
-                st.caption("AI interpretation unavailable — set ANTHROPIC_API_KEY or GROQ_API_KEY to enable.")
 
         if load_research:
             st.markdown("**Research Context**")

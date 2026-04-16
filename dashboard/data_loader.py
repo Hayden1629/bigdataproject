@@ -140,12 +140,40 @@ def load_tables() -> dict[str, pd.DataFrame]:
 def load_lookup_tables() -> dict[str, pd.DataFrame]:
     """Build compact lookup tables used by the query layer.
 
-    These tables trade a small amount of startup work for much faster repeated
-    dashboard interactions by avoiding full scans of the large source tables.
+    On first run, builds indexes from the source tables and saves them to disk.
+    On subsequent runs (including after app restarts), loads from disk instantly.
+    Cache is invalidated automatically when the source demo.parquet is newer.
     """
     import time
     t0 = time.perf_counter()
-    log.info("Building lookup tables...")
+
+    _LOOKUP_FILES = {
+        "quarter_cases":  os.path.join(_CACHE_DIR, "lookup_quarter_cases.parquet"),
+        "drug_cases":     os.path.join(_CACHE_DIR, "lookup_drug_cases.parquet"),
+        "drug_role_cases": os.path.join(_CACHE_DIR, "lookup_drug_role_cases.parquet"),
+        "reaction_cases": os.path.join(_CACHE_DIR, "lookup_reaction_cases.parquet"),
+    }
+
+    # Use the demo parquet mtime as a proxy for "source data changed"
+    demo_path = os.path.join(_PARQUET_DIR, "demo.parquet")
+    source_mtime = os.path.getmtime(demo_path) if os.path.exists(demo_path) else 0
+
+    all_fresh = all(
+        os.path.exists(p) and os.path.getmtime(p) > source_mtime
+        for p in _LOOKUP_FILES.values()
+    )
+
+    if all_fresh:
+        log.info("Loading lookup tables from disk cache...")
+        result = {name: pd.read_parquet(path) for name, path in _LOOKUP_FILES.items()}
+        log.info("Lookup tables loaded from disk: %s quarters, %s drug entries, %s reaction entries  (%.2fs)",
+                 result["quarter_cases"].index.nunique(),
+                 len(result["drug_cases"]),
+                 len(result["reaction_cases"]),
+                 time.perf_counter() - t0)
+        return result
+
+    log.info("Building lookup tables (will save to disk for future restarts)...")
     tables = load_tables()
 
     demo_quarters = (
@@ -174,12 +202,18 @@ def load_lookup_tables() -> dict[str, pd.DataFrame]:
     )
 
     result = {
-        "quarter_cases": demo_quarters,
-        "drug_cases": drug_cases,
+        "quarter_cases":  demo_quarters,
+        "drug_cases":     drug_cases,
         "drug_role_cases": drug_role_cases,
         "reaction_cases": reaction_cases,
     }
-    log.info("Lookup tables ready: %s quarters, %s drug entries, %s reaction entries  (%.2fs)",
+
+    os.makedirs(_CACHE_DIR, exist_ok=True)
+    for name, path in _LOOKUP_FILES.items():
+        result[name].to_parquet(path)
+        log.debug("Saved lookup table %s → %s", name, path)
+
+    log.info("Lookup tables built and saved to disk: %s quarters, %s drug entries, %s reaction entries  (%.2fs)",
              len(demo_quarters.index.unique()), len(drug_cases), len(reaction_cases),
              time.perf_counter() - t0)
     return result

@@ -4,7 +4,6 @@ import streamlit as st
 
 import data_loader as dl
 import queries as qr
-import signal_detection as sd
 from ui import C
 from logger import get_logger
 
@@ -46,7 +45,6 @@ Global Filters
 
         st.divider()
         gk = qr.global_kpis()
-        sc = sd.signal_counts()
         profile = dl.get_dataset_profile()
         st.markdown(
             f"""
@@ -67,7 +65,6 @@ Dataset
 | MedDRA PTs | **{gk['n_pts']:,}** |
 | Mode | **{profile['mode']}** |
 | Quarters | **{profile['quarter_start']} → {profile['quarter_end']}** |
-| HIGH signals | **{sc['HIGH']:,}** |
 """
         )
         st.divider()
