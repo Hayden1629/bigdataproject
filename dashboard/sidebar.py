@@ -79,7 +79,6 @@ About
 </div>
 <div style="font-size:.72rem;color:{C['muted']};line-height:1.6;">
 FDA FAERS spontaneous adverse event reports, 2023 Q3&ndash;2025 Q2.<br>
-Signal detection via PRR/chi&#178; (Evans et al. 2001).<br>
 Drug normalization via RxNorm (NLM).
 </div>
 """,

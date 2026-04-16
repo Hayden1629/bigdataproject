@@ -279,6 +279,29 @@ def drug_concomitants(names_key: str, role: str, quarters_key: str, top_n: int =
     return vc
 
 
+@st.cache_data(show_spinner=False)
+def drug_recent_records(names_key: str, role: str, quarters_key: str, limit: int = 100) -> pd.DataFrame:
+    """Return recent individual drug records for the matched drug names."""
+    tables = dl.load_tables()
+    case_ids = _drug_case_ids(names_key, role, quarters_key)
+    if not case_ids:
+        return pd.DataFrame()
+
+    drug = tables["drug"]
+    name_set = set(names_key.split("|"))
+
+    mask = drug["primaryid"].isin(case_ids) & drug["canon"].isin(name_set)
+    if role != "all":
+        mask = mask & (drug["role_cod"] == role)
+
+    sub = drug[mask].copy()
+
+    _WANT_COLS = ["primaryid", "role_cod", "drugname", "prod_ai", "route",
+                  "dose_vbm", "dose_amt", "dose_unit", "dose_form", "dose_freq"]
+    sub = sub[[c for c in _WANT_COLS if c in sub.columns]]
+    return sub.sort_values("primaryid", ascending=False).head(limit).reset_index(drop=True)
+
+
 # ── Reaction queries ──────────────────────────────────────────────────────────
 
 @st.cache_data(show_spinner=False)
