@@ -19,10 +19,74 @@ import time
 import streamlit as st
 import requests
 import pandas as pd
+from typing import TypedDict
 from logger import get_logger
 from api_cache import disk_cache
+from typing import TypedDict
 
 log = get_logger(__name__)
+
+
+class ClinicalTrialRow(TypedDict):
+    nct_id: str
+    title: str
+    status: str
+    phase: str
+    study_type: str
+    sponsor: str
+    enrollment: str | int
+    start_date: str
+    completion_date: str
+    interventions: str
+    conditions: str
+    url: str
+
+
+class PubMedArticle(TypedDict):
+    pmid: str
+    title: str
+    authors: str
+    journal: str
+    pub_date: str
+    pub_type: str
+    doi: str
+    url: str
+
+
+class FdaApprovalRecord(TypedDict):
+    application_number: str
+    app_type: str
+    sponsor: str
+    brand_names: str
+    generic_names: str
+    dosage_forms: str
+    routes: str
+    marketing_status: str
+    first_approval: str
+    latest_action: str
+    ob_url: str
+    fda_url: str
+
+
+class DrugLabelPayload(TypedDict):
+    boxed_warning: str
+    warnings: str
+    indications: str
+    contraindications: str
+    brand_name: str
+    generic_name: str
+    manufacturer: str
+
+
+class EnforcementRecord(TypedDict):
+    recall_number: str
+    status: str
+    recalling_firm: str
+    reason_for_recall: str
+    product_description: str
+    classification: str
+    recall_initiation_date: str
+    termination_date: str
 
 CTGOV_BASE       = "https://clinicaltrials.gov/api/v2/studies"
 PUBMED_SEARCH    = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
@@ -33,6 +97,52 @@ OPENFDA_ENFORCE  = "https://api.fda.gov/drug/enforcement.json"
 RXCLASS_BASE     = "https://rxnav.nlm.nih.gov/REST/rxclass"
 
 _REQUEST_TIMEOUT = 12
+
+
+# Strongly-typed records for key JSON responses
+
+
+class FdaApprovalRecord(TypedDict):
+    application_number: str
+    app_type: str
+    sponsor: str
+    brand_names: str
+    generic_names: str
+    dosage_forms: str
+    routes: str
+    marketing_status: str
+    first_approval: str
+    latest_action: str
+    ob_url: str
+    fda_url: str
+
+
+class DrugClass(TypedDict):
+    class_id: str
+    class_name: str
+    class_type: str
+    source: str
+
+
+class DrugLabel(TypedDict):
+    boxed_warning: str
+    warnings: str
+    indications: str
+    contraindications: str
+    brand_name: str
+    generic_name: str
+    manufacturer: str
+
+
+class EnforcementRecord(TypedDict):
+    recall_number: str
+    status: str
+    recalling_firm: str
+    reason_for_recall: str
+    product_description: str
+    classification: str
+    recall_initiation_date: str
+    termination_date: str
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -90,7 +200,7 @@ def search_clinical_trials(
     total = data.get("totalCount", 0)
     studies = data.get("studies", [])
 
-    rows = []
+    rows: list[ClinicalTrialRow] = []
     for study in studies:
         proto = study.get("protocolSection", {})
         ident  = proto.get("identificationModule", {})
@@ -196,7 +306,7 @@ def search_pubmed(
     result = sum_data.get("result", {})
     uids   = result.get("uids", [])
 
-    rows = []
+    rows: list[PubMedArticle] = []
     for uid in uids:
         art = result.get(uid, {})
         if not art:
@@ -235,7 +345,7 @@ def search_pubmed(
 
 @st.cache_data(ttl=86400, show_spinner=False)
 @disk_cache(ttl=86400)
-def get_fda_approval_info(drug_name: str) -> list[dict]:
+def get_fda_approval_info(drug_name: str) -> list[FdaApprovalRecord]:
     """
     Query openFDA Drugs@FDA for regulatory approval information.
 
@@ -269,7 +379,7 @@ def get_fda_approval_info(drug_name: str) -> list[dict]:
     return []
 
 
-def _parse_fda_result(r: dict) -> dict:
+def _parse_fda_result(r: dict) -> FdaApprovalRecord:
     """Extract key fields from a single openFDA drugsfda result."""
     openfda = r.get("openfda", {})
     submissions = r.get("submissions", [])
@@ -327,7 +437,7 @@ def _parse_fda_result(r: dict) -> dict:
 
 @st.cache_data(ttl=86400, show_spinner=False)
 @disk_cache(ttl=86400)
-def get_drug_class(rxcui: str) -> list[dict]:
+def get_drug_class(rxcui: str) -> list[DrugClass]:
     """
     Fetch therapeutic classifications for a drug via the NLM RxClass API.
 
@@ -343,7 +453,7 @@ def get_drug_class(rxcui: str) -> list[dict]:
 
     log.info("RxClass lookup: rxcui=%s", rxcui)
     t0 = time.perf_counter()
-    results: list[dict] = []
+    results: list[DrugClass] = []
     for source in ("ATC", "VA"):
         try:
             resp = requests.get(
@@ -372,7 +482,7 @@ def get_drug_class(rxcui: str) -> list[dict]:
 
     # Deduplicate by class_name
     seen: set[str] = set()
-    unique: list[dict] = []
+    unique: list[DrugClass] = []
     for r in results:
         if r["class_name"] not in seen:
             seen.add(r["class_name"])
@@ -387,7 +497,7 @@ def get_drug_class(rxcui: str) -> list[dict]:
 
 @st.cache_data(ttl=86400, show_spinner=False)
 @disk_cache(ttl=86400)
-def get_drug_label(drug_name: str) -> dict:
+def get_drug_label(drug_name: str) -> DrugLabel:
     """
     Fetch structured product label data from openFDA for a drug.
 
@@ -398,7 +508,7 @@ def get_drug_label(drug_name: str) -> dict:
     Tries brand name then generic name search.
     Results are cached for 24 hours. Returns empty dict on error.
     """
-    empty: dict = {
+    empty: DrugLabel = {
         "boxed_warning": "", "warnings": "", "indications": "",
         "contraindications": "", "brand_name": "", "generic_name": "",
         "manufacturer": "",
@@ -448,7 +558,7 @@ def get_drug_label(drug_name: str) -> dict:
 
 @st.cache_data(ttl=3600, show_spinner=False)
 @disk_cache(ttl=3600)
-def get_drug_enforcement(drug_name: str, limit: int = 5) -> list[dict]:
+def get_drug_enforcement(drug_name: str, limit: int = 5) -> list[EnforcementRecord]:
     """
     Search openFDA Drug Enforcement database for recall/enforcement actions.
 
@@ -478,19 +588,21 @@ def get_drug_enforcement(drug_name: str, limit: int = 5) -> list[dict]:
         results = resp.json().get("results", [])
         log.info("FDA enforcement: %r → %d recall records  (%.2fs)",
                  drug_name, len(results), time.perf_counter() - t0)
-        return [
-            {
-                "recall_number":         r.get("recall_number", ""),
-                "status":                r.get("status", ""),
-                "recalling_firm":        r.get("recalling_firm", ""),
-                "reason_for_recall":     r.get("reason_for_recall", "")[:200],
-                "product_description":   r.get("product_description", "")[:120],
-                "classification":        r.get("classification", ""),
-                "recall_initiation_date":r.get("recall_initiation_date", ""),
-                "termination_date":      r.get("termination_date", ""),
-            }
-            for r in results
-        ]
+        typed_results: list[EnforcementRecord] = []
+        for r in results:
+            typed_results.append(
+                EnforcementRecord(
+                    recall_number=r.get("recall_number", ""),
+                    status=r.get("status", ""),
+                    recalling_firm=r.get("recalling_firm", ""),
+                    reason_for_recall=r.get("reason_for_recall", "")[:200],
+                    product_description=r.get("product_description", "")[:120],
+                    classification=r.get("classification", ""),
+                    recall_initiation_date=r.get("recall_initiation_date", ""),
+                    termination_date=r.get("termination_date", ""),
+                )
+            )
+        return typed_results
     except Exception as exc:
         log.warning("FDA enforcement request failed for %r: %s", drug_name, exc)
         return []

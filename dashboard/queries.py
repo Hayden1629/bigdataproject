@@ -393,74 +393,40 @@ def drug_recent_records(names_key: str, role: str, quarters_key: str, limit: int
 def reaction_kpis(pts_key: str, quarters_key: str) -> dict:
     log.info("reaction_kpis: pts=%r  quarters=%s", pts_key[:80], quarters_key[:40])
     tables = dl.load_tables()
-    case_ids = _reaction_case_ids(pts_key, quarters_key)
-    n_cases = len(case_ids)
-    if n_cases == 0:
-        log.warning("reaction_kpis: 0 cases matched for pts=%r", pts_key[:80])
-        return {"n_cases": 0, "n_deaths": 0, "n_serious": 0}
-
-    outc_sub = tables["outc"][tables["outc"]["primaryid"].isin(case_ids)]
-    vc = outc_sub["outc_cod"].value_counts()
-    result = {
-        "n_cases": n_cases,
-        "n_deaths": int(vc.get("DE", 0)),
-        "n_serious": int(outc_sub["primaryid"].nunique()),
-    }
-    log.info("reaction_kpis: %s cases, %s deaths", f"{n_cases:,}", f"{result['n_deaths']:,}")
-    return result
+    reac = _filter_quarters(tables["reac"], quarters_key)
+    outc = _filter_quarters_by_demo(tables["outc"], tables["demo"], quarters_key)
+    pt_set = set(pts_key.split("|")) if pts_key else set()
+    return ana.kpis_for_reaction(reac, outc, pt_set)
 
 
 @st.cache_data(show_spinner=False)
 def reaction_top_drugs(pts_key: str, role: str, quarters_key: str, top_n: int) -> pd.DataFrame:
     tables = dl.load_tables()
-    case_ids = _reaction_case_ids(pts_key, quarters_key)
-    total = len(case_ids)
-    if total == 0:
-        return pd.DataFrame(columns=["drug_label", "case_count", "pct"])
-
-    drug_sub = tables["drug"][tables["drug"]["primaryid"].isin(case_ids)]
-    if role != "all":
-        drug_sub = drug_sub[drug_sub["role_cod"] == role]
-
-    counts = (
-        drug_sub.groupby("canon")["primaryid"]
-        .nunique()
-        .sort_values(ascending=False)
-        .head(top_n)
-        .reset_index()
-    )
-    counts.columns = ["drug_label", "case_count"]
-    counts["pct"] = (counts["case_count"] / total * 100).round(1)
-    return counts
+    pt_set = set(pts_key.split("|")) if pts_key else set()
+    reac = _filter_quarters(tables["reac"], quarters_key)
+    drug = tables["drug"]
+    return ana.top_drugs_for_reaction(drug, reac, pt_set, role=role, top_n=top_n)
 
 
 @st.cache_data(show_spinner=False)
 def reaction_outcomes(pts_key: str, quarters_key: str) -> pd.DataFrame:
     tables = dl.load_tables()
-    case_ids = _reaction_case_ids(pts_key, quarters_key)
-    total = len(case_ids)
-    if total == 0:
-        return pd.DataFrame(columns=["outcome_label", "count", "pct"])
-
-    outc_sub = tables["outc"][tables["outc"]["primaryid"].isin(case_ids)]
-    vc = outc_sub["outc_cod"].value_counts().reset_index()
-    vc.columns = ["outc_cod", "count"]
-    vc["outcome_label"] = vc["outc_cod"].map(ana.OUTCOME_LABELS).fillna(vc["outc_cod"])
-    vc["pct"] = (vc["count"] / total * 100).round(1)
-    return vc[["outcome_label", "count", "pct"]].sort_values("count", ascending=False)
+    pt_set = set(pts_key.split("|")) if pts_key else set()
+    reac = _filter_quarters(tables["reac"], quarters_key)
+    outc = _filter_quarters_by_demo(tables["outc"], tables["demo"], quarters_key)
+    return ana.outcomes_for_reaction(reac, outc, pt_set)
 
 
 @st.cache_data(show_spinner=False)
 def reaction_trend(pts_key: str, quarters_key: str) -> pd.DataFrame:
     tables = dl.load_tables()
-    case_ids = _reaction_case_ids(pts_key, quarters_key)
-    if not case_ids:
-        return pd.DataFrame(columns=["quarter", "case_count"])
-
-    demo = tables["demo"][tables["demo"]["primaryid"].isin(case_ids)]
-    trend = demo.groupby("quarter")["primaryid"].nunique().reset_index()
-    trend.columns = ["quarter", "case_count"]
-    return trend.sort_values("quarter")
+    pt_set = set(pts_key.split("|")) if pts_key else set()
+    reac = tables["reac"]
+    if quarters_key == "ALL":
+        quarter_filter: list[str] | None = None
+    else:
+        quarter_filter = quarters_key.split("|")
+    return ana.quarterly_trend_for_reaction(pt_set, reac, quarter_filter=quarter_filter)
 
 
 # ── Global overview queries ───────────────────────────────────────────────────
@@ -568,13 +534,9 @@ def trending_reactions(top_n: int = 10) -> pd.DataFrame:
 def global_reporter_types() -> pd.DataFrame:
     tables = dl.load_tables()
     demo   = tables["demo"]
-    OCCP_LABELS = {
-        "MD": "Physician", "PH": "Pharmacist", "RN": "Nurse",
-        "OT": "Other HCP", "LW": "Lawyer", "CN": "Consumer", "HP": "Health Professional",
-    }
     vc = demo["occp_cod"].value_counts().reset_index()
     vc.columns = ["code", "count"]
-    vc["label"] = vc["code"].map(OCCP_LABELS).fillna(vc["code"])
+    vc["label"] = vc["code"].map(ana.OCCP_LABELS).fillna(vc["code"])
     vc["pct"] = (vc["count"] / len(demo) * 100).round(1)
     return vc
 

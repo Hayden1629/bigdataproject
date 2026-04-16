@@ -8,6 +8,8 @@ import os
 import sys
 import threading
 
+import pandas as pd
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import streamlit as st
@@ -40,9 +42,14 @@ if not dl._warm_started:
     threading.Thread(target=_bg_warm, daemon=True).start()
 
 
-log.info("App startup: loading tables, reaction terms, and quarters")
+log.info("App startup: loading reaction terms, quarters, and drug name lookup")
 with st.spinner("Loading FAERS dataset..."):
-    tables = dl.load_tables()
+    # Views now read from precomputed caches via queries/data_loader; only the
+    # slim drug-name lookup is needed at startup for Drug Explorer matching.
+    drug_name_lookup = dl.load_drug_name_lookup()
+    tables: dict[str, pd.DataFrame] = {}
+    if drug_name_lookup is not None:
+        tables["drug"] = drug_name_lookup
     all_pts = dl.get_all_reaction_terms()
     all_q = dl.get_quarters()
 log.info("App startup complete: %d quarters, %d reaction terms", len(all_q), len(all_pts))

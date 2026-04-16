@@ -40,7 +40,7 @@ The dashboard answers questions like:
 
 ## Tab-by-Tab Guide
 
-The app has **five tabs**: Overview · Drug Explorer · Drug Comparison · Signal Intelligence · Reaction Explorer.
+The app has **three tabs**: Overview · Drug Explorer · Reaction Explorer.
 
 The code is now organized as:
 - `app.py` for app composition only
@@ -65,9 +65,7 @@ The landing view of the full FAERS dataset.
 | Reports Per Quarter | Line chart of total case volume by quarter, 2023 Q3–2025 Q2 |
 | Top Drugs | Bar chart of most-reported drugs across all quarters |
 | Top Reactions | Bar chart of most-reported MedDRA Preferred Terms |
-| Signal Summary | Count of HIGH / MEDIUM / LOW PRR signals in the dataset |
 | Quarter-over-Quarter Trends | Top 10 drugs and reactions with the largest case increase between the two most recent quarters |
-| Top Elevated Signals | Table of the 10 most extreme HIGH signals (N ≥ 50) |
 
 A loading spinner is shown while the dataset initialises. On a warm server (already been accessed), the page loads in under a second — see [Performance](#performance) below.
 
@@ -226,7 +224,7 @@ python3 utils/STARTHERE.py --mode full
 
 `STARTHERE.py` replaces the old manual `LOW_RAM = True/False` code edit. Use `--mode recent` for faster local iteration and `--mode full` for final runs.
 
-### 3. Build the pre-computed signal cache (run once per dataset, ~3–5 min on recent data)
+### 3. Build the pre-computed cache (run once per dataset, ~3–5 min on recent data)
 
 ```bash
 FAERS_PARQUET_DIR=data/parquet_recent FAERS_CACHE_DIR=dashboard/cache_recent python3 dashboard/precompute.py
@@ -238,17 +236,19 @@ For the full dataset:
 FAERS_PARQUET_DIR=data/parquet FAERS_CACHE_DIR=dashboard/cache_full python3 dashboard/precompute.py
 ```
 
-This creates five parquet files in the cache directory that matches your dataset mode:
+This creates a set of parquet files in the cache directory that matches your dataset mode:
 
 | File | Contents |
 |---|---|
-| `prr_table.parquet` | 511K drug-reaction PRR / ROR / chi² signals (~45 MB) |
 | `drug_summary.parquet` | Per-drug case counts |
 | `reac_summary.parquet` | Per-reaction case counts |
 | `quarterly_drug.parquet` | Drug × quarter case counts |
 | `quarterly_reac.parquet` | Reaction × quarter case counts |
+| `fact_drug_quarter.parquet` | Slim drug-centric fact table (drug_canon × quarter × primaryid + outcomes) used by the app |
+| `fact_reac_quarter.parquet` | Slim reaction-centric fact table (reaction_pt_norm × quarter × primaryid + outcomes) used by the app |
+| `demo_slim.parquet` | Slim demographics slice (primaryid, quarter, age_grp, sex, reporter_country, occp_cod) |
 
-After this step, all dashboard queries run in under 100 ms.
+After this step, all dashboard queries run in under 100 ms on the recent dataset; on full history, most interactions still depend only on these compact cache tables and stay fast while keeping RAM usage manageable.
 
 ### 4. (Optional) Enable AI signal interpretation
 
@@ -286,28 +286,22 @@ python3 utils/run_dashboard.py --mode full
 
 | Mechanism | What it stores | Scope |
 |---|---|---|
-| `@st.cache_resource` | Large DataFrames (FAERS tables, PRR table) | One shared copy across all sessions and reruns. Never re-serialized. |
+| `@st.cache_resource` | Precomputed parquet tables (drug/reaction summaries, quarterly trends, fact tables, slim demographics) | One shared copy across all sessions and reruns. Never re-serialized. |
 | `@st.cache_data` | Derived query results (KPIs, charts, drug lookups) | Per unique set of arguments. Copied via Arrow on access. |
 | `@disk_cache` (`api_cache.py`) | External API responses (RxNorm, openFDA, ClinicalTrials, PubMed) | Pickle files in `cache/api/`. Persists across server restarts so repeated drug lookups never hit the network again. TTL configurable per function (1–24 h). |
 
 ### Background warm-up thread
 
 On server start, `app.py` fires a single background thread (guarded by a module-level
-flag in `data_loader.py` so it only runs once) that pre-loads all six parquet files
-and the two most expensive overview queries. The thread runs concurrently while
+flag in `data_loader.py` so it only runs once) that pre-loads **only the compact
+cache tables** required by the three live tabs (summaries, quarterly trends, fact
+tables, slim demographics, lookup indexes). The thread runs concurrently while
 Streamlit renders the first page request.
 
 **Effect:**
-- **Cold start (first user, server just started):** data loads during the spinner, ~15–30 s
-- **Warm (server started > ~30 s ago):** `load_tables()` returns from memory, spinner
-  shows for < 1 s
-- **All subsequent users / reruns:** instant
-
-### Pre-computed cache
-
-All PRR signal calculations (~511K drug-reaction pairs) are done offline by
-`precompute.py` and stored as Parquet. The dashboard never recomputes signals at
-query time — it only filters and sorts an in-memory DataFrame.
+- **Cold start (first user, server just started):** cache tables load during the spinner.
+- **Warm (server started > ~30 s ago):** queries hit in-memory cache tables and return quickly.
+- **Full history:** RAM usage stays bounded because the app mostly works off slim fact tables instead of full raw FAERS tables.
 
 ---
 
@@ -315,17 +309,15 @@ query time — it only filters and sorts an in-memory DataFrame.
 
 | File | Purpose |
 |---|---|
-| `app.py` | Main Streamlit app. Five tabs, global sidebar, all chart builders, CSS (FDA blue/white theme). Background cache warm-up thread. |
-| `queries.py` | Streamlit-cached query layer. Wraps analytics functions with stable string cache keys so repeated drug/reaction searches return instantly. |
-| `data_loader.py` | Loads all 7 FAERS parquet tables, deduplicates by `caseversion`, normalizes drug names and reaction PTs. Path-configurable via env vars. Provides `warm_all_tables()` and `_warm_started` flag for background pre-loading. |
+| `app.py` | Main Streamlit app. Three tabs, global sidebar, header, and background cache warm-up thread. |
+| `queries.py` | Streamlit-cached query layer. Wraps analytics functions with stable string cache keys so repeated drug/reaction searches return instantly. Uses precomputed cache tables wherever possible. |
+| `data_loader.py` | Loads FAERS parquet tables and all precomputed cache tables. Exposes lightweight loaders for summaries, quarterly trends, fact tables, and slim demographics. Provides `warm_all_tables()` and `_warm_started` flag for background pre-loading. |
 | `analytics.py` | Pure pandas computation — no Streamlit state. KPIs, aggregations, trend series, demographic breakdowns, concomitant drugs, indications. |
-| `signal_detection.py` | Query interface over the pre-computed PRR table. `signals_for_drug`, `signals_for_reaction`, `global_top_signals`, `signal_counts`. |
 | `api_cache.py` | Persistent disk cache decorator (`@disk_cache`). Wraps external API calls so results survive server restarts. Stores pickle files under `cache/api/`. |
 | `drug_normalizer.py` | RxNorm REST API lookup for canonical names + RxCUI. Fuzzy matching (RapidFuzz) against FAERS drug name vocabulary. |
 | `reaction_search.py` | Maps plain-English symptoms to MedDRA Preferred Terms via a 128-entry curated synonym map with fuzzy fallback. |
-| `signal_interpreter.py` | LLM-based pharmacovigilance signal summaries. Tries Anthropic Claude Haiku first, then Groq Llama 3.1 as a free fallback. 1-hour cache. Returns empty string if no key is set. |
 | `research_connector.py` | Live REST connectors: ClinicalTrials.gov v2 API, PubMed eutils, and openFDA Drugs@FDA. All unauthenticated. In-memory cache via `@st.cache_data` (1 h / 24 h) plus persistent disk cache via `@disk_cache`. |
-| `precompute.py` | One-time offline job: PRR/ROR/chi² for top 500 drugs × all 18K MedDRA PTs. Writes 5 parquet files to `cache/`. |
+| `precompute.py` | One-time offline job: builds summaries, quarterly trends, PRR signals, and app-optimised fact tables. Writes parquet files to `cache_*` directories. |
 | `.streamlit/config.toml` | Light theme (FDA blue/white), server settings (headless, maxUpload), fast reruns. |
 
 ---

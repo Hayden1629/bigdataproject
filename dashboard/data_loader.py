@@ -155,6 +155,54 @@ def load_tables() -> dict[str, pd.DataFrame]:
 
 
 @st.cache_resource(show_spinner=False)
+def load_demo_slim() -> pd.DataFrame | None:
+    """Load slimmed demo slice for demographics if precomputed, else None."""
+    path = os.path.join(_CACHE_DIR, "demo_slim.parquet")
+    if os.path.exists(path):
+        df = pd.read_parquet(path)
+        log.info("Loaded demo_slim cache  %s rows", f"{len(df):,}")
+        return df
+    log.warning("demo_slim cache not found at %s", path)
+    return None
+
+
+@st.cache_resource(show_spinner=False)
+def load_fact_drug_quarter() -> pd.DataFrame | None:
+    """Load drug-centric fact table (drug_canon, quarter, primaryid, outc_cod) if precomputed."""
+    path = os.path.join(_CACHE_DIR, "fact_drug_quarter.parquet")
+    if os.path.exists(path):
+        df = pd.read_parquet(path)
+        log.info("Loaded fact_drug_quarter  %s rows", f"{len(df):,}")
+        return df
+    log.warning("fact_drug_quarter cache not found at %s", path)
+    return None
+
+
+@st.cache_resource(show_spinner=False)
+def load_fact_reac_quarter() -> pd.DataFrame | None:
+    """Load reaction-centric fact table (reaction_pt_norm, quarter, primaryid, outc_cod) if precomputed."""
+    path = os.path.join(_CACHE_DIR, "fact_reac_quarter.parquet")
+    if os.path.exists(path):
+        df = pd.read_parquet(path)
+        log.info("Loaded fact_reac_quarter  %s rows", f"{len(df):,}")
+        return df
+    log.warning("fact_reac_quarter cache not found at %s", path)
+    return None
+
+
+@st.cache_resource(show_spinner=False)
+def load_drug_name_lookup() -> pd.DataFrame | None:
+    """Load the slim drug-name lookup table if precomputed."""
+    path = os.path.join(_CACHE_DIR, "drug_name_lookup.parquet")
+    if os.path.exists(path):
+        df = pd.read_parquet(path)
+        log.info("Loaded drug_name_lookup  %s rows", f"{len(df):,}")
+        return df
+    log.warning("drug_name_lookup cache not found at %s", path)
+    return None
+
+
+@st.cache_resource(show_spinner=False)
 def load_lookup_tables() -> dict[str, pd.DataFrame]:
     """Build compact lookup tables used by the query layer.
 
@@ -240,20 +288,32 @@ def load_lookup_tables() -> dict[str, pd.DataFrame]:
 @st.cache_data(show_spinner=False)
 def get_all_reaction_terms() -> list[str]:
     """All unique MedDRA PTs present in the FAERS data, sorted."""
-    return sorted(load_tables()["reac"]["pt_norm"].dropna().unique().tolist())
+    fact = load_fact_reac_quarter()
+    if fact is not None:
+        return sorted(fact["reaction_pt_norm"].dropna().unique().tolist())
+    tables = load_tables()
+    return sorted(tables["reac"]["pt_norm"].dropna().unique().tolist())
 
 
 @st.cache_data(show_spinner=False)
 def get_all_drug_names() -> list[str]:
     """Unique canonical (prod_ai) drug names, sorted."""
-    drug = load_tables()["drug"]
-    names = drug["canon"].dropna().unique()
+    fact = load_fact_drug_quarter()
+    if fact is not None:
+        names = fact["drug_canon"].dropna().unique()
+    else:
+        drug = load_tables()["drug"]
+        names = drug["canon"].dropna().unique()
     return sorted(n for n in names if n and len(n) > 1)
 
 
 @st.cache_data(show_spinner=False)
 def get_quarters() -> list[str]:
-    return sorted(load_tables()["demo"]["quarter"].dropna().unique().tolist())
+    fact = load_fact_drug_quarter()
+    if fact is not None and "quarter" in fact.columns:
+        return sorted(fact["quarter"].dropna().unique().tolist())
+    demo = load_tables()["demo"]
+    return sorted(demo["quarter"].dropna().unique().tolist())
 
 
 @st.cache_data(show_spinner=False)
@@ -322,15 +382,22 @@ _warm_started: bool = False
 
 
 def warm_all_tables() -> None:
-    """Call every cache_resource loader so data is in memory before any user arrives."""
+    """Warm only the caches needed by the current dashboard tabs."""
     import time
     t0 = time.perf_counter()
-    log.info("Background cache warm-up starting...")
-    load_tables()
-    load_lookup_tables()
-    load_prr_table()
+    log.info("Background cache warm-up starting (light)...")
+
+    # Precomputed fact and summary tables
+    load_fact_drug_quarter()
+    load_fact_reac_quarter()
+    load_demo_slim()
+    load_drug_name_lookup()
     load_drug_summary()
     load_reac_summary()
     load_quarterly_drug()
     load_quarterly_reac()
+
+    # Lookup tables still rely on full tables for now
+    load_lookup_tables()
+
     log.info("Background cache warm-up complete (%.2fs)", time.perf_counter() - t0)

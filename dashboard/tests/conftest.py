@@ -10,8 +10,8 @@ Strategy
   is imported, so data_loader picks up the test paths at module-load time.
 * Expose normalised DataFrames that mirror data_loader.load_tables() output
   without requiring Streamlit caching context.
-* Individual test modules can import analytics / signal_detection functions
-  directly and pass these DataFrames in.
+* Individual test modules can import analytics functions directly and pass
+  these DataFrames in.
 """
 
 from __future__ import annotations

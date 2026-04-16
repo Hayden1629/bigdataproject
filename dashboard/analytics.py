@@ -14,7 +14,7 @@ from logger import get_logger
 
 log = get_logger(__name__)
 
-OUTCOME_LABELS = {
+OUTCOME_LABELS: dict[str, str] = {
     "DE": "Death",
     "LT": "Life-threatening",
     "HO": "Hospitalisation",
@@ -24,9 +24,9 @@ OUTCOME_LABELS = {
     "OT": "Other serious",
 }
 
-AGE_LABELS    = {"N": "Neonate", "I": "Infant", "C": "Child", "T": "Teen", "A": "Adult", "E": "Elderly"}
-SEX_LABELS    = {"M": "Male", "F": "Female", "UNK": "Unknown"}
-OCCP_LABELS   = {
+AGE_LABELS: dict[str, str] = {"N": "Neonate", "I": "Infant", "C": "Child", "T": "Teen", "A": "Adult", "E": "Elderly"}
+SEX_LABELS: dict[str, str] = {"M": "Male", "F": "Female", "UNK": "Unknown"}
+OCCP_LABELS: dict[str, str] = {
     "MD": "Physician", "PH": "Pharmacist", "RN": "Nurse",
     "OT": "Other HCP", "LW": "Lawyer", "CN": "Consumer", "HP": "Health Professional",
 }
