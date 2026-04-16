@@ -6,8 +6,7 @@ import streamlit as st
 import data_loader as dl
 import queries as qr
 import reaction_search as reaction_search_module
-import signal_detection as sd
-from ui import C, bar_h, donut, forest_plot, kpi_card, line_trend, quarter_delta_text, sec, summary_note
+from ui import C, bar_h, donut, kpi_card, line_trend, quarter_delta_text, sec, summary_note
 from logger import get_logger
 
 log = get_logger(__name__)
@@ -86,11 +85,9 @@ def render(*, all_pts: list[str], q_key: str, role_cod: str, top_n: int) -> None
     top_d = qr.reaction_top_drugs(pk, role_cod, q_key, top_n)
     outc_r = qr.reaction_outcomes(pk, q_key)
     tr = qr.reaction_trend(pk, q_key)
-    reac_sigs = sd.signals_for_reaction(selected_pts, min_signal="MEDIUM", top_n=20)
     top_drug_note = f"Top associated drug: {top_d.iloc[0]['drug_label']} ({int(top_d.iloc[0]['case_count']):,} cases, {top_d.iloc[0]['pct']:.1f}% of matched reaction cases)." if not top_d.empty else ""
     reaction_trend_note = f"Recent volume change: {quarter_delta_text(tr)}." if not tr.empty else ""
-    reaction_signal_note = f"Strongest elevated drug signal: {reac_sigs.iloc[0]['drug']} (PRR {reac_sigs.iloc[0]['PRR']:.2f}, N={int(reac_sigs.iloc[0]['N_DR']):,})." if not reac_sigs.empty else ""
-    summary_note("At A Glance", [top_drug_note, reaction_trend_note, reaction_signal_note])
+    summary_note("At A Glance", [top_drug_note, reaction_trend_note])
 
     cl, cr = st.columns([3, 2])
     with cl:
@@ -102,27 +99,3 @@ def render(*, all_pts: list[str], q_key: str, role_cod: str, top_n: int) -> None
 
     sec("Quarterly Report Volume")
     st.plotly_chart(line_trend(tr, "quarter", "case_count", "Reports", color=C["purple"]), width='stretch')
-
-    sec("Drug Signals for This Reaction (PRR)")
-    if not reac_sigs.empty:
-        sr1, sr2 = st.columns([2, 3])
-        with sr1:
-            sd_disp = reac_sigs.rename(columns={"drug": "Drug", "N_DR": "N (D+R)", "PRR": "PRR", "chi2": "Chi-sq", "signal": "Signal"})
-            st.dataframe(
-                sd_disp[["Signal", "Drug", "PRR", "N (D+R)", "Chi-sq"]],
-                width='stretch',
-                hide_index=True,
-                height=360,
-                column_config={
-                    "PRR": st.column_config.NumberColumn("PRR", format="%.2f"),
-                    "Chi-sq": st.column_config.NumberColumn("Chi-sq", format="%.1f"),
-                },
-            )
-        with sr2:
-            fp_df = reac_sigs.rename(columns={"drug": "pt"}).copy()
-            if "N_total" not in fp_df.columns:
-                fp_df["N_total"] = dl.get_n_total()
-            st.markdown('<div style="font-size:.68rem;color:#8b949e;margin-bottom:4px;">FOREST PLOT — drugs with elevated PRR for this reaction</div>', unsafe_allow_html=True)
-            st.plotly_chart(forest_plot(fp_df, h=360), width='stretch')
-    else:
-        st.info("No elevated PRR signals found for the selected terms.")

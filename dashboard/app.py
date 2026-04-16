@@ -18,12 +18,9 @@ import data_loader as dl
 log = get_logger(__name__)
 from sidebar import render_sidebar
 from ui import configure_page, inject_css, render_header
-from views.comparison import render as render_comparison
 from views.drug import render as render_drug
 from views.overview import render as render_overview
 from views.reaction import render as render_reaction
-from views.signals import render as render_signals
-
 
 configure_page()
 inject_css()
@@ -53,8 +50,8 @@ log.info("App startup complete: %d quarters, %d reaction terms", len(all_q), len
 
 filters = render_sidebar(all_q)
 
-tab_ov, tab_drug, tab_cmp, tab_sig, tab_reac = st.tabs(
-    ["Overview", "Drug Explorer", "Drug Comparison", "Signal Intelligence", "Reaction Explorer"]
+tab_ov, tab_drug, tab_reac = st.tabs(
+    ["Overview", "Drug Explorer", "Reaction Explorer"]
 )
 
 with tab_ov:
@@ -67,16 +64,6 @@ with tab_drug:
         role_cod=filters["role_cod"],
         top_n=filters["top_n"],
     )
-
-with tab_cmp:
-    render_comparison(
-        tables=tables,
-        role_cod=filters["role_cod"],
-        top_n=filters["top_n"],
-    )
-
-with tab_sig:
-    render_signals()
 
 with tab_reac:
     render_reaction(
