@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 import pandas as pd
@@ -49,7 +50,7 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
         return
 
     # ── 1. Drug lookup ────────────────────────────────────────────────────────
-    with st.spinner("Looking up drug names…"):
+    with st.spinner("Searching names…"):
         rxn = drug_normalizer.rxnorm_lookup(drug_query)
         matched = drug_normalizer.find_faers_names(drug_query, tables["drug"])
 
@@ -61,14 +62,46 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
     log.info("Drug Explorer: %r → %d FAERS names  canon=%r", drug_query, len(matched), rxn.get("canonical"))
 
     nk = qr._names_key(matched)
-    canon = rxn.get("canonical") or drug_query.title()
+    canon_full = rxn.get("canonical") or drug_query.title()
+    # Simpler display title: strip the "(ingredient)" part when a brand name is present
+    _bracket = re.match(r'^(.+?)\s*\(.*\)$', canon_full)
+    canon = _bracket.group(1).strip() if _bracket else canon_full
     related = rxn.get("related", [])
     rxcui_tag = f" &nbsp;·&nbsp; RxCUI `{rxn['rxcui']}`" if rxn.get("rxcui") else ""
 
-    # Drug class + header
-    with st.spinner("Loading drug classification…"):
-        drug_classes = research_connector.get_drug_class(rxn.get("rxcui", "") or "")
+    # ── Parallel fetch: all downstream data at once ───────────────────────────
+    rxcui_str = rxn.get("rxcui", "") or ""
+    with st.spinner("Loading drug data…"):
+        with ThreadPoolExecutor(max_workers=12) as ex:
+            f_classes  = ex.submit(research_connector.get_drug_class, rxcui_str)
+            f_fda      = ex.submit(research_connector.get_fda_approval_info, canon)
+            f_label    = ex.submit(research_connector.get_drug_label, canon)
+            f_kpi      = ex.submit(qr.drug_kpis, nk, role_cod, q_key)
+            f_trend    = ex.submit(qr.drug_trend, nk, role_cod, q_key)
+            f_reac     = ex.submit(qr.drug_top_reactions, nk, role_cod, q_key, top_n)
+            f_outc     = ex.submit(qr.drug_outcomes, nk, role_cod, q_key)
+            f_demog    = ex.submit(qr.drug_demographics, nk, role_cod, q_key)
+            f_ctry     = ex.submit(qr.drug_countries, nk, role_cod, q_key, top_n=10)
+            f_indi     = ex.submit(qr.drug_indications, nk, role_cod, q_key, top_n=12)
+            f_comed    = ex.submit(qr.drug_concomitants, nk, role_cod, q_key, top_n=12)
+            f_sig      = ex.submit(sd.signals_for_drug, matched, min_signal="LOW", top_n=25, min_n_dr=10)
+            f_recent   = ex.submit(qr.drug_recent_records, nk, role_cod, q_key)
 
+        drug_classes = f_classes.result()
+        fda_records  = f_fda.result()
+        label        = f_label.result()
+        kpi          = f_kpi.result()
+        trend        = f_trend.result()
+        reac_df      = f_reac.result()
+        outc_df      = f_outc.result()
+        demog        = f_demog.result()
+        ctry_df      = f_ctry.result()
+        indi_df      = f_indi.result()
+        comed_df     = f_comed.result()
+        sig_df       = f_sig.result()
+        recent_df    = f_recent.result()
+
+    # Drug class + header
     class_tag = ""
     if drug_classes:
         atc = [c for c in drug_classes if c["source"] == "ATC"]
@@ -82,11 +115,6 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
         st.markdown(f'<div class="chips">{chips_html}</div>', unsafe_allow_html=True)
     st.caption(f"{len(matched)} FAERS drug name strings matched. Current role filter: {role_cod}.")
 
-    # FDA approval card + boxed warning
-    with st.spinner("Loading FDA regulatory info…"):
-        fda_records = research_connector.get_fda_approval_info(canon)
-        label = research_connector.get_drug_label(canon)
-
     if fda_records:
         fda = fda_records[0]
 
@@ -98,7 +126,7 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
             _fda_field("Application No.", fda["application_number"]),
             _fda_field("Sponsor", fda["sponsor"]),
             _fda_field("First Approval", fda["first_approval"]),
-            _fda_field("Latest Action", fda["latest_action"]),
+            _fda_field("Latest Action (Clinical Release)", fda["latest_action"]),
             _fda_field("Dosage Forms", fda["dosage_forms"] or "—"),
             _fda_field("Route(s)", fda["routes"] or "—"),
             _fda_field("Marketing Status", fda["marketing_status"] or "—"),
@@ -120,9 +148,6 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
         )
 
     # ── 2. KPIs ───────────────────────────────────────────────────────────────
-    with st.spinner("Computing case statistics…"):
-        kpi = qr.drug_kpis(nk, role_cod, q_key)
-
     serious_pct = round(kpi["n_serious"] / kpi["n_cases"] * 100, 1) if kpi["n_cases"] else 0
     death_cls = "kpi-danger" if kpi["death_pct"] > 10 else "kpi-warn" if kpi["death_pct"] > 5 else ""
     k_html = "".join([
@@ -134,22 +159,48 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
     ])
     st.markdown(f'<div class="kpi-row">{k_html}</div>', unsafe_allow_html=True)
 
-    # ── 3. Adverse event profile ──────────────────────────────────────────────
-    with st.spinner("Loading adverse event profile…"):
-        trend  = qr.drug_trend(nk, role_cod, q_key)
-        reac_df = qr.drug_top_reactions(nk, role_cod, q_key, top_n)
-        outc_df = qr.drug_outcomes(nk, role_cod, q_key)
+    # ── 3. Recent drug records table ─────────────────────────────────────────
+    sec("Recent Drug Records")
+    if not recent_df.empty:
+        _ROLE_LABELS = {"PS": "Primary Suspect", "SS": "Secondary Suspect", "C": "Concomitant", "I": "Interacting"}
+        _COL_RENAME = {
+            "role_cod": "Role",
+            "drugname": "Drug Name",
+            "prod_ai": "Active Ingredient",
+            "route": "Route",
+            "dose_vbm": "Dose (as reported)",
+            "dose_amt": "Dose Amount",
+            "dose_unit": "Dose Unit",
+            "dose_form": "Dose Form",
+            "dose_freq": "Dose Frequency",
+        }
+        disp = recent_df.drop(columns=["primaryid"], errors="ignore").copy()
+        if "role_cod" in disp.columns:
+            disp["role_cod"] = disp["role_cod"].map(_ROLE_LABELS).fillna(disp["role_cod"])
+        # Combine dose_amt + dose_unit into one column if dose_vbm is absent
+        if "dose_vbm" not in disp.columns and "dose_amt" in disp.columns and "dose_unit" in disp.columns:
+            disp["dose_vbm"] = disp["dose_amt"].fillna("").astype(str).str.strip() + " " + disp["dose_unit"].fillna("").astype(str).str.strip()
+            disp["dose_vbm"] = disp["dose_vbm"].str.strip().replace("", None)
+            disp = disp.drop(columns=["dose_amt", "dose_unit"], errors="ignore")
+        elif "dose_amt" in disp.columns and "dose_unit" in disp.columns:
+            disp = disp.drop(columns=["dose_amt", "dose_unit"], errors="ignore")
+        disp = disp.rename(columns={k: v for k, v in _COL_RENAME.items() if k in disp.columns})
+        st.dataframe(disp, hide_index=True, width='stretch', height=min(400, len(disp) * 35 + 60))
+        st.caption(f"Showing {len(recent_df):,} most recent records (by case ID) for the current role/quarter filter.")
+    else:
+        st.caption("No individual drug records found for this search.")
 
+    # ── 5. Adverse event profile ──────────────────────────────────────────────
     lead_reaction = f"Top reported reaction: {reac_df.iloc[0]['pt']} ({int(reac_df.iloc[0]['count']):,} reports, {reac_df.iloc[0]['pct']:.1f}% of matched cases)." if not reac_df.empty else ""
     recent_change = f"Recent volume change: {quarter_delta_text(trend)}." if not trend.empty else ""
 
     c_left, c_right = st.columns([3, 2])
     with c_left:
         sec("Top Adverse Reactions (MedDRA PTs)")
-        st.plotly_chart(bar_h(reac_df, "count", "pt", [[0, "#1d4ed8"], [1, "#60a5fa"]], h=max(400, top_n * 22 + 80)), width='stretch')
+        st.plotly_chart(bar_h(reac_df, "count", "pt", [[0, "#1d4ed8"], [1, "#60a5fa"]], h=max(400, top_n * 22 + 80)), width='stretch', key=f"top_reac_{nk[:40]}")
     with c_right:
         sec("Outcome Distribution")
-        st.plotly_chart(donut(outc_df, "count", "outcome_label", h=340), width='stretch')
+        st.plotly_chart(donut(outc_df, "count", "outcome_label", h=340), width='stretch', key=f"outc_donut_{nk[:40]}")
 
     sec("Quarterly Report Volume")
     trend_fig = line_trend(trend, "quarter", "case_count", "Reports")
@@ -166,86 +217,75 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
                     trend_fig.add_annotation(x=quarters_list[0], y=1, xref="x", yref="paper", text=f"FDA Approved {appr_raw[:7]}", showarrow=False, xanchor="left", font=dict(size=9, color=C["muted"]), bgcolor=C["surface"], borderpad=3)
             except Exception:
                 pass
-    st.plotly_chart(trend_fig, width='stretch')
+    st.plotly_chart(trend_fig, width='stretch', key=f"trend_{nk[:40]}")
 
-    # ── 4. Demographics ───────────────────────────────────────────────────────
-    with st.spinner("Loading patient demographics…"):
-        demog  = qr.drug_demographics(nk, role_cod, q_key)
-        ctry_df = qr.drug_countries(nk, role_cod, q_key, top_n=10)
-
+    # ── 6. Demographics ───────────────────────────────────────────────────────
     sec("Patient Demographics & Geography")
     d1, d2, d3, d4 = st.columns(4)
     with d1:
         st.markdown('<div style="text-align:center;font-size:.68rem;color:#8b949e;">SEX</div>', unsafe_allow_html=True)
-        st.plotly_chart(donut(demog["sex"], "count", "sex_label", [C["accent"], "#ec4899", C["muted"]], h=220), width='stretch')
+        st.plotly_chart(donut(demog["sex"], "count", "sex_label", [C["accent"], "#ec4899", C["muted"]], h=220), width='stretch', key=f"demog_sex_{nk[:40]}")
     with d2:
         st.markdown('<div style="text-align:center;font-size:.68rem;color:#8b949e;">AGE GROUP</div>', unsafe_allow_html=True)
-        st.plotly_chart(bar_v(demog["age_grp"], "age_group_label", "count", [[0, "#1e3a5f"], [1, "#3b82f6"]], h=220), width='stretch')
+        st.plotly_chart(bar_v(demog["age_grp"], "age_group_label", "count", [[0, "#1e3a5f"], [1, "#3b82f6"]], h=220), width='stretch', key=f"demog_age_{nk[:40]}")
     with d3:
         st.markdown('<div style="text-align:center;font-size:.68rem;color:#8b949e;">REPORTER</div>', unsafe_allow_html=True)
-        st.plotly_chart(bar_v(demog["reporter"], "reporter", "count", [[0, "#1a3a2a"], [1, "#3fb950"]], h=220), width='stretch')
+        st.plotly_chart(bar_v(demog["reporter"], "reporter", "count", [[0, "#1a3a2a"], [1, "#3fb950"]], h=220), width='stretch', key=f"demog_rep_{nk[:40]}")
     with d4:
         sec("Top Reporter Countries")
         if not ctry_df.empty:
             st.dataframe(ctry_df[["country", "count", "pct"]].rename(columns={"count": "Cases", "pct": "%"}), width='stretch', hide_index=True, height=220)
 
-    # ── 5. Clinical context ───────────────────────────────────────────────────
-    with st.spinner("Loading clinical context…"):
-        indi_df  = qr.drug_indications(nk, role_cod, q_key, top_n=12)
-        comed_df = qr.drug_concomitants(nk, role_cod, q_key, top_n=12)
-
+    # ── 7. Clinical context ───────────────────────────────────────────────────
     sec("Clinical Context")
     ci1, ci2 = st.columns(2)
     with ci1:
         st.markdown('<div style="font-size:.72rem;color:#8b949e;margin-bottom:6px;">PRESCRIBED FOR (Top Indications)</div>', unsafe_allow_html=True)
         if not indi_df.empty:
-            st.plotly_chart(bar_h(indi_df, "count", "indication", [[0, "#2d1b69"], [1, "#a78bfa"]], h=max(300, len(indi_df) * 22 + 60)), width='stretch')
+            st.plotly_chart(bar_h(indi_df, "count", "indication", [[0, "#2d1b69"], [1, "#a78bfa"]], h=max(300, len(indi_df) * 22 + 60)), width='stretch', key=f"indi_{nk[:40]}")
         else:
             st.caption("No indication data found for this drug.")
     with ci2:
         st.markdown('<div style="font-size:.72rem;color:#8b949e;margin-bottom:6px;">COMMONLY CO-REPORTED DRUGS</div>', unsafe_allow_html=True)
         if not comed_df.empty:
-            st.plotly_chart(bar_h(comed_df, "count", "drug", [[0, "#1a3a3a"], [1, "#22d3ee"]], h=max(300, len(comed_df) * 22 + 60)), width='stretch')
+            st.plotly_chart(bar_h(comed_df, "count", "drug", [[0, "#1a3a3a"], [1, "#22d3ee"]], h=max(300, len(comed_df) * 22 + 60)), width='stretch', key=f"comed_{nk[:40]}")
         else:
             st.caption("No concomitant drug data found.")
 
-    # ── 6. Pharmacovigilance signals ──────────────────────────────────────────
-    with st.spinner("Loading pharmacovigilance signals…"):
-        sig_df = sd.signals_for_drug(matched, min_signal="LOW", top_n=25, min_n_dr=10)
-
+    # ── 8. Pharmacovigilance signals ──────────────────────────────────────────
     # Now that we have all data, render the At A Glance summary
     top_indication = f"Most common linked indication: {indi_df.iloc[0]['indication']}." if not indi_df.empty else ""
     strongest_signal = f"Strongest PRR signal: {sig_df.iloc[0]['pt']} (PRR {sig_df.iloc[0]['PRR']:.2f}, N={int(sig_df.iloc[0]['N_DR']):,}, {sig_df.iloc[0]['signal'].lower()})." if not sig_df.empty else ""
     summary_note("At A Glance", [lead_reaction, recent_change, strongest_signal, top_indication])
 
-    sec("Pharmacovigilance Signals (PRR)")
-    if not sig_df.empty:
-        cnt_h = int((sig_df["signal"] == "HIGH").sum())
-        cnt_m = int((sig_df["signal"] == "MEDIUM").sum())
-        cnt_l = int((sig_df["signal"] == "LOW").sum())
-        st.markdown(f"Showing {len(sig_df)} signals — {badge('HIGH')} **{cnt_h}** &nbsp; {badge('MEDIUM')} **{cnt_m}** &nbsp; {badge('LOW')} **{cnt_l}**", unsafe_allow_html=True)
-        fp1, fp2 = st.columns([2, 3])
-        with fp1:
-            sig_disp = add_prr_ci(sig_df).rename(columns={"pt": "Preferred Term", "N_DR": "N (D+R)", "N_D": "N (Drug)", "N_R": "N (Rxn)", "PRR": "PRR", "CI_lower": "CI Low", "CI_upper": "CI High", "chi2": "Chi-sq", "signal": "Signal"})
-            st.dataframe(
-                sig_disp[["Signal", "Preferred Term", "PRR", "CI Low", "CI High", "N (D+R)", "Chi-sq"]],
-                width='stretch',
-                hide_index=True,
-                height=400,
-                column_config={
-                    "PRR": st.column_config.NumberColumn("PRR", format="%.2f"),
-                    "CI Low": st.column_config.NumberColumn("CI Low", format="%.2f"),
-                    "CI High": st.column_config.NumberColumn("CI High", format="%.2f"),
-                    "Chi-sq": st.column_config.NumberColumn("Chi-sq", format="%.1f"),
-                },
-            )
-        with fp2:
-            st.markdown('<div style="font-size:.68rem;color:#8b949e;margin-bottom:4px;">FOREST PLOT — 95% CI on log scale</div>', unsafe_allow_html=True)
-            st.plotly_chart(forest_plot(sig_df, h=400), width='stretch')
-    else:
-        st.info("No PRR signals found. Run `python3 dashboard/precompute.py` to generate the signal cache.")
+    # sec("Pharmacovigilance Signals (PRR)")
+    # if not sig_df.empty:
+    #     cnt_h = int((sig_df["signal"] == "HIGH").sum())
+    #     cnt_m = int((sig_df["signal"] == "MEDIUM").sum())
+    #     cnt_l = int((sig_df["signal"] == "LOW").sum())
+    #     st.markdown(f"Showing {len(sig_df)} signals — {badge('HIGH')} **{cnt_h}** &nbsp; {badge('MEDIUM')} **{cnt_m}** &nbsp; {badge('LOW')} **{cnt_l}**", unsafe_allow_html=True)
+    #     fp1, fp2 = st.columns([2, 3])
+    #     with fp1:
+    #         sig_disp = add_prr_ci(sig_df).rename(columns={"pt": "Preferred Term", "N_DR": "N (D+R)", "N_D": "N (Drug)", "N_R": "N (Rxn)", "PRR": "PRR", "CI_lower": "CI Low", "CI_upper": "CI High", "chi2": "Chi-sq", "signal": "Signal"})
+    #         st.dataframe(
+    #             sig_disp[["Signal", "Preferred Term", "PRR", "CI Low", "CI High", "N (D+R)", "Chi-sq"]],
+    #             width='stretch',
+    #             hide_index=True,
+    #             height=400,
+    #             column_config={
+    #                 "PRR": st.column_config.NumberColumn("PRR", format="%.2f"),
+    #                 "CI Low": st.column_config.NumberColumn("CI Low", format="%.2f"),
+    #                 "CI High": st.column_config.NumberColumn("CI High", format="%.2f"),
+    #                 "Chi-sq": st.column_config.NumberColumn("Chi-sq", format="%.1f"),
+    #             },
+    #         )
+    #     with fp2:
+    #         st.markdown('<div style="font-size:.68rem;color:#8b949e;margin-bottom:4px;">FOREST PLOT — 95% CI on log scale</div>', unsafe_allow_html=True)
+    #         st.plotly_chart(forest_plot(sig_df, h=400), width='stretch', key=f"forest_{nk[:40]}")
+    # else:
+    #     st.info("No PRR signals found. Run `python3 dashboard/precompute.py` to generate the signal cache.")
 
-    # ── 7. Optional external context (on demand) ──────────────────────────────
+    # ── 9. Optional external context (on demand) ──────────────────────────────
     with st.expander("Optional External Context", expanded=False):
         load_ai = bool(sig_df is not None and not sig_df.empty) and st.toggle("Generate AI interpretation", value=False, key=f"ai_{canon}", help="Uses an external model only when you turn this on.")
         load_research = st.toggle("Load live research and FDA enforcement context", value=False, key=f"research_{canon}", help="Fetches ClinicalTrials.gov, PubMed, and openFDA enforcement data on demand.")

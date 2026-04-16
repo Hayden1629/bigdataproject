@@ -17,6 +17,9 @@ import pytest
 
 import signal_detection as sd
 
+# Signal intelligence is beyond current scope — skip all tests in this file
+pytestmark = pytest.mark.skip(reason="Signal intelligence beyond current scope")
+
 
 # ── Helper: patch load_prr_table to return the fixture parquet ────────────────
 

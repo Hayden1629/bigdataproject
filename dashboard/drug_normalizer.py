@@ -101,30 +101,49 @@ def rxnorm_lookup(drug_name: str) -> dict:
             # Fall back to the highest-priority tty available
             best_tty = min(names_by_tty.keys(), key=lambda t: _TTY_PRIORITY.get(t, 99))
             rxcui, name = names_by_tty[best_tty][0]
-            canonical = name.title()
+            # SBD/BPCK product strings often embed the brand in brackets, e.g.
+            # "10 Ml Drug-Name Dosage [Brand]" — extract it for a cleaner label.
+            bracket = re.search(r'\[([^\[\]]+)\]', name)
+            canonical = bracket.group(1).strip().title() if bracket else name.title()
 
         result["rxcui"] = rxcui
         result["canonical"] = canonical
-        log.debug("RxNorm: %r → RxCUI=%s canonical=%r", drug_name, rxcui, canonical)
+        log.debug("RxNorm step1: %r → RxCUI=%s tentative_canonical=%r", drug_name, rxcui, canonical)
     except Exception as exc:
         log.warning("RxNorm lookup failed for %r: %s", drug_name, exc)
         return result
 
-    # Step 2: related names (BN=brand names, IN=ingredients, SBD=semantic branded drugs)
+    # Step 2: fetch all related concepts via allRelatedInfo (works for every RxCUI type,
+    # unlike related.json which requires TTY params that can 400 on some concept types).
     try:
         time.sleep(0.1)  # be polite to the API
-        rel = _rxnorm_get(
-            f"rxcui/{rxcui}/related.json",
-            params={"tty": "BN+IN+SCDF+SBD+MIN"},
-        )
-        related_names = []
-        for group in rel.get("relatedGroup", {}).get("conceptGroup", []):
+        rel = _rxnorm_get(f"rxcui/{rxcui}/allRelatedInfo.json")
+        related_names: list[str] = []
+        names_by_tty_rel: dict[str, list[str]] = {}
+        for group in rel.get("allRelatedGroup", {}).get("conceptGroup", []):
+            tty = group.get("tty", "")
             for prop in group.get("conceptProperties", []):
                 name = prop.get("name", "")
                 if name:
                     related_names.append(name.upper().strip())
+                    names_by_tty_rel.setdefault(tty, []).append(name)
         result["related"] = list(set(related_names))
-        log.debug("RxNorm: %r → %d related names  (%.2fs)", drug_name, len(result["related"]), time.perf_counter() - t0)
+
+        # Refine canonical: prefer "Brand (ingredient)" when both are present
+        in_rel = (names_by_tty_rel.get("IN", []) or
+                  names_by_tty_rel.get("PIN", []) or
+                  names_by_tty_rel.get("MIN", []))
+        bn_rel = names_by_tty_rel.get("BN", [])
+        if in_rel and bn_rel:
+            result["canonical"] = f"{bn_rel[0].title()} ({in_rel[0].lower()})"
+        elif in_rel:
+            result["canonical"] = in_rel[0].title()
+        elif bn_rel:
+            result["canonical"] = bn_rel[0].title()
+        # else: keep the bracket-extracted name from Step 1
+
+        log.debug("RxNorm step2: %r → %d related names canonical=%r  (%.2fs)",
+                  drug_name, len(result["related"]), result["canonical"], time.perf_counter() - t0)
     except Exception as exc:
         log.warning("RxNorm related lookup failed for RxCUI=%s: %s", rxcui, exc)
 
@@ -233,6 +252,20 @@ def find_faers_names(
                         matched.add(faers_name)
 
   
+    # 5. Canon expansion: for every matched name, add the corresponding prod_ai_norm
+    #    (the canon key used by the lookup tables). This ensures that when a brand
+    #    name like "SKYRIZI" is matched via drugname_norm, we also include
+    #    "RISANKIZUMAB" (the prod_ai_norm / canon), so the indexed lookups work.
+    #    This is critical when RxNorm step 2 fails and can't bridge brand→ingredient.
+    if matched and "canon" in drug_df.columns:
+        rows = drug_df[drug_df["drugname_norm"].isin(matched) | drug_df["prod_ai_norm"].isin(matched)]
+        canon_vals = {n for n in rows["canon"].dropna().unique() if _is_valid_drug_name(n)}
+        extra = canon_vals - matched
+        if extra:
+            log.debug("Canon expansion: +%d names from prod_ai cross-reference  e.g. %s",
+                      len(extra), sorted(extra)[:3])
+            matched.update(extra)
+
     result = sorted(matched)
     if result:
         log.info("find_faers_names: %r → %d FAERS names  (%.2fs)  e.g. %s",
