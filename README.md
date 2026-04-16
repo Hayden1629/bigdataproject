@@ -22,6 +22,12 @@ python3 utils/run_dashboard.py --mode recent
 # Run the test suite first, then launch (aborts on failure)
 python3 utils/run_dashboard.py --mode recent --test
 ```
+```
+pip install -r dashboard/requirements.txt
+python3 utils/STARTHERE.py --mode full
+FAERS_PARQUET_DIR=data/parquet FAERS_CACHE_DIR=dashboard/cache_full python3 dashboard/precompute.py 
+python3 utils/run_dashboard.py --mode full
+```
 
 Open `http://localhost:8501`.
 
