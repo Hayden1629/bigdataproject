@@ -76,15 +76,40 @@ def empty_figure(title: str = "No data"):
 def bar_horizontal(df: pd.DataFrame, x_col: str, y_col: str, title: str):
     if df.empty or x_col not in df.columns or y_col not in df.columns:
         return empty_figure(title)
+    plot_df = df.sort_values(x_col, ascending=True).copy()
+    n_rows = max(1, len(plot_df))
+    dynamic_height = max(380, min(880, 48 + (n_rows * 32)))
+
     fig = px.bar(
-        df.sort_values(x_col, ascending=True),
+        plot_df,
         x=x_col,
         y=y_col,
         orientation="h",
         color_discrete_sequence=[PALETTE[0]],
         title=title,
+        text=x_col,
     )
-    fig.update_layout(height=380, margin=dict(l=10, r=10, t=40, b=10), showlegend=False)
+    fig.update_traces(
+        texttemplate="%{text:,.0f}",
+        textposition="outside",
+        cliponaxis=False,
+        hovertemplate="%{y}<br>%{x:,.0f} case reports<extra></extra>",
+    )
+    fig.update_yaxes(
+        categoryorder="array",
+        categoryarray=plot_df[y_col].tolist(),
+        tickmode="array",
+        tickvals=plot_df[y_col].tolist(),
+        ticktext=[str(v) for v in plot_df[y_col].tolist()],
+        automargin=True,
+    )
+    fig.update_layout(
+        height=dynamic_height,
+        margin=dict(l=10, r=20, t=40, b=10),
+        showlegend=False,
+        uniformtext_minsize=10,
+        uniformtext_mode="show",
+    )
     return _apply_professional_layout(fig, x_col=x_col, y_col=y_col)
 
 

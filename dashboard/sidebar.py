@@ -48,7 +48,7 @@ def render_sidebar(default_top_n: int = 20) -> dict[str, Any]:
         st.subheader("About")
         st.caption(
             "FAERS is a spontaneous reporting system. Signals represent disproportionate reporting, not causality. "
-            "FDA dashboard: https://www.fda.gov/drugs/fdas-adverse-event-reporting-system-faers"
+            "Official FDA dashboard: https://www.fda.gov/drugs/fdas-adverse-event-reporting-system-faers"
         )
 
     return {
