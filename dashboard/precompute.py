@@ -11,6 +11,8 @@ Outputs (saved to claude_test/cache/):
     reac_summary.parquet    - per-PT aggregate stats
     quarterly_drug.parquet  - per-drug per-quarter case counts
     quarterly_reac.parquet  - per-PT per-quarter case counts
+    global_kpis.parquet     - one-row global KPI cache for fast app startup
+    lookup_*.parquet        - compact lookup indexes used by cached query layer
 
 PRR (Proportional Reporting Ratio) is the standard pharmacovigilance metric for
 detecting drug-reaction signals in spontaneous reporting databases.
@@ -34,7 +36,7 @@ from logger import get_logger
 log = get_logger(__name__)
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-HERE         = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 def _default_cache_dir(parquet_dir: str) -> str:
@@ -48,18 +50,19 @@ def _default_cache_dir(parquet_dir: str) -> str:
     return os.path.join(HERE, cache_name)
 
 
-PARQUET_DIR  = os.environ.get(
+PARQUET_DIR = os.environ.get(
     "FAERS_PARQUET_DIR",
     os.path.abspath(os.path.join(HERE, "..", "data", "parquet_recent")),
 )
-CACHE_DIR    = os.environ.get("FAERS_CACHE_DIR", _default_cache_dir(PARQUET_DIR))
+CACHE_DIR = os.environ.get("FAERS_CACHE_DIR", _default_cache_dir(PARQUET_DIR))
 os.makedirs(CACHE_DIR, exist_ok=True)
 
-TOP_DRUGS    = 500   # compute PRR for the N most-reported drugs
-MIN_N_DR     = 3     # minimum co-occurrence count to include a pair
-MIN_PRR      = 1.5   # minimum PRR to include a pair
+TOP_DRUGS = 500  # compute PRR for the N most-reported drugs
+MIN_N_DR = 3  # minimum co-occurrence count to include a pair
+MIN_PRR = 1.5  # minimum PRR to include a pair
 
 # ── Load & deduplicate ────────────────────────────────────────────────────────
+
 
 def _load_and_dedup():
     print("Loading parquet files...")
@@ -70,7 +73,9 @@ def _load_and_dedup():
 
     # Deduplicate demo: keep latest caseversion per caseid
     print("Deduplicating cases...")
-    demo["caseversion"] = pd.to_numeric(demo["caseversion"], errors="coerce").fillna(0).astype(int)
+    demo["caseversion"] = (
+        pd.to_numeric(demo["caseversion"], errors="coerce").fillna(0).astype(int)
+    )
     demo = demo.sort_values("caseversion").drop_duplicates("caseid", keep="last")
 
     valid_pids = set(demo["primaryid"].unique())
@@ -90,6 +95,7 @@ def _load_and_dedup():
 
 
 # ── Drug summary ──────────────────────────────────────────────────────────────
+
 
 def build_drug_summary(drug_df, outc_df, n_total):
     print("Building drug summary...")
@@ -120,6 +126,7 @@ def build_drug_summary(drug_df, outc_df, n_total):
 
 # ── Reaction summary ──────────────────────────────────────────────────────────
 
+
 def build_reac_summary(reac_df, outc_df):
     print("Building reaction summary...")
     grp = reac_df.groupby("pt_norm")["primaryid"].nunique().reset_index()
@@ -142,6 +149,7 @@ def build_reac_summary(reac_df, outc_df):
 
 
 # ── Quarterly trends ──────────────────────────────────────────────────────────
+
 
 def build_quarterly_trends(drug_df, reac_df):
     print("Building quarterly drug trends...")
@@ -174,12 +182,17 @@ def build_quarterly_trends(drug_df, reac_df):
 
 # ── App-optimised fact tables --------------------------------------------------
 
+
 def build_app_fact_tables(demo_df, drug_df, reac_df, outc_df):
     """
     Build slim, app-optimised fact tables for the dashboard:
     - fact_drug_quarter.parquet  (drug_canon, quarter, primaryid, outc_cod)
     - fact_reac_quarter.parquet  (reaction_pt_norm, quarter, primaryid, outc_cod)
     - demo_slim.parquet          (primaryid, quarter, age_grp, sex, reporter_country, occp_cod)
+    - drug_records_slim.parquet  (drug rows needed by Drug Explorer details)
+    - reac_slim.parquet          (primaryid, pt_norm)
+    - outc_slim.parquet          (primaryid, outc_cod)
+    - indi_slim.parquet          (primaryid, indi_drug_seq, indi_pt)
     """
     print("Building app-optimised fact tables...")
 
@@ -187,6 +200,7 @@ def build_app_fact_tables(demo_df, drug_df, reac_df, outc_df):
     drug = drug_df.copy()
     reac = reac_df.copy()
     outc = outc_df.copy()
+    indi = pd.read_parquet(os.path.join(PARQUET_DIR, "indi.parquet"))
 
     # Ensure canonical names and normalised PTs exist
     drug["prod_ai_norm"] = drug["prod_ai"].str.upper().str.strip()
@@ -263,8 +277,139 @@ def build_app_fact_tables(demo_df, drug_df, reac_df, outc_df):
     drug_name_lookup.to_parquet(path_name_lookup, index=False)
     print(f"  Saved {len(drug_name_lookup):,} rows -> {path_name_lookup}")
 
+    # Slim tables used by fast drug-query path (avoid loading full raw tables)
+    outc_slim = outc[["primaryid", "outc_cod"]].drop_duplicates().copy()
+    path_outc_slim = os.path.join(CACHE_DIR, "outc_slim.parquet")
+    outc_slim.to_parquet(path_outc_slim, index=False)
+    print(f"  Saved {len(outc_slim):,} rows -> {path_outc_slim}")
+
+    reac_slim = (
+        reac[["primaryid", "pt_norm"]]
+        .dropna(subset=["pt_norm"])
+        .drop_duplicates()
+        .copy()
+    )
+    path_reac_slim = os.path.join(CACHE_DIR, "reac_slim.parquet")
+    reac_slim.to_parquet(path_reac_slim, index=False)
+    print(f"  Saved {len(reac_slim):,} rows -> {path_reac_slim}")
+
+    drug_records_slim = (
+        drug[
+            [
+                "primaryid",
+                "canon",
+                "role_cod",
+                "drug_seq",
+                "drugname",
+                "prod_ai",
+                "route",
+                "dose_vbm",
+                "dose_amt",
+                "dose_unit",
+                "dose_form",
+                "dose_freq",
+            ]
+        ]
+        .dropna(subset=["canon"])
+        .copy()
+    )
+    path_drug_records_slim = os.path.join(CACHE_DIR, "drug_records_slim.parquet")
+    drug_records_slim.to_parquet(path_drug_records_slim, index=False)
+    print(f"  Saved {len(drug_records_slim):,} rows -> {path_drug_records_slim}")
+
+    indi_slim = (
+        indi[["primaryid", "indi_drug_seq", "indi_pt"]]
+        .dropna(subset=["indi_pt"])
+        .copy()
+    )
+    path_indi_slim = os.path.join(CACHE_DIR, "indi_slim.parquet")
+    indi_slim.to_parquet(path_indi_slim, index=False)
+    print(f"  Saved {len(indi_slim):,} rows -> {path_indi_slim}")
+
+
+def build_lookup_tables(demo_df, drug_df, reac_df):
+    """Build compact lookup indexes used by the query layer."""
+    print("Building lookup tables...")
+
+    drug = drug_df.copy()
+    reac = reac_df.copy()
+
+    drug["prod_ai_norm"] = drug["prod_ai"].str.upper().str.strip()
+    drug["drugname_norm"] = drug["drugname"].str.upper().str.strip()
+    drug["canon"] = drug["prod_ai_norm"].fillna(drug["drugname_norm"])
+    reac["pt_norm"] = reac["pt"].str.strip().str.title()
+
+    quarter_cases = (
+        demo_df[["quarter", "primaryid"]]
+        .drop_duplicates()
+        .sort_values(["quarter", "primaryid"])
+        .set_index("quarter")
+    )
+    drug_cases = (
+        drug[["canon", "primaryid"]]
+        .dropna(subset=["canon"])
+        .drop_duplicates()
+        .sort_values(["canon", "primaryid"])
+        .set_index("canon")
+    )
+    drug_role_cases = (
+        drug[["canon", "role_cod", "primaryid"]]
+        .dropna(subset=["canon", "role_cod"])
+        .drop_duplicates()
+        .sort_values(["canon", "role_cod", "primaryid"])
+        .set_index(["canon", "role_cod"])
+    )
+    reaction_cases = (
+        reac[["pt_norm", "primaryid"]]
+        .dropna(subset=["pt_norm"])
+        .drop_duplicates()
+        .sort_values(["pt_norm", "primaryid"])
+        .set_index("pt_norm")
+    )
+
+    lookup_files = {
+        "lookup_quarter_cases.parquet": quarter_cases,
+        "lookup_drug_cases.parquet": drug_cases,
+        "lookup_drug_role_cases.parquet": drug_role_cases,
+        "lookup_reaction_cases.parquet": reaction_cases,
+    }
+    for filename, df in lookup_files.items():
+        out_path = os.path.join(CACHE_DIR, filename)
+        df.to_parquet(out_path)
+        print(f"  Saved {len(df):,} rows -> {out_path}")
+
+
+def build_global_kpis_cache(demo_df, drug_df, reac_df, outc_df):
+    """Persist one-row global KPI cache so sidebar/overview avoid raw table scans."""
+    print("Building global KPI cache...")
+
+    drug = drug_df.copy()
+    reac = reac_df.copy()
+
+    drug["prod_ai_norm"] = drug["prod_ai"].str.upper().str.strip()
+    drug["drugname_norm"] = drug["drugname"].str.upper().str.strip()
+    drug["canon"] = drug["prod_ai_norm"].fillna(drug["drugname_norm"])
+    reac["pt_norm"] = reac["pt"].str.strip().str.title()
+
+    row = pd.DataFrame(
+        [
+            {
+                "n_cases": int(len(demo_df)),
+                "n_deaths": int((outc_df["outc_cod"] == "DE").sum()),
+                "n_drugs": int(drug["canon"].nunique()),
+                "n_pts": int(reac["pt_norm"].nunique()),
+                "n_hosp": int((outc_df["outc_cod"] == "HO").sum()),
+                "n_lt": int((outc_df["outc_cod"] == "LT").sum()),
+            }
+        ]
+    )
+    out_path = os.path.join(CACHE_DIR, "global_kpis.parquet")
+    row.to_parquet(out_path, index=False)
+    print(f"  Saved 1 row -> {out_path}")
+
 
 # ── PRR computation ───────────────────────────────────────────────────────────
+
 
 def build_prr_table(drug_df, reac_df, n_total, top_n=TOP_DRUGS):
     print(f"Building PRR table (top {top_n} drugs)...")
@@ -281,7 +426,9 @@ def build_prr_table(drug_df, reac_df, n_total, top_n=TOP_DRUGS):
     top_drug_names = n_d_series.nlargest(top_n).index.tolist()
 
     # Restrict to top drugs for the join (performance)
-    drug_sub = drug_df[drug_df["canon"].isin(top_drug_names)][["canon", "primaryid"]].drop_duplicates()
+    drug_sub = drug_df[drug_df["canon"].isin(top_drug_names)][
+        ["canon", "primaryid"]
+    ].drop_duplicates()
     print(f"  Drug sub rows: {len(drug_sub):,}")
 
     # N_R: unique cases per PT
@@ -321,7 +468,7 @@ def build_prr_table(drug_df, reac_df, n_total, top_n=TOP_DRUGS):
     c = np.where(c <= 0, 0.5, c)
     b = np.where(b <= 0, 0.5, b)
 
-    n_exposed   = a + b  # N_D
+    n_exposed = a + b  # N_D
     n_unexposed = c + d  # N_total - N_D
 
     prr = (a / n_exposed) / (c / n_unexposed)
@@ -331,12 +478,14 @@ def build_prr_table(drug_df, reac_df, n_total, top_n=TOP_DRUGS):
 
     # Chi-squared (Yates corrected)
     n_arr = a + b + c + d
-    chi2 = n_arr * (np.abs(a * d - b * c) - 0.5 * n_arr) ** 2 / (
-        (a + b) * (c + d) * (a + c) * (b + d) + 1e-10
+    chi2 = (
+        n_arr
+        * (np.abs(a * d - b * c) - 0.5 * n_arr) ** 2
+        / ((a + b) * (c + d) * (a + c) * (b + d) + 1e-10)
     )
 
-    n_dr["PRR"]  = np.round(prr, 3)
-    n_dr["ROR"]  = np.round(ror, 3)
+    n_dr["PRR"] = np.round(prr, 3)
+    n_dr["ROR"] = np.round(ror, 3)
     n_dr["chi2"] = np.round(chi2, 2)
 
     # Filter
@@ -356,10 +505,14 @@ def build_prr_table(drug_df, reac_df, n_total, top_n=TOP_DRUGS):
     n_dr["signal"] = n_dr.apply(_signal, axis=1)
     n_dr = n_dr[n_dr["signal"] != "NONE"].copy()
 
-    n_dr = n_dr.sort_values(["PRR", "N_DR"], ascending=[False, False]).reset_index(drop=True)
-    print(f"  Signals: {len(n_dr):,}  (HIGH={n_dr[n_dr['signal']=='HIGH'].shape[0]:,}, "
-          f"MEDIUM={n_dr[n_dr['signal']=='MEDIUM'].shape[0]:,}, "
-          f"LOW={n_dr[n_dr['signal']=='LOW'].shape[0]:,})")
+    n_dr = n_dr.sort_values(["PRR", "N_DR"], ascending=[False, False]).reset_index(
+        drop=True
+    )
+    print(
+        f"  Signals: {len(n_dr):,}  (HIGH={n_dr[n_dr['signal'] == 'HIGH'].shape[0]:,}, "
+        f"MEDIUM={n_dr[n_dr['signal'] == 'MEDIUM'].shape[0]:,}, "
+        f"LOW={n_dr[n_dr['signal'] == 'LOW'].shape[0]:,})"
+    )
 
     path = os.path.join(CACHE_DIR, "prr_table.parquet")
     n_dr.to_parquet(path, index=False)
@@ -379,7 +532,11 @@ if __name__ == "__main__":
     build_quarterly_trends(drug, reac)
     build_prr_table(drug, reac, n_total, top_n=TOP_DRUGS)
     build_app_fact_tables(demo, drug, reac, outc)
+    build_lookup_tables(demo, drug, reac)
+    build_global_kpis_cache(demo, drug, reac, outc)
 
     elapsed = time.perf_counter() - t_start
     log.info("precompute complete  total=%.1fs  cache=%s", elapsed, CACHE_DIR)
-    print(f"\nPrecomputation complete in {elapsed:.1f}s. Cache files saved to {CACHE_DIR}")
+    print(
+        f"\nPrecomputation complete in {elapsed:.1f}s. Cache files saved to {CACHE_DIR}"
+    )
