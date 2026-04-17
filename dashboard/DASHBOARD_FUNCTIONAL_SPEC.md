@@ -50,6 +50,7 @@ Implemented in: `dashboard/sidebar.py`
 - Quarter range
 
 Computed from:
+
 - `queries.global_kpis()`
 - `data_loader.get_dataset_profile()`
 
@@ -64,6 +65,7 @@ Implemented in: `dashboard/views/overview.py`
 ### 4.1 KPI Cards
 
 Displays:
+
 - Total Cases
 - Deaths Reported (+ death % of cases)
 - Hospitalisations
@@ -72,6 +74,7 @@ Displays:
 - Unique Reaction Categories (MedDRA PTs)
 
 Data sources:
+
 - `queries.global_kpis()`
 
 ### 4.2 Figure: Top 15 Drugs by Report Volume
@@ -94,6 +97,7 @@ Data sources:
 - Includes absolute delta and percent change labels.
 
 Data sources:
+
 - `queries.trending_drugs(top_n=10)` using `quarterly_drug.parquet`
 - `queries.trending_reactions(top_n=10)` using `quarterly_reac.parquet`
 
@@ -116,24 +120,24 @@ Implemented in: `dashboard/views/drug.py`
 User input -> FAERS drug-name set, implemented in `dashboard/drug_normalizer.py`:
 
 1. **RxNorm lookup** (`rxnorm_lookup`)
+
    - Calls `https://rxnav.nlm.nih.gov/REST/drugs.json?name=...`
    - Picks best RxCUI + canonical name.
    - Calls `.../rxcui/{rxcui}/allRelatedInfo.json` for related names.
    - Returns: `rxcui`, `canonical`, `related[]`.
    - Cached in-memory and on disk.
-
 2. **Direct substring match** in FAERS normalized names (`drugname_norm`, `prod_ai_norm`).
-
 3. **RxNorm-to-FAERS bridge match**
+
    - Tokenized substring matching between RxNorm canonical/related names and FAERS name universe.
-
 4. **Fuzzy fallback** (RapidFuzz `token_set_ratio`)
+
    - Uses threshold and max result limits.
-
 5. **LLM fallback** (`llm_normalize`)
-   - If still unmatched after fuzzy.
 
+   - If still unmatched after fuzzy.
 6. **Canon expansion**
+
    - For matched rows, include corresponding `canon` values so brand and ingredient map together.
 
 Result is final list of matched FAERS drug strings (sorted).
@@ -158,6 +162,7 @@ In `views/drug.py`, via `ThreadPoolExecutor`, it concurrently fetches:
 ### 5.5 FDA Regulatory Card (if data present)
 
 Shows fields from openFDA/drugsfda:
+
 - Application type
 - Application number
 - Sponsor
@@ -175,6 +180,7 @@ Shows fields from openFDA/drugsfda:
 ### 5.7 Drug KPI Row
 
 Displays:
+
 - Total Cases
 - Deaths (+ death %)
 - Hospitalisations
@@ -186,6 +192,7 @@ From `bundle["kpi"]` returned by `queries.drug_query_bundle`.
 ### 5.8 Table: Recent Drug Records
 
 Shows up to 100 records (default call) with columns such as:
+
 - Role
 - Drug Name
 - Active Ingredient
@@ -213,6 +220,7 @@ Role codes mapped to labels (PS/SS/C/I).
 ### 5.12 Demographics & Geography
 
 4-column block:
+
 - Sex donut
 - Age-group vertical bar
 - Reporter-type vertical bar
@@ -223,6 +231,7 @@ From `bundle["demographics"]` and `bundle["countries"]`.
 ### 5.13 Clinical Context
 
 Two charts:
+
 - Prescribed-for indications (top)
 - Commonly co-reported drugs (top)
 
@@ -237,6 +246,7 @@ Auto-generated short bullets derived from top reaction, trend delta, and top ind
 Toggle: `Load live research and FDA enforcement context`
 
 Tabs:
+
 - Clinical Trials (ClinicalTrials.gov)
 - Literature (PubMed)
 - Recalls & Enforcement (openFDA enforcement)
@@ -283,6 +293,7 @@ Input query -> list of MedDRA PT matches (with score):
 ### 6.4 Reaction KPI Row
 
 Displays:
+
 - Cases reporting reaction
 - Deaths in those cases (+ death %)
 - Any serious outcome
@@ -344,6 +355,7 @@ Implemented in: `dashboard/data_loader.py`
 ### 8.2 Precomputed Runtime Tables
 
 Current cache loaders include:
+
 - `demo_slim.parquet`
 - `fact_drug_quarter.parquet`
 - `fact_reac_quarter.parquet`
@@ -398,9 +410,11 @@ These are cached in-memory and on disk (TTL varies by endpoint).
 ## 11) What Is Persisted vs Computed On Demand
 
 Persisted/precomputed:
+
 - Summary/trend/fact/lookup/kpi tables (parquet).
 
 Computed on demand:
+
 - Final filtered aggregates per user query (`drug_query_bundle`, reaction queries).
 - Optional external context calls when expander toggle enabled.
 - Name matching and reaction-term mapping from input text.
@@ -408,44 +422,48 @@ Computed on demand:
 ## 12) Current Functional Surface Checklist
 
 ### Global
-- [x] Quarter filter (checkbox list)
-- [x] Drug role filter
-- [x] Top-N slider
-- [x] Dataset summary block
+
+- [X] Quarter filter (checkbox list)
+- [X] Drug role filter
+- [X] Top-N slider
+- [X] Dataset summary block
 
 ### Overview Tab
-- [x] Global KPI cards
-- [x] Top drugs chart
-- [x] Top reactions chart
-- [x] QoQ trending drugs chart
-- [x] QoQ trending reactions chart
-- [x] Reports-per-quarter chart
+
+- [X] Global KPI cards
+- [X] Top drugs chart
+- [X] Top reactions chart
+- [X] QoQ trending drugs chart
+- [X] QoQ trending reactions chart
+- [X] Reports-per-quarter chart
 
 ### Drug Explorer Tab
-- [x] Drug search box + examples
-- [x] RxNorm + FAERS name matching pipeline
-- [x] Parallel loading of analytics + external metadata
-- [x] Header with canonical name / RxCUI / class / related chips
-- [x] FDA approval card
-- [x] Boxed warning banner
-- [x] KPI cards
-- [x] Recent records table
-- [x] Top reactions chart
-- [x] Outcome donut
-- [x] Quarterly trend line (+ approval marker if available)
-- [x] Demographics block (sex/age/reporter/countries)
-- [x] Clinical context block (indications + concomitants)
-- [x] At-a-glance summary
-- [x] Optional external context tabset (trials/pubmed/enforcement)
-- [x] Matched-name expander table
-- [x] PRR section present but currently commented out
+
+- [X] Drug search box + examples
+- [X] RxNorm + FAERS name matching pipeline
+- [X] Parallel loading of analytics + external metadata
+- [X] Header with canonical name / RxCUI / class / related chips
+- [X] FDA approval card
+- [X] Boxed warning banner
+- [X] KPI cards
+- [X] Recent records table
+- [X] Top reactions chart
+- [X] Outcome donut
+- [X] Quarterly trend line (+ approval marker if available)
+- [X] Demographics block (sex/age/reporter/countries)
+- [X] Clinical context block (indications + concomitants)
+- [X] At-a-glance summary
+- [X] Optional external context tabset (trials/pubmed/enforcement)
+- [X] Matched-name expander table
+- [X] PRR section present but currently commented out
 
 ### Reaction Explorer Tab
-- [x] Reaction search box + examples
-- [x] Plain-language -> MedDRA matching pipeline
-- [x] PT multiselect + score table
-- [x] KPI cards
-- [x] Top associated drugs chart
-- [x] Outcome donut
-- [x] Quarterly trend line
-- [x] At-a-glance summary
+
+- [X] Reaction search box + examples
+- [X] Plain-language -> MedDRA matching pipeline
+- [X] PT multiselect + score table
+- [X] KPI cards
+- [X] Top associated drugs chart
+- [X] Outcome donut
+- [X] Quarterly trend line
+- [X] At-a-glance summary
