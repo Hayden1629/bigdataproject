@@ -188,6 +188,7 @@ def render(*, tables: dict[str, pd.DataFrame], q_key: str, role_cod: str, top_n:
             "dose_unit": "Dose Unit",
             "dose_form": "Dose Form",
             "dose_freq": "Dose Frequency",
+            "adverse_events": "Adverse Events",
         }
         disp = recent_df.drop(columns=["primaryid"], errors="ignore").copy()
         if "role_cod" in disp.columns:

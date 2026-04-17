@@ -21,46 +21,179 @@ log = get_logger(__name__)
 
 # ISO-3166-1 alpha-2 → country name (top FAERS countries)
 ISO2_NAMES: dict[str, str] = {
-    "US": "United States", "CA": "Canada", "JP": "Japan", "GB": "United Kingdom",
-    "FR": "France", "CN": "China", "DE": "Germany", "IT": "Italy", "ES": "Spain",
-    "AU": "Australia", "BR": "Brazil", "IN": "India", "CO": "Colombia",
-    "NL": "Netherlands", "PL": "Poland", "MX": "Mexico", "SE": "Sweden",
-    "KR": "South Korea", "AR": "Argentina", "CH": "Switzerland", "AT": "Austria",
-    "BE": "Belgium", "TW": "Taiwan", "PT": "Portugal", "TR": "Turkey",
-    "ZA": "South Africa", "RU": "Russia", "SG": "Singapore", "DK": "Denmark",
-    "NO": "Norway", "FI": "Finland", "HU": "Hungary", "CZ": "Czechia",
-    "RO": "Romania", "GR": "Greece", "IL": "Israel", "PH": "Philippines",
-    "ID": "Indonesia", "TH": "Thailand", "MY": "Malaysia", "EG": "Egypt",
-    "SA": "Saudi Arabia", "NG": "Nigeria", "PE": "Peru", "CL": "Chile",
-    "IE": "Ireland", "NZ": "New Zealand", "HK": "Hong Kong", "PK": "Pakistan",
+    "US": "United States",
+    "CA": "Canada",
+    "JP": "Japan",
+    "GB": "United Kingdom",
+    "FR": "France",
+    "CN": "China",
+    "DE": "Germany",
+    "IT": "Italy",
+    "ES": "Spain",
+    "AU": "Australia",
+    "BR": "Brazil",
+    "IN": "India",
+    "CO": "Colombia",
+    "NL": "Netherlands",
+    "PL": "Poland",
+    "MX": "Mexico",
+    "SE": "Sweden",
+    "KR": "South Korea",
+    "AR": "Argentina",
+    "CH": "Switzerland",
+    "AT": "Austria",
+    "BE": "Belgium",
+    "TW": "Taiwan",
+    "PT": "Portugal",
+    "TR": "Turkey",
+    "ZA": "South Africa",
+    "RU": "Russia",
+    "SG": "Singapore",
+    "DK": "Denmark",
+    "NO": "Norway",
+    "FI": "Finland",
+    "HU": "Hungary",
+    "CZ": "Czechia",
+    "RO": "Romania",
+    "GR": "Greece",
+    "IL": "Israel",
+    "PH": "Philippines",
+    "ID": "Indonesia",
+    "TH": "Thailand",
+    "MY": "Malaysia",
+    "EG": "Egypt",
+    "SA": "Saudi Arabia",
+    "NG": "Nigeria",
+    "PE": "Peru",
+    "CL": "Chile",
+    "IE": "Ireland",
+    "NZ": "New Zealand",
+    "HK": "Hong Kong",
+    "PK": "Pakistan",
 }
 
 # ISO-3166-1 alpha-2 → alpha-3  (used by Plotly choropleth)
 ISO2_TO_ISO3: dict[str, str] = {
-    "US": "USA", "CA": "CAN", "JP": "JPN", "GB": "GBR", "FR": "FRA",
-    "CN": "CHN", "DE": "DEU", "IT": "ITA", "ES": "ESP", "AU": "AUS",
-    "BR": "BRA", "IN": "IND", "CO": "COL", "NL": "NLD", "PL": "POL",
-    "MX": "MEX", "SE": "SWE", "KR": "KOR", "AR": "ARG", "CH": "CHE",
-    "AT": "AUT", "BE": "BEL", "TW": "TWN", "PT": "PRT", "TR": "TUR",
-    "ZA": "ZAF", "RU": "RUS", "SG": "SGP", "DK": "DNK", "NO": "NOR",
-    "FI": "FIN", "HU": "HUN", "CZ": "CZE", "RO": "ROU", "GR": "GRC",
-    "IL": "ISR", "PH": "PHL", "ID": "IDN", "TH": "THA", "MY": "MYS",
-    "EG": "EGY", "SA": "SAU", "NG": "NGA", "PE": "PER", "CL": "CHL",
-    "IE": "IRL", "NZ": "NZL", "HK": "HKG", "PK": "PAK", "VN": "VNM",
-    "UA": "UKR", "HR": "HRV", "RS": "SRB", "SK": "SVK", "SI": "SVN",
-    "LT": "LTU", "LV": "LVA", "EE": "EST", "BG": "BGR", "BA": "BIH",
-    "MA": "MAR", "TN": "TUN", "DZ": "DZA", "KE": "KEN", "GH": "GHA",
-    "ET": "ETH", "TZ": "TZA", "UG": "UGA", "AO": "AGO", "MZ": "MOZ",
-    "SN": "SEN", "CM": "CMR", "CG": "COG", "CI": "CIV", "MR": "MRT",
-    "UZ": "UZB", "KZ": "KAZ", "AZ": "AZE", "GE": "GEO", "AM": "ARM",
-    "BD": "BGD", "LK": "LKA", "NP": "NPL", "MM": "MMR", "KH": "KHM",
-    "QA": "QAT", "AE": "ARE", "KW": "KWT", "OM": "OMN", "JO": "JOR",
-    "LB": "LBN", "IQ": "IRQ", "IR": "IRN", "SY": "SYR", "YE": "YEM",
-    "EC": "ECU", "BO": "BOL", "PY": "PRY", "UY": "URY", "VE": "VEN",
-    "GT": "GTM", "HN": "HND", "SV": "SLV", "NI": "NIC", "CR": "CRI",
-    "PA": "PAN", "CU": "CUB", "DO": "DOM", "HT": "HTI", "JM": "JAM",
-    "PL": "POL", "LU": "LUX", "MT": "MLT", "CY": "CYP", "IS": "ISL",
-    "LI": "LIE", "MC": "MCO", "SM": "SMR", "VA": "VAT", "AD": "AND",
+    "US": "USA",
+    "CA": "CAN",
+    "JP": "JPN",
+    "GB": "GBR",
+    "FR": "FRA",
+    "CN": "CHN",
+    "DE": "DEU",
+    "IT": "ITA",
+    "ES": "ESP",
+    "AU": "AUS",
+    "BR": "BRA",
+    "IN": "IND",
+    "CO": "COL",
+    "NL": "NLD",
+    "PL": "POL",
+    "MX": "MEX",
+    "SE": "SWE",
+    "KR": "KOR",
+    "AR": "ARG",
+    "CH": "CHE",
+    "AT": "AUT",
+    "BE": "BEL",
+    "TW": "TWN",
+    "PT": "PRT",
+    "TR": "TUR",
+    "ZA": "ZAF",
+    "RU": "RUS",
+    "SG": "SGP",
+    "DK": "DNK",
+    "NO": "NOR",
+    "FI": "FIN",
+    "HU": "HUN",
+    "CZ": "CZE",
+    "RO": "ROU",
+    "GR": "GRC",
+    "IL": "ISR",
+    "PH": "PHL",
+    "ID": "IDN",
+    "TH": "THA",
+    "MY": "MYS",
+    "EG": "EGY",
+    "SA": "SAU",
+    "NG": "NGA",
+    "PE": "PER",
+    "CL": "CHL",
+    "IE": "IRL",
+    "NZ": "NZL",
+    "HK": "HKG",
+    "PK": "PAK",
+    "VN": "VNM",
+    "UA": "UKR",
+    "HR": "HRV",
+    "RS": "SRB",
+    "SK": "SVK",
+    "SI": "SVN",
+    "LT": "LTU",
+    "LV": "LVA",
+    "EE": "EST",
+    "BG": "BGR",
+    "BA": "BIH",
+    "MA": "MAR",
+    "TN": "TUN",
+    "DZ": "DZA",
+    "KE": "KEN",
+    "GH": "GHA",
+    "ET": "ETH",
+    "TZ": "TZA",
+    "UG": "UGA",
+    "AO": "AGO",
+    "MZ": "MOZ",
+    "SN": "SEN",
+    "CM": "CMR",
+    "CG": "COG",
+    "CI": "CIV",
+    "MR": "MRT",
+    "UZ": "UZB",
+    "KZ": "KAZ",
+    "AZ": "AZE",
+    "GE": "GEO",
+    "AM": "ARM",
+    "BD": "BGD",
+    "LK": "LKA",
+    "NP": "NPL",
+    "MM": "MMR",
+    "KH": "KHM",
+    "QA": "QAT",
+    "AE": "ARE",
+    "KW": "KWT",
+    "OM": "OMN",
+    "JO": "JOR",
+    "LB": "LBN",
+    "IQ": "IRQ",
+    "IR": "IRN",
+    "SY": "SYR",
+    "YE": "YEM",
+    "EC": "ECU",
+    "BO": "BOL",
+    "PY": "PRY",
+    "UY": "URY",
+    "VE": "VEN",
+    "GT": "GTM",
+    "HN": "HND",
+    "SV": "SLV",
+    "NI": "NIC",
+    "CR": "CRI",
+    "PA": "PAN",
+    "CU": "CUB",
+    "DO": "DOM",
+    "HT": "HTI",
+    "JM": "JAM",
+    "PL": "POL",
+    "LU": "LUX",
+    "MT": "MLT",
+    "CY": "CYP",
+    "IS": "ISL",
+    "LI": "LIE",
+    "MC": "MCO",
+    "SM": "SMR",
+    "VA": "VAT",
+    "AD": "AND",
 }
 
 
@@ -73,7 +206,9 @@ def _quarters_key(quarters: list[str] | None) -> str:
     return "|".join(sorted(quarters)) if quarters else "ALL"
 
 
-def _primaryids_for_index(indexed_df: pd.DataFrame, keys: list[str] | tuple[str, ...]) -> set[int]:
+def _primaryids_for_index(
+    indexed_df: pd.DataFrame, keys: list[str] | tuple[str, ...]
+) -> set[int]:
     if not keys:
         return set()
 
@@ -141,13 +276,36 @@ def _reaction_case_ids(pts_key: str, quarters_key: str) -> set[int]:
 def _primaryid_indexed_tables() -> dict[str, pd.DataFrame]:
     """PrimaryID-indexed tables for fast point lookups without full scans."""
     t0 = time.perf_counter()
-    tables = dl.load_tables()
-    indexed: dict[str, pd.DataFrame] = {}
+
+    demo = dl.load_demo_slim()
+    drug = dl.load_drug_records_slim()
+    reac = dl.load_reac_slim()
+    outc = dl.load_outc_slim()
+    indi = dl.load_indi_slim()
+
+    if any(x is None for x in (demo, drug, reac, outc, indi)):
+        tables = dl.load_tables()
+        indexed: dict[str, pd.DataFrame] = {}
+        tracked = ["demo", "drug", "reac", "outc", "indi"]
+        for name in tracked:
+            indexed[name] = tables[name].set_index("primaryid", drop=False).sort_index()
+        log.info(
+            "PrimaryID indexes ready (fallback raw tables): %s  (%.2fs)",
+            ", ".join(f"{name}={len(indexed[name]):,}" for name in tracked),
+            time.perf_counter() - t0,
+        )
+        return indexed
+
+    indexed = {
+        "demo": demo.set_index("primaryid", drop=False).sort_index(),
+        "drug": drug.set_index("primaryid", drop=False).sort_index(),
+        "reac": reac.set_index("primaryid", drop=False).sort_index(),
+        "outc": outc.set_index("primaryid", drop=False).sort_index(),
+        "indi": indi.set_index("primaryid", drop=False).sort_index(),
+    }
     tracked = ["demo", "drug", "reac", "outc", "indi"]
-    for name in tracked:
-        indexed[name] = tables[name].set_index("primaryid", drop=False).sort_index()
     log.info(
-        "PrimaryID indexes ready: %s  (%.2fs)",
+        "PrimaryID indexes ready (slim caches): %s  (%.2fs)",
         ", ".join(f"{name}={len(indexed[name]):,}" for name in tracked),
         time.perf_counter() - t0,
     )
@@ -159,7 +317,9 @@ def _subset_by_primaryids(indexed_df: pd.DataFrame, case_ids: set[int]) -> pd.Da
     if not case_ids:
         return indexed_df.iloc[0:0].copy()
 
-    positions, _missing = indexed_df.index.get_indexer_non_unique(pd.Index(sorted(case_ids)))
+    positions, _missing = indexed_df.index.get_indexer_non_unique(
+        pd.Index(sorted(case_ids))
+    )
     positions = positions[positions >= 0]
     if len(positions) == 0:
         return indexed_df.iloc[0:0].copy()
@@ -176,7 +336,14 @@ def _empty_drug_demographics() -> dict[str, pd.DataFrame]:
 
 def _empty_drug_bundle() -> dict:
     return {
-        "kpi": {"n_cases": 0, "n_deaths": 0, "n_hosp": 0, "n_lt": 0, "n_serious": 0, "death_pct": 0.0},
+        "kpi": {
+            "n_cases": 0,
+            "n_deaths": 0,
+            "n_hosp": 0,
+            "n_lt": 0,
+            "n_serious": 0,
+            "death_pct": 0.0,
+        },
         "trend": pd.DataFrame(columns=["quarter", "case_count"]),
         "top_reactions": pd.DataFrame(columns=["pt", "count", "pct"]),
         "outcomes": pd.DataFrame(columns=["outcome_label", "count", "pct"]),
@@ -189,6 +356,7 @@ def _empty_drug_bundle() -> dict:
 
 
 # ── Drug queries ──────────────────────────────────────────────────────────────
+
 
 @st.cache_data(show_spinner=False)
 def drug_query_bundle(
@@ -204,12 +372,21 @@ def drug_query_bundle(
 ) -> dict:
     """Compute the full Drug Explorer data bundle from one shared filtered context."""
     t0 = time.perf_counter()
-    log.info("drug_query_bundle: start names=%r  role=%s  quarters=%s", names_key[:60], role, quarters_key[:40])
+    log.info(
+        "drug_query_bundle: start names=%r  role=%s  quarters=%s",
+        names_key[:60],
+        role,
+        quarters_key[:40],
+    )
 
     step_t0 = time.perf_counter()
     case_ids = _drug_case_ids(names_key, role, quarters_key)
     n_cases = len(case_ids)
-    log.info("drug_query_bundle: case ids resolved: %s  (%.2fs)", f"{n_cases:,}", time.perf_counter() - step_t0)
+    log.info(
+        "drug_query_bundle: case ids resolved: %s  (%.2fs)",
+        f"{n_cases:,}",
+        time.perf_counter() - step_t0,
+    )
     if n_cases == 0:
         log.warning("drug_query_bundle: 0 cases matched for names=%r", names_key[:60])
         return _empty_drug_bundle()
@@ -249,15 +426,21 @@ def drug_query_bundle(
     trend.columns = ["quarter", "case_count"]
     trend = trend.sort_values("quarter")
 
-    top_reactions = reac_sub["pt_norm"].value_counts().head(top_n_reactions).reset_index()
+    top_reactions = (
+        reac_sub["pt_norm"].value_counts().head(top_n_reactions).reset_index()
+    )
     top_reactions.columns = ["pt", "count"]
     top_reactions["pct"] = (top_reactions["count"] / n_cases * 100).round(1)
 
     outcomes = outc_sub["outc_cod"].value_counts().reset_index()
     outcomes.columns = ["outc_cod", "count"]
-    outcomes["outcome_label"] = outcomes["outc_cod"].map(ana.OUTCOME_LABELS).fillna(outcomes["outc_cod"])
+    outcomes["outcome_label"] = (
+        outcomes["outc_cod"].map(ana.OUTCOME_LABELS).fillna(outcomes["outc_cod"])
+    )
     outcomes["pct"] = (outcomes["count"] / n_cases * 100).round(1)
-    outcomes = outcomes[["outcome_label", "count", "pct"]].sort_values("count", ascending=False)
+    outcomes = outcomes[["outcome_label", "count", "pct"]].sort_values(
+        "count", ascending=False
+    )
 
     sex = demo_sub["sex"].value_counts().reset_index()
     sex.columns = ["sex_label", "count"]
@@ -265,14 +448,18 @@ def drug_query_bundle(
 
     age = demo_sub["age_grp"].value_counts().reset_index()
     age.columns = ["age_group_label", "count"]
-    age["age_group_label"] = age["age_group_label"].map(ana.AGE_LABELS).fillna(age["age_group_label"])
+    age["age_group_label"] = (
+        age["age_group_label"].map(ana.AGE_LABELS).fillna(age["age_group_label"])
+    )
 
     rep = demo_sub["occp_cod"].value_counts().reset_index()
     rep.columns = ["reporter", "count"]
     rep["reporter"] = rep["reporter"].map(ana.OCCP_LABELS).fillna(rep["reporter"])
     demographics = {"sex": sex, "age_grp": age, "reporter": rep}
 
-    countries = demo_sub["reporter_country"].value_counts().head(top_n_countries).reset_index()
+    countries = (
+        demo_sub["reporter_country"].value_counts().head(top_n_countries).reset_index()
+    )
     countries.columns = ["iso2", "count"]
     countries["country"] = countries["iso2"].map(ISO2_NAMES).fillna(countries["iso2"])
     countries["pct"] = (countries["count"] / countries["count"].sum() * 100).round(1)
@@ -280,7 +467,9 @@ def drug_query_bundle(
     drug_target_mask = drug_sub["canon"].isin(name_set)
     if role != "all":
         drug_target_mask = drug_target_mask & (drug_sub["role_cod"] == role)
-    drug_target = drug_sub.loc[drug_target_mask, ["primaryid", "drug_seq"]].drop_duplicates()
+    drug_target = drug_sub.loc[
+        drug_target_mask, ["primaryid", "drug_seq"]
+    ].drop_duplicates()
 
     joined = drug_target.merge(
         indi_sub[["primaryid", "indi_drug_seq", "indi_pt"]],
@@ -288,11 +477,19 @@ def drug_query_bundle(
         right_on=["primaryid", "indi_drug_seq"],
         how="inner",
     )
-    indications = joined["indi_pt"].value_counts().head(top_n_indications + 1).reset_index()
+    indications = (
+        joined["indi_pt"].value_counts().head(top_n_indications + 1).reset_index()
+    )
     indications.columns = ["indication", "count"]
-    indications = indications[~indications["indication"].str.lower().str.contains("unknown", na=False)].head(top_n_indications)
+    indications = indications[
+        ~indications["indication"].str.lower().str.contains("unknown", na=False)
+    ].head(top_n_indications)
     indication_total = joined["primaryid"].nunique()
-    indications["pct"] = (indications["count"] / indication_total * 100).round(1) if indication_total else 0.0
+    indications["pct"] = (
+        (indications["count"] / indication_total * 100).round(1)
+        if indication_total
+        else 0.0
+    )
 
     other = drug_sub[~drug_sub["canon"].isin(name_set)]
     concomitants = other["canon"].value_counts().head(top_n_concomitants).reset_index()
@@ -315,8 +512,23 @@ def drug_query_bundle(
         "dose_form",
         "dose_freq",
     ]
-    recent_records = recent_records[[c for c in want_cols if c in recent_records.columns]]
-    recent_records = recent_records.sort_values("primaryid", ascending=False).head(recent_limit).reset_index(drop=True)
+    recent_records = recent_records[
+        [c for c in want_cols if c in recent_records.columns]
+    ]
+    # Join adverse events from reac_sub
+    if not reac_sub.empty and "pt_norm" in reac_sub.columns:
+        ae_map = (
+            reac_sub.groupby("primaryid")["pt_norm"]
+            .apply(lambda pts: "; ".join(pts.dropna().unique()))
+            .rename("adverse_events")
+        )
+        recent_records = recent_records.merge(ae_map, on="primaryid", how="left")
+
+    recent_records = (
+        recent_records.sort_values("primaryid", ascending=False)
+        .head(recent_limit)
+        .reset_index(drop=True)
+    )
 
     bundle = {
         "kpi": kpi,
@@ -344,8 +556,12 @@ def drug_kpis(names_key: str, role: str, quarters_key: str) -> dict:
 
 
 @st.cache_data(show_spinner=False)
-def drug_top_reactions(names_key: str, role: str, quarters_key: str, top_n: int) -> pd.DataFrame:
-    return drug_query_bundle(names_key, role, quarters_key, top_n_reactions=top_n)["top_reactions"]
+def drug_top_reactions(
+    names_key: str, role: str, quarters_key: str, top_n: int
+) -> pd.DataFrame:
+    return drug_query_bundle(names_key, role, quarters_key, top_n_reactions=top_n)[
+        "top_reactions"
+    ]
 
 
 @st.cache_data(show_spinner=False)
@@ -364,30 +580,47 @@ def drug_demographics(names_key: str, role: str, quarters_key: str) -> dict:
 
 
 @st.cache_data(show_spinner=False)
-def drug_countries(names_key: str, role: str, quarters_key: str, top_n: int = 20) -> pd.DataFrame:
+def drug_countries(
+    names_key: str, role: str, quarters_key: str, top_n: int = 20
+) -> pd.DataFrame:
     """Top reporter countries for a drug's cases."""
-    return drug_query_bundle(names_key, role, quarters_key, top_n_countries=top_n)["countries"]
+    return drug_query_bundle(names_key, role, quarters_key, top_n_countries=top_n)[
+        "countries"
+    ]
 
 
 @st.cache_data(show_spinner=False)
-def drug_indications(names_key: str, role: str, quarters_key: str, top_n: int = 15) -> pd.DataFrame:
+def drug_indications(
+    names_key: str, role: str, quarters_key: str, top_n: int = 15
+) -> pd.DataFrame:
     """Top indications (what the drug was prescribed for)."""
-    return drug_query_bundle(names_key, role, quarters_key, top_n_indications=top_n)["indications"]
+    return drug_query_bundle(names_key, role, quarters_key, top_n_indications=top_n)[
+        "indications"
+    ]
 
 
 @st.cache_data(show_spinner=False)
-def drug_concomitants(names_key: str, role: str, quarters_key: str, top_n: int = 15) -> pd.DataFrame:
+def drug_concomitants(
+    names_key: str, role: str, quarters_key: str, top_n: int = 15
+) -> pd.DataFrame:
     """Other drugs most commonly reported alongside this drug."""
-    return drug_query_bundle(names_key, role, quarters_key, top_n_concomitants=top_n)["concomitants"]
+    return drug_query_bundle(names_key, role, quarters_key, top_n_concomitants=top_n)[
+        "concomitants"
+    ]
 
 
 @st.cache_data(show_spinner=False)
-def drug_recent_records(names_key: str, role: str, quarters_key: str, limit: int = 100) -> pd.DataFrame:
+def drug_recent_records(
+    names_key: str, role: str, quarters_key: str, limit: int = 100
+) -> pd.DataFrame:
     """Return recent individual drug records for the matched drug names."""
-    return drug_query_bundle(names_key, role, quarters_key, recent_limit=limit)["recent_records"]
+    return drug_query_bundle(names_key, role, quarters_key, recent_limit=limit)[
+        "recent_records"
+    ]
 
 
 # ── Reaction queries ──────────────────────────────────────────────────────────
+
 
 @st.cache_data(show_spinner=False)
 def reaction_kpis(pts_key: str, quarters_key: str) -> dict:
@@ -400,7 +633,9 @@ def reaction_kpis(pts_key: str, quarters_key: str) -> dict:
 
 
 @st.cache_data(show_spinner=False)
-def reaction_top_drugs(pts_key: str, role: str, quarters_key: str, top_n: int) -> pd.DataFrame:
+def reaction_top_drugs(
+    pts_key: str, role: str, quarters_key: str, top_n: int
+) -> pd.DataFrame:
     tables = dl.load_tables()
     pt_set = set(pts_key.split("|")) if pts_key else set()
     reac = _filter_quarters(tables["reac"], quarters_key)
@@ -431,40 +666,59 @@ def reaction_trend(pts_key: str, quarters_key: str) -> pd.DataFrame:
 
 # ── Global overview queries ───────────────────────────────────────────────────
 
+
 @st.cache_data(show_spinner=False)
 def global_kpis() -> dict:
     log.info("global_kpis: computing...")
-    tables = dl.load_tables()
-    demo   = tables["demo"]
-    outc   = tables["outc"]
-    drug   = tables["drug"]
-    reac   = tables["reac"]
+    cached = dl.load_global_kpis()
+    if cached is not None:
+        log.info(
+            "global_kpis: loaded from cache  %s cases  %s deaths  %s drugs  %s PTs",
+            f"{cached['n_cases']:,}",
+            f"{cached['n_deaths']:,}",
+            f"{cached['n_drugs']:,}",
+            f"{cached['n_pts']:,}",
+        )
+        return cached
 
-    n_cases  = len(demo)
+    tables = dl.load_tables()
+    demo = tables["demo"]
+    outc = tables["outc"]
+    drug = tables["drug"]
+    reac = tables["reac"]
+
+    n_cases = len(demo)
     n_deaths = int((outc["outc_cod"] == "DE").sum())
-    n_drugs  = drug["canon"].nunique()
-    n_pts    = reac["pt_norm"].nunique()
-    hosp     = int((outc["outc_cod"] == "HO").sum())
-    lt       = int((outc["outc_cod"] == "LT").sum())
+    n_drugs = drug["canon"].nunique()
+    n_pts = reac["pt_norm"].nunique()
+    hosp = int((outc["outc_cod"] == "HO").sum())
+    lt = int((outc["outc_cod"] == "LT").sum())
 
     result = {
-        "n_cases":  n_cases,
+        "n_cases": n_cases,
         "n_deaths": n_deaths,
-        "n_drugs":  n_drugs,
-        "n_pts":    n_pts,
-        "n_hosp":   hosp,
-        "n_lt":     lt,
+        "n_drugs": n_drugs,
+        "n_pts": n_pts,
+        "n_hosp": hosp,
+        "n_lt": lt,
     }
-    log.info("global_kpis: %s cases  %s deaths  %s drugs  %s PTs",
-             f"{n_cases:,}", f"{n_deaths:,}", f"{n_drugs:,}", f"{n_pts:,}")
+    log.info(
+        "global_kpis: %s cases  %s deaths  %s drugs  %s PTs",
+        f"{n_cases:,}",
+        f"{n_deaths:,}",
+        f"{n_drugs:,}",
+        f"{n_pts:,}",
+    )
     return result
 
 
 @st.cache_data(show_spinner=False)
 def global_quarterly_trend() -> pd.DataFrame:
     """Total cases per quarter across all drugs."""
-    tables = dl.load_tables()
-    demo   = tables["demo"]
+    demo = dl.load_demo_slim()
+    if demo is None:
+        tables = dl.load_tables()
+        demo = tables["demo"]
     vc = demo["quarter"].value_counts().sort_index().reset_index()
     vc.columns = ["quarter", "case_count"]
     return vc
@@ -472,8 +726,10 @@ def global_quarterly_trend() -> pd.DataFrame:
 
 @st.cache_data(show_spinner=False)
 def global_top_countries(top_n: int = 20) -> pd.DataFrame:
-    tables = dl.load_tables()
-    demo   = tables["demo"]
+    demo = dl.load_demo_slim()
+    if demo is None:
+        tables = dl.load_tables()
+        demo = tables["demo"]
     vc = demo["reporter_country"].value_counts().head(top_n).reset_index()
     vc.columns = ["iso2", "count"]
     vc["country"] = vc["iso2"].map(ISO2_NAMES).fillna(vc["iso2"])
@@ -532,8 +788,10 @@ def trending_reactions(top_n: int = 10) -> pd.DataFrame:
 
 @st.cache_data(show_spinner=False)
 def global_reporter_types() -> pd.DataFrame:
-    tables = dl.load_tables()
-    demo   = tables["demo"]
+    demo = dl.load_demo_slim()
+    if demo is None:
+        tables = dl.load_tables()
+        demo = tables["demo"]
     vc = demo["occp_cod"].value_counts().reset_index()
     vc.columns = ["code", "count"]
     vc["label"] = vc["code"].map(ana.OCCP_LABELS).fillna(vc["code"])
@@ -543,6 +801,7 @@ def global_reporter_types() -> pd.DataFrame:
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
+
 def _filter_quarters(df: pd.DataFrame, quarters_key: str) -> pd.DataFrame:
     if quarters_key == "ALL":
         return df
@@ -550,21 +809,28 @@ def _filter_quarters(df: pd.DataFrame, quarters_key: str) -> pd.DataFrame:
     return df[df["quarter"].isin(quarters)]
 
 
-def _filter_quarters_by_demo(outc_df: pd.DataFrame, demo_df: pd.DataFrame, quarters_key: str) -> pd.DataFrame:
+def _filter_quarters_by_demo(
+    outc_df: pd.DataFrame, demo_df: pd.DataFrame, quarters_key: str
+) -> pd.DataFrame:
     if quarters_key == "ALL":
         return outc_df
     quarters = set(quarters_key.split("|"))
-    valid_pids = set(demo_df.loc[demo_df["quarter"].isin(quarters), "primaryid"].unique())
+    valid_pids = set(
+        demo_df.loc[demo_df["quarter"].isin(quarters), "primaryid"].unique()
+    )
     return outc_df[outc_df["primaryid"].isin(valid_pids)]
 
 
 # ── World map query ───────────────────────────────────────────────────────────
 
+
 @st.cache_data(show_spinner=False)
 def global_country_choropleth() -> pd.DataFrame:
     """All countries with ISO-3 code and report count for a choropleth map."""
-    tables = dl.load_tables()
-    demo = tables["demo"]
+    demo = dl.load_demo_slim()
+    if demo is None:
+        tables = dl.load_tables()
+        demo = tables["demo"]
     vc = demo["reporter_country"].value_counts().reset_index()
     vc.columns = ["iso2", "count"]
     vc["iso3"] = vc["iso2"].map(ISO2_TO_ISO3)
@@ -577,78 +843,99 @@ def global_country_choropleth() -> pd.DataFrame:
 
 # ── Drug comparison queries ───────────────────────────────────────────────────
 
+
 @st.cache_data(show_spinner=False)
-def drug_comparison_kpis(names_key_a: str, names_key_b: str, role: str) -> tuple[dict, dict]:
+def drug_comparison_kpis(
+    names_key_a: str, names_key_b: str, role: str
+) -> tuple[dict, dict]:
     """Return KPI dicts for two drugs."""
-    log.info("drug_comparison_kpis: A=%r  B=%r  role=%s",
-             names_key_a[:40], names_key_b[:40], role)
-    tables  = dl.load_tables()
-    drug    = tables["drug"]
-    outc    = tables["outc"]
-    set_a   = set(names_key_a.split("|"))
-    set_b   = set(names_key_b.split("|"))
-    kpi_a   = ana.kpis_for_drug(drug, outc, set_a, role=role)
-    kpi_b   = ana.kpis_for_drug(drug, outc, set_b, role=role)
+    log.info(
+        "drug_comparison_kpis: A=%r  B=%r  role=%s",
+        names_key_a[:40],
+        names_key_b[:40],
+        role,
+    )
+    tables = dl.load_tables()
+    drug = tables["drug"]
+    outc = tables["outc"]
+    set_a = set(names_key_a.split("|"))
+    set_b = set(names_key_b.split("|"))
+    kpi_a = ana.kpis_for_drug(drug, outc, set_a, role=role)
+    kpi_b = ana.kpis_for_drug(drug, outc, set_b, role=role)
     return kpi_a, kpi_b
 
 
 @st.cache_data(show_spinner=False)
-def drug_comparison_top_reactions(names_key_a: str, names_key_b: str, role: str, top_n: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+def drug_comparison_top_reactions(
+    names_key_a: str, names_key_b: str, role: str, top_n: int
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Top reactions for each drug."""
     tables = dl.load_tables()
-    drug   = tables["drug"]
-    reac   = tables["reac"]
-    set_a  = set(names_key_a.split("|"))
-    set_b  = set(names_key_b.split("|"))
-    df_a   = ana.top_reactions_for_drug(drug, reac, set_a, role=role, top_n=top_n)
-    df_b   = ana.top_reactions_for_drug(drug, reac, set_b, role=role, top_n=top_n)
+    drug = tables["drug"]
+    reac = tables["reac"]
+    set_a = set(names_key_a.split("|"))
+    set_b = set(names_key_b.split("|"))
+    df_a = ana.top_reactions_for_drug(drug, reac, set_a, role=role, top_n=top_n)
+    df_b = ana.top_reactions_for_drug(drug, reac, set_b, role=role, top_n=top_n)
     return df_a, df_b
 
 
 @st.cache_data(show_spinner=False)
-def drug_comparison_trend(names_key_a: str, names_key_b: str, role: str) -> pd.DataFrame:
+def drug_comparison_trend(
+    names_key_a: str, names_key_b: str, role: str
+) -> pd.DataFrame:
     """Quarterly trend for both drugs merged into one DataFrame for multi-line chart."""
     tables = dl.load_tables()
-    drug   = tables["drug"]
-    set_a  = set(names_key_a.split("|"))
-    set_b  = set(names_key_b.split("|"))
+    drug = tables["drug"]
+    set_a = set(names_key_a.split("|"))
+    set_b = set(names_key_b.split("|"))
     trend_a = ana.quarterly_trend_for_drug(set_a, drug, role=role)
     trend_b = ana.quarterly_trend_for_drug(set_b, drug, role=role)
     label_a = names_key_a.split("|")[0].title()
     label_b = names_key_b.split("|")[0].title()
-    merged = trend_a.rename(columns={"case_count": label_a}).merge(
-        trend_b.rename(columns={"case_count": label_b}),
-        on="quarter", how="outer",
-    ).sort_values("quarter").fillna(0)
+    merged = (
+        trend_a.rename(columns={"case_count": label_a})
+        .merge(
+            trend_b.rename(columns={"case_count": label_b}),
+            on="quarter",
+            how="outer",
+        )
+        .sort_values("quarter")
+        .fillna(0)
+    )
     merged[label_a] = merged[label_a].astype(int)
     merged[label_b] = merged[label_b].astype(int)
     return merged
 
 
 @st.cache_data(show_spinner=False)
-def drug_comparison_outcomes(names_key_a: str, names_key_b: str, role: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+def drug_comparison_outcomes(
+    names_key_a: str, names_key_b: str, role: str
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Outcome distributions for each drug."""
     tables = dl.load_tables()
-    drug   = tables["drug"]
-    outc   = tables["outc"]
-    set_a  = set(names_key_a.split("|"))
-    set_b  = set(names_key_b.split("|"))
-    df_a   = ana.outcomes_for_drug(drug, outc, set_a, role=role)
-    df_b   = ana.outcomes_for_drug(drug, outc, set_b, role=role)
+    drug = tables["drug"]
+    outc = tables["outc"]
+    set_a = set(names_key_a.split("|"))
+    set_b = set(names_key_b.split("|"))
+    df_a = ana.outcomes_for_drug(drug, outc, set_a, role=role)
+    df_b = ana.outcomes_for_drug(drug, outc, set_b, role=role)
     return df_a, df_b
 
 
 @st.cache_data(show_spinner=False)
-def drug_comparison_shared_reactions(names_key_a: str, names_key_b: str, role: str, top_n: int = 20) -> pd.DataFrame:
+def drug_comparison_shared_reactions(
+    names_key_a: str, names_key_b: str, role: str, top_n: int = 20
+) -> pd.DataFrame:
     """
     Reactions shared between two drugs with normalized report rate per 1000 cases.
     Returns a DataFrame with pt, rate_a, rate_b for a grouped bar comparison.
     """
-    tables  = dl.load_tables()
-    drug    = tables["drug"]
-    reac    = tables["reac"]
-    set_a   = set(names_key_a.split("|"))
-    set_b   = set(names_key_b.split("|"))
+    tables = dl.load_tables()
+    drug = tables["drug"]
+    reac = tables["reac"]
+    set_a = set(names_key_a.split("|"))
+    set_b = set(names_key_b.split("|"))
 
     def _rate_df(name_set: set[str]) -> pd.DataFrame:
         mask = drug["canon"].isin(name_set)
@@ -668,12 +955,18 @@ def drug_comparison_shared_reactions(names_key_a: str, names_key_b: str, role: s
     if not shared:
         return pd.DataFrame()
 
-    df = pd.DataFrame({
-        "pt": list(shared),
-        "rate_a": [rate_a[pt] for pt in shared],
-        "rate_b": [rate_b[pt] for pt in shared],
-    })
+    df = pd.DataFrame(
+        {
+            "pt": list(shared),
+            "rate_a": [rate_a[pt] for pt in shared],
+            "rate_b": [rate_b[pt] for pt in shared],
+        }
+    )
     # rank by max rate across both drugs, keep top N
     df["max_rate"] = df[["rate_a", "rate_b"]].max(axis=1)
-    df = df.sort_values("max_rate", ascending=False).head(top_n).drop(columns=["max_rate"])
+    df = (
+        df.sort_values("max_rate", ascending=False)
+        .head(top_n)
+        .drop(columns=["max_rate"])
+    )
     return df.reset_index(drop=True)

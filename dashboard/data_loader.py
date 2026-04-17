@@ -24,8 +24,10 @@ try:
     import streamlit as st
 except ImportError:
     from types import SimpleNamespace
+
     def _noop(*args, **kwargs):
         return args[0] if args and callable(args[0]) else (lambda f: f)
+
     st = SimpleNamespace(cache_resource=_noop, cache_data=_noop)
 
 from logger import get_logger
@@ -44,6 +46,7 @@ def _default_cache_dir(parquet_dir: str) -> str:
     else:
         cache_name = f"cache_{base}"
     return os.path.join(_HERE, cache_name)
+
 
 # ── Path configuration ────────────────────────────────────────────────────────
 # Override with env vars for cloud deployment (Databricks DBFS, S3, ADLS, etc.)
@@ -69,6 +72,7 @@ def load_tables() -> dict[str, pd.DataFrame]:
     sessions rather than copied per-session (cache_data behaviour).
     """
     import time
+
     t0 = time.perf_counter()
     log.info("Loading FAERS parquet tables from %s", _PARQUET_DIR)
 
@@ -77,7 +81,12 @@ def load_tables() -> dict[str, pd.DataFrame]:
         path = os.path.join(_PARQUET_DIR, f"{name}.parquet")
         t1 = time.perf_counter()
         tables[name] = pd.read_parquet(path)
-        log.debug("  Loaded %-6s  %9s rows  (%.2fs)", name, f"{len(tables[name]):,}", time.perf_counter() - t1)
+        log.debug(
+            "  Loaded %-6s  %9s rows  (%.2fs)",
+            name,
+            f"{len(tables[name]):,}",
+            time.perf_counter() - t1,
+        )
 
     # ── Deduplication is done at build time by STARTHERE.py ──────────────────
     # demo.parquet already contains only the latest caseversion per caseid, and
@@ -91,7 +100,9 @@ def load_tables() -> dict[str, pd.DataFrame]:
     # intentionally include duplicate caseversions) behave consistently with
     # the conftest normalisation and the `_primaryid_indexed_tables` path.
     if "caseid" in demo.columns and "caseversion" in demo.columns:
-        demo["caseversion"] = pd.to_numeric(demo["caseversion"], errors="coerce").fillna(0).astype(int)
+        demo["caseversion"] = (
+            pd.to_numeric(demo["caseversion"], errors="coerce").fillna(0).astype(int)
+        )
         demo = demo.sort_values("caseversion").drop_duplicates("caseid", keep="last")
 
     tables["demo"] = demo
@@ -101,17 +112,23 @@ def load_tables() -> dict[str, pd.DataFrame]:
     valid_pids = set(demo["primaryid"].unique())
     for _tbl in ["drug", "reac", "outc", "indi", "rpsr", "ther"]:
         if _tbl in tables and not tables[_tbl].empty:
-            tables[_tbl] = tables[_tbl][tables[_tbl]["primaryid"].isin(valid_pids)].copy()
+            tables[_tbl] = tables[_tbl][
+                tables[_tbl]["primaryid"].isin(valid_pids)
+            ].copy()
 
     # ── Derive synthetic columns if not present (test fixtures may omit them) ──
     # age_grp: bucket numeric age into MedDRA age groups
     if "age_grp" not in demo.columns:
         age = pd.to_numeric(demo.get("age", pd.Series(dtype=float)), errors="coerce")
-        demo["age_grp"] = pd.cut(
-            age,
-            bins=[-1, 1, 11, 17, 64, 150],
-            labels=["N", "I", "C", "A", "E"],
-        ).astype(str).replace("nan", pd.NA)
+        demo["age_grp"] = (
+            pd.cut(
+                age,
+                bins=[-1, 1, 11, 17, 64, 150],
+                labels=["N", "I", "C", "A", "E"],
+            )
+            .astype(str)
+            .replace("nan", pd.NA)
+        )
 
     # occp_cod: fall back to reporter_type when present
     if "occp_cod" not in demo.columns:
@@ -119,14 +136,16 @@ def load_tables() -> dict[str, pd.DataFrame]:
 
     # reporter_country: fall back to occr_country when present
     if "reporter_country" not in demo.columns:
-        demo["reporter_country"] = demo.get("occr_country", pd.Series("", index=demo.index))
+        demo["reporter_country"] = demo.get(
+            "occr_country", pd.Series("", index=demo.index)
+        )
 
     tables["demo"] = demo
 
     # ── Normalise drug names ───────────────────────────────────────────────────
     drug = tables["drug"].copy()
     drug["drugname_norm"] = drug["drugname"].str.upper().str.strip()
-    drug["prod_ai_norm"]  = drug["prod_ai"].str.upper().str.strip()
+    drug["prod_ai_norm"] = drug["prod_ai"].str.upper().str.strip()
     drug["canon"] = drug["prod_ai_norm"].fillna(drug["drugname_norm"])
     # Propagate quarter from demo so quarter-filter helpers work on the drug table
     if "quarter" not in drug.columns:
@@ -148,9 +167,13 @@ def load_tables() -> dict[str, pd.DataFrame]:
         if "quarter" not in _t.columns:
             tables[_tbl] = _t.merge(_pid_quarter, on="primaryid", how="left")
 
-    log.info("load_tables complete: %s cases, %s drug rows, %s reaction rows  (%.2fs total)",
-             f"{len(tables['demo']):,}", f"{len(tables['drug']):,}", f"{len(tables['reac']):,}",
-             time.perf_counter() - t0)
+    log.info(
+        "load_tables complete: %s cases, %s drug rows, %s reaction rows  (%.2fs total)",
+        f"{len(tables['demo']):,}",
+        f"{len(tables['drug']):,}",
+        f"{len(tables['reac']):,}",
+        time.perf_counter() - t0,
+    )
     return tables
 
 
@@ -203,6 +226,54 @@ def load_drug_name_lookup() -> pd.DataFrame | None:
 
 
 @st.cache_resource(show_spinner=False)
+def load_drug_records_slim() -> pd.DataFrame | None:
+    """Load slim drug records table for Drug Explorer bundle path."""
+    path = os.path.join(_CACHE_DIR, "drug_records_slim.parquet")
+    if os.path.exists(path):
+        df = pd.read_parquet(path)
+        log.info("Loaded drug_records_slim  %s rows", f"{len(df):,}")
+        return df
+    log.warning("drug_records_slim cache not found at %s", path)
+    return None
+
+
+@st.cache_resource(show_spinner=False)
+def load_reac_slim() -> pd.DataFrame | None:
+    """Load slim reactions table (primaryid, pt_norm)."""
+    path = os.path.join(_CACHE_DIR, "reac_slim.parquet")
+    if os.path.exists(path):
+        df = pd.read_parquet(path)
+        log.info("Loaded reac_slim  %s rows", f"{len(df):,}")
+        return df
+    log.warning("reac_slim cache not found at %s", path)
+    return None
+
+
+@st.cache_resource(show_spinner=False)
+def load_outc_slim() -> pd.DataFrame | None:
+    """Load slim outcomes table (primaryid, outc_cod)."""
+    path = os.path.join(_CACHE_DIR, "outc_slim.parquet")
+    if os.path.exists(path):
+        df = pd.read_parquet(path)
+        log.info("Loaded outc_slim  %s rows", f"{len(df):,}")
+        return df
+    log.warning("outc_slim cache not found at %s", path)
+    return None
+
+
+@st.cache_resource(show_spinner=False)
+def load_indi_slim() -> pd.DataFrame | None:
+    """Load slim indications table (primaryid, indi_drug_seq, indi_pt)."""
+    path = os.path.join(_CACHE_DIR, "indi_slim.parquet")
+    if os.path.exists(path):
+        df = pd.read_parquet(path)
+        log.info("Loaded indi_slim  %s rows", f"{len(df):,}")
+        return df
+    log.warning("indi_slim cache not found at %s", path)
+    return None
+
+
+@st.cache_resource(show_spinner=False)
 def load_lookup_tables() -> dict[str, pd.DataFrame]:
     """Build compact lookup tables used by the query layer.
 
@@ -211,11 +282,12 @@ def load_lookup_tables() -> dict[str, pd.DataFrame]:
     Cache is invalidated automatically when the source demo.parquet is newer.
     """
     import time
+
     t0 = time.perf_counter()
 
     _LOOKUP_FILES = {
-        "quarter_cases":  os.path.join(_CACHE_DIR, "lookup_quarter_cases.parquet"),
-        "drug_cases":     os.path.join(_CACHE_DIR, "lookup_drug_cases.parquet"),
+        "quarter_cases": os.path.join(_CACHE_DIR, "lookup_quarter_cases.parquet"),
+        "drug_cases": os.path.join(_CACHE_DIR, "lookup_drug_cases.parquet"),
         "drug_role_cases": os.path.join(_CACHE_DIR, "lookup_drug_role_cases.parquet"),
         "reaction_cases": os.path.join(_CACHE_DIR, "lookup_reaction_cases.parquet"),
     }
@@ -232,11 +304,13 @@ def load_lookup_tables() -> dict[str, pd.DataFrame]:
     if all_fresh:
         log.info("Loading lookup tables from disk cache...")
         result = {name: pd.read_parquet(path) for name, path in _LOOKUP_FILES.items()}
-        log.info("Lookup tables loaded from disk: %s quarters, %s drug entries, %s reaction entries  (%.2fs)",
-                 result["quarter_cases"].index.nunique(),
-                 len(result["drug_cases"]),
-                 len(result["reaction_cases"]),
-                 time.perf_counter() - t0)
+        log.info(
+            "Lookup tables loaded from disk: %s quarters, %s drug entries, %s reaction entries  (%.2fs)",
+            result["quarter_cases"].index.nunique(),
+            len(result["drug_cases"]),
+            len(result["reaction_cases"]),
+            time.perf_counter() - t0,
+        )
         return result
 
     log.info("Building lookup tables (will save to disk for future restarts)...")
@@ -268,8 +342,8 @@ def load_lookup_tables() -> dict[str, pd.DataFrame]:
     )
 
     result = {
-        "quarter_cases":  demo_quarters,
-        "drug_cases":     drug_cases,
+        "quarter_cases": demo_quarters,
+        "drug_cases": drug_cases,
         "drug_role_cases": drug_role_cases,
         "reaction_cases": reaction_cases,
     }
@@ -279,9 +353,13 @@ def load_lookup_tables() -> dict[str, pd.DataFrame]:
         result[name].to_parquet(path)
         log.debug("Saved lookup table %s → %s", name, path)
 
-    log.info("Lookup tables built and saved to disk: %s quarters, %s drug entries, %s reaction entries  (%.2fs)",
-             len(demo_quarters.index.unique()), len(drug_cases), len(reaction_cases),
-             time.perf_counter() - t0)
+    log.info(
+        "Lookup tables built and saved to disk: %s quarters, %s drug entries, %s reaction entries  (%.2fs)",
+        len(demo_quarters.index.unique()),
+        len(drug_cases),
+        len(reaction_cases),
+        time.perf_counter() - t0,
+    )
     return result
 
 
@@ -323,9 +401,21 @@ def get_n_total() -> int:
 
 @st.cache_data(show_spinner=False)
 def get_dataset_profile() -> dict[str, str | int]:
-    demo = load_tables()["demo"]
-    quarters = sorted(demo["quarter"].dropna().unique().tolist())
-    mode = "Recent sample" if os.path.basename(os.path.normpath(_PARQUET_DIR)) == "parquet_recent" else "Full history"
+    fact = load_fact_drug_quarter()
+    if fact is not None and "quarter" in fact.columns:
+        quarters = sorted(fact["quarter"].dropna().unique().tolist())
+    else:
+        demo = load_demo_slim()
+        if demo is not None and "quarter" in demo.columns:
+            quarters = sorted(demo["quarter"].dropna().unique().tolist())
+        else:
+            demo = load_tables()["demo"]
+            quarters = sorted(demo["quarter"].dropna().unique().tolist())
+    mode = (
+        "Recent sample"
+        if os.path.basename(os.path.normpath(_PARQUET_DIR)) == "parquet_recent"
+        else "Full history"
+    )
     return {
         "mode": mode,
         "parquet_dir": _PARQUET_DIR,
@@ -339,6 +429,7 @@ def get_dataset_profile() -> dict[str, str | int]:
 # ── Pre-computed cache tables ─────────────────────────────────────────────────
 # Also cache_resource: these are large parquet files loaded once and shared.
 
+
 def _load_cache_parquet(name: str, path: str) -> pd.DataFrame | None:
     if os.path.exists(path):
         df = pd.read_parquet(path)
@@ -350,27 +441,57 @@ def _load_cache_parquet(name: str, path: str) -> pd.DataFrame | None:
 
 @st.cache_resource(show_spinner="Loading signal table…")
 def load_prr_table() -> pd.DataFrame | None:
-    return _load_cache_parquet("prr_table", os.path.join(_CACHE_DIR, "prr_table.parquet"))
+    return _load_cache_parquet(
+        "prr_table", os.path.join(_CACHE_DIR, "prr_table.parquet")
+    )
 
 
 @st.cache_resource(show_spinner=False)
 def load_drug_summary() -> pd.DataFrame | None:
-    return _load_cache_parquet("drug_summary", os.path.join(_CACHE_DIR, "drug_summary.parquet"))
+    return _load_cache_parquet(
+        "drug_summary", os.path.join(_CACHE_DIR, "drug_summary.parquet")
+    )
 
 
 @st.cache_resource(show_spinner=False)
 def load_reac_summary() -> pd.DataFrame | None:
-    return _load_cache_parquet("reac_summary", os.path.join(_CACHE_DIR, "reac_summary.parquet"))
+    return _load_cache_parquet(
+        "reac_summary", os.path.join(_CACHE_DIR, "reac_summary.parquet")
+    )
 
 
 @st.cache_resource(show_spinner=False)
 def load_quarterly_drug() -> pd.DataFrame | None:
-    return _load_cache_parquet("quarterly_drug", os.path.join(_CACHE_DIR, "quarterly_drug.parquet"))
+    return _load_cache_parquet(
+        "quarterly_drug", os.path.join(_CACHE_DIR, "quarterly_drug.parquet")
+    )
 
 
 @st.cache_resource(show_spinner=False)
 def load_quarterly_reac() -> pd.DataFrame | None:
-    return _load_cache_parquet("quarterly_reac", os.path.join(_CACHE_DIR, "quarterly_reac.parquet"))
+    return _load_cache_parquet(
+        "quarterly_reac", os.path.join(_CACHE_DIR, "quarterly_reac.parquet")
+    )
+
+
+@st.cache_resource(show_spinner=False)
+def load_global_kpis() -> dict[str, int] | None:
+    """Load one-row precomputed global KPI cache if available."""
+    df = _load_cache_parquet(
+        "global_kpis", os.path.join(_CACHE_DIR, "global_kpis.parquet")
+    )
+    if df is None or df.empty:
+        return None
+
+    row = df.iloc[0]
+    return {
+        "n_cases": int(row.get("n_cases", 0)),
+        "n_deaths": int(row.get("n_deaths", 0)),
+        "n_drugs": int(row.get("n_drugs", 0)),
+        "n_pts": int(row.get("n_pts", 0)),
+        "n_hosp": int(row.get("n_hosp", 0)),
+        "n_lt": int(row.get("n_lt", 0)),
+    }
 
 
 # ── Background cache warm-up ──────────────────────────────────────────────────
@@ -384,6 +505,7 @@ _warm_started: bool = False
 def warm_all_tables() -> None:
     """Warm only the caches needed by the current dashboard tabs."""
     import time
+
     t0 = time.perf_counter()
     log.info("Background cache warm-up starting (light)...")
 
@@ -392,10 +514,15 @@ def warm_all_tables() -> None:
     load_fact_reac_quarter()
     load_demo_slim()
     load_drug_name_lookup()
+    load_drug_records_slim()
+    load_reac_slim()
+    load_outc_slim()
+    load_indi_slim()
     load_drug_summary()
     load_reac_summary()
     load_quarterly_drug()
     load_quarterly_reac()
+    load_global_kpis()
 
     # Lookup tables still rely on full tables for now
     load_lookup_tables()
