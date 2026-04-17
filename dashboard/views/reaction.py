@@ -45,15 +45,28 @@ def render(filters: dict) -> None:
         return
     logger.info("Reaction terms selected: query=%s terms=%s", q, selected)
 
-    left, right = st.columns([2, 1])
-    with right:
-        st.markdown("#### Match Scores")
-        st.dataframe(scored, width="stretch", hide_index=True)
-
     terms = tuple(selected)
     quarters = tuple(filters["quarters"])
     role = filters["role_filter"]
     top_n = filters["top_n"]
+
+    top_drugs = queries.reaction_top_drugs(terms, top_n, quarters, role)
+    outcomes = queries.reaction_outcomes(terms, top_n, quarters, role)
+    trend = queries.reaction_trend(terms, quarters, role)
+
+    st.markdown("#### At a glance")
+    if not top_drugs.empty:
+        lead = top_drugs.iloc[0]
+        st.info(
+            f"Top associated drug is **{lead['drugname']}** with **{int(lead['n_cases']):,}** case reports."
+        )
+    else:
+        st.info("No associated drug signals found for the selected terms and filters.")
+
+    left, right = st.columns([2, 1])
+    with right:
+        st.markdown("#### Match Scores")
+        st.dataframe(scored, width="stretch", hide_index=True)
 
     kpi = queries.reaction_kpis(terms, quarters, role)
     with left:
@@ -66,16 +79,6 @@ def render(filters: dict) -> None:
             metric_card("Any Serious Outcome", f"{kpi['serious']:,}")
         with c4:
             metric_card("Selected Terms", f"{kpi['n_terms']:,}")
-
-        top_drugs = queries.reaction_top_drugs(terms, top_n, quarters, role)
-        outcomes = queries.reaction_outcomes(terms, top_n, quarters, role)
-        trend = queries.reaction_trend(terms, quarters, role)
-
-        if not top_drugs.empty:
-            lead = top_drugs.iloc[0]
-            st.info(
-                f"At a glance: top associated drug is **{lead['drugname']}** with **{int(lead['n_cases']):,}** cases."
-            )
 
         a, b = st.columns(2)
         with a:
