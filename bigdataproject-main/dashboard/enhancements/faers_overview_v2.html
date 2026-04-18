@@ -1,0 +1,240 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sid:#1C2333;--bg:#F4F3EF;--surf:#FFFFFF;
+  --red:#C0392B;--red-lt:#FAECE7;--red-dk:#712B13;
+  --teal:#0F6E56;--teal-md:#1D9E75;--teal-lt:#E1F5EE;
+  --blue:#185FA5;--blue-lt:#E6F1FB;--blue-md:#378ADD;
+  --amber:#854F0B;--amber-lt:#FAEEDA;
+  --text:#1C2333;--muted:#6B7380;--border:#E2E0D8;
+  --fn:'DM Sans',system-ui,sans-serif;--mono:'DM Mono',monospace;
+}
+body{font-family:var(--fn);background:var(--bg);color:var(--text);font-size:13px;line-height:1.4}
+.shell{display:flex;min-height:860px;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.sid{width:210px;background:var(--sid);color:#fff;flex-shrink:0;display:flex;flex-direction:column}
+.sid-top{padding:18px 16px 0}
+.sid-brand{font-size:11px;color:#7A8599;letter-spacing:.6px;text-transform:uppercase;margin-bottom:2px}
+.sid-title{font-size:14px;font-weight:600;color:#fff;margin-bottom:18px}
+.nav-item{padding:8px 16px;font-size:12px;color:#8A94A8;cursor:pointer;display:flex;align-items:center;gap:8px;border-left:2px solid transparent}
+.nav-item.active{background:rgba(255,255,255,.07);color:#fff;border-left-color:#C0392B}
+.sid-divider{height:1px;background:rgba(255,255,255,.08);margin:12px 0}
+.filter-block{padding:0 16px}
+.f-label{font-size:10px;color:#5A6478;letter-spacing:.7px;text-transform:uppercase;margin-bottom:6px}
+.q-tags{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:10px}
+.qtag{font-size:9px;background:rgba(192,57,43,.22);color:#F0886C;padding:2px 6px;border-radius:3px;font-family:var(--mono)}
+.sid-select{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:5px 8px;font-size:11px;color:#8A94A8;margin-bottom:10px}
+.slider-row{margin-bottom:4px}
+.slider-row input{width:100%;accent-color:#C0392B}
+.slider-labels{display:flex;justify-content:space-between;font-size:10px;color:#4A5568;margin-top:2px}
+.sid-section{padding:0 16px;margin-top:14px}
+.ds-row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.ds-row span:first-child{color:#6B7A8D}
+.ds-row span:last-child{font-weight:600;font-family:var(--mono);color:#D0D6E0}
+.sid-about{padding:14px 16px;margin-top:auto}
+.about-text{font-size:10px;color:#4A5568;line-height:1.5}
+.about-link{color:#5DCAA5;font-size:10px}
+.main{flex:1;display:flex;flex-direction:column;background:var(--bg);overflow:auto}
+.topbar{background:var(--surf);border-bottom:1px solid var(--border);padding:12px 22px}
+.topbar-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:1px}
+.topbar-sub{font-size:11px;color:var(--muted)}
+.nav-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surf);padding:0 22px}
+.tab{padding:9px 16px;font-size:12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:var(--red);border-bottom-color:var(--red);font-weight:500}
+.content{padding:18px 22px;flex:1}
+.kpi-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:11px 13px}
+.kpi-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.kpi-val{font-size:20px;font-weight:600;font-family:var(--mono);line-height:1}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:3px}
+.kpi.t-red{border-top:2px solid var(--red)}
+.kpi.t-blue{border-top:2px solid var(--blue-md)}
+.kpi.t-teal{border-top:2px solid var(--teal-md)}
+.kpi.t-amber{border-top:2px solid #BA7517}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.card{background:var(--surf);border:1px solid var(--border);border-radius:9px;padding:14px}
+.card-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.card-title{font-size:12px;font-weight:600;color:var(--text)}
+.card-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.leg-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px}
+.leg-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)}
+.leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+</style>
+<div class="shell">
+  <div class="sid">
+    <div class="sid-top">
+      <div class="sid-brand">FAERS</div>
+      <div class="sid-title">Safety Intelligence</div>
+    </div>
+    <div class="nav-item active">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x=".5" y=".5" width="5" height="5" rx="1" fill="currentColor"/><rect x="7.5" y=".5" width="5" height="5" rx="1" fill="currentColor" opacity=".4"/><rect x=".5" y="7.5" width="5" height="5" rx="1" fill="currentColor" opacity=".4"/><rect x="7.5" y="7.5" width="5" height="5" rx="1" fill="currentColor" opacity=".4"/></svg>
+      Overview
+    </div>
+    <div class="nav-item">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M6.5 4v2.5l1.5.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Drug Explorer
+    </div>
+    <div class="nav-item">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 3.5h10M1.5 6.5h7M1.5 9.5h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Manufacturer Lookup
+    </div>
+    <div class="nav-item">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.2"/><path d="M8.5 8.5l3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Reaction Explorer
+    </div>
+    <div class="sid-divider"></div>
+    <div class="filter-block">
+      <div class="f-label">Quarters</div>
+      <div class="q-tags">
+        <span class="qtag">2023Q3</span><span class="qtag">2023Q4</span>
+        <span class="qtag">2024Q1</span><span class="qtag">2024Q2</span>
+        <span class="qtag">2024Q3</span><span class="qtag">2024Q4</span>
+        <span class="qtag">2025Q1</span><span class="qtag">2025Q2</span>
+      </div>
+      <div class="f-label">Drug role</div>
+      <select class="sid-select"><option>all</option><option>primary suspect</option><option>secondary suspect</option></select>
+      <div class="f-label">Top N per chart — <span style="color:#C0392B;font-family:var(--mono)">20</span></div>
+      <div class="slider-row"><input type="range" min="5" max="50" value="20" step="1"></div>
+      <div class="slider-labels"><span>5</span><span>50</span></div>
+    </div>
+    <div class="sid-section">
+      <div class="f-label" style="margin-bottom:8px">Dataset summary</div>
+      <div class="ds-row"><span>Mode</span><span>recent</span></div>
+      <div class="ds-row"><span>Cases</span><span>3.24M</span></div>
+      <div class="ds-row"><span>Deaths</span><span>241K</span></div>
+      <div class="ds-row"><span>Unique drugs</span><span>105.8K</span></div>
+      <div class="ds-row"><span>MedDRA PTs</span><span>18,455</span></div>
+      <div class="ds-row"><span>Quarters</span><span>2023Q3–2025Q2</span></div>
+    </div>
+    <div class="sid-about">
+      <p class="about-text">FAERS is a spontaneous reporting system. Signals represent disproportionate reporting, not causality.</p>
+      <a class="about-link" href="https://www.fda.gov/drugs/fdas-adverse-event-reporting-system-faers">Official FDA dashboard</a>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title">FAERS Safety Intelligence Dashboard</div>
+      <div class="topbar-sub">Explore adverse-event patterns by drug, manufacturer, and reaction term</div>
+    </div>
+    <div class="nav-tabs">
+      <div class="tab active">Overview</div>
+      <div class="tab">Drug Explorer</div>
+      <div class="tab">Manufacturer Lookup</div>
+      <div class="tab">Reaction Explorer</div>
+    </div>
+    <div class="content">
+
+      <div class="kpi-row">
+        <div class="kpi t-blue" style="grid-column:span 2">
+          <div class="kpi-lbl">Total cases</div>
+          <div class="kpi-val" style="color:var(--blue)">3.24M</div>
+          <div class="kpi-sub">2023Q3 – 2025Q2 · 8 quarters</div>
+        </div>
+        <div class="kpi t-red">
+          <div class="kpi-lbl">Deaths</div>
+          <div class="kpi-val" style="color:var(--red)">241K</div>
+          <div class="kpi-sub">7.5% fatality rate</div>
+        </div>
+        <div class="kpi t-amber">
+          <div class="kpi-lbl">Hospitalisations</div>
+          <div class="kpi-val" style="color:#854F0B">666K</div>
+          <div class="kpi-sub">20.6% of cases</div>
+        </div>
+        <div class="kpi t-amber">
+          <div class="kpi-lbl">Life-threatening</div>
+          <div class="kpi-val" style="color:#854F0B">101K</div>
+          <div class="kpi-sub">3.1% of cases</div>
+        </div>
+        <div class="kpi t-teal">
+          <div class="kpi-lbl">Unique drug entries</div>
+          <div class="kpi-val" style="color:var(--teal-md)">105.8K</div>
+          <div class="kpi-sub">18,455 MedDRA PTs</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-hd">
+            <div>
+              <div class="card-title">Top 15 drugs by case reports</div>
+              <div class="card-sub">full dataset · all drug roles</div>
+            </div>
+          </div>
+          <div style="position:relative;width:100%;height:380px">
+            <canvas id="drugBar" role="img" aria-label="Top 15 drugs by case reports. DUPIXENT leads with 220K cases.">DUPIXENT 220K, PREDNISONE 117K, ACETAMINOPHEN 85K, ASPIRIN 82K.</canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd">
+            <div>
+              <div class="card-title">Top 15 reactions by case reports</div>
+              <div class="card-sub">MedDRA preferred terms</div>
+            </div>
+          </div>
+          <div style="position:relative;width:100%;height:380px">
+            <canvas id="rxBar" role="img" aria-label="Top 15 reactions. Off label use leads with 258K cases.">Off label use 258K, Drug ineffective 198K, Fatigue 154K.</canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">Quarterly case volume trend</div>
+            <div class="card-sub">total cases reported per quarter</div>
+          </div>
+        </div>
+        <div style="position:relative;width:100%;height:130px">
+          <canvas id="trendLine" role="img" aria-label="Quarterly FAERS case trend 2023Q3 to 2025Q2">Trend rising from ~340K in 2023Q3 to ~445K in 2024Q4 then moderating.</canvas>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+function fmt(n){if(n>=1000000)return(n/1000000).toFixed(2)+'M';if(n>=1000)return(n/1000).toFixed(0)+'K';return n}
+const TEAL='#1D9E75';const TEAL_LT='#5DCAA5';const BLUE='#378ADD';const BLUE_LT='#85B7EB';const RED='#C0392B';
+
+const drugs=[['DUPIXENT',220255],['PREDNISONE',116906],['ACETAMINOPHEN',85305],['ASPIRIN',81619],['METHOTREXATE',66294],['ATORVASTATIN',57830],['GABAPENTIN',54959],['DEXAMETHASONE',54497],['HUMIRA',51200],['METOPROLOL',48300],['LISINOPRIL',46100],['OZEMPIC',44800],['JARDIANCE',42600],['ELIQUIS',41900],['KEYTRUDA',39500]];
+const rxns=[['Off label use',258483],['Drug ineffective',197526],['Fatigue',154262],['Nausea',123218],['Death',121703],['Product dose omission',121050],['Diarrhoea',120990],['Headache',101250],['Dyspnoea',98400],['Pain',94200],['Vomiting',89600],['Dizziness',84300],['Rash',78200],['Arthralgia',72100],['Insomnia',67800]];
+
+new Chart(document.getElementById('drugBar'),{
+  type:'bar',
+  data:{
+    labels:drugs.map(d=>d[0]),
+    datasets:[{label:'Cases',data:drugs.map(d=>d[1]),backgroundColor:drugs.map((_,i)=>i===0?RED:i<4?TEAL:TEAL_LT),borderRadius:3,barThickness:16}]
+  },
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+ctx.raw.toLocaleString()}}},
+    scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:10},callback:v=>fmt(v)}},y:{grid:{display:false},ticks:{font:{size:10},color:'#444441'}}}}
+});
+
+new Chart(document.getElementById('rxBar'),{
+  type:'bar',
+  data:{
+    labels:rxns.map(d=>d[0]),
+    datasets:[{label:'Cases',data:rxns.map(d=>d[1]),backgroundColor:rxns.map((_,i)=>i===0?RED:i<4?BLUE:BLUE_LT),borderRadius:3,barThickness:16}]
+  },
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+ctx.raw.toLocaleString()}}},
+    scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:10},callback:v=>fmt(v)}},y:{grid:{display:false},ticks:{font:{size:10},color:'#444441'}}}}
+});
+
+new Chart(document.getElementById('trendLine'),{
+  type:'line',
+  data:{
+    labels:['2023Q3','2023Q4','2024Q1','2024Q2','2024Q3','2024Q4','2025Q1','2025Q2'],
+    datasets:[{label:'Cases',data:[340000,390000,420000,410000,435000,445000,398000,398078],
+      borderColor:TEAL,backgroundColor:'rgba(29,158,117,.07)',fill:true,tension:.35,borderWidth:2,
+      pointRadius:4,pointBackgroundColor:TEAL,pointBorderColor:'#fff',pointBorderWidth:2}]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.raw)}}},
+    scales:{x:{grid:{display:false},ticks:{font:{size:10},autoSkip:false}},
+      y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:10},callback:v=>fmt(v)}}}}
+});
+</script>

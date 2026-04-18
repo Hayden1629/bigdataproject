@@ -1,0 +1,13 @@
+/data
+claude_test/cache/
+dashboard/cache/
+dashboard/cache_*/
+# uv
+.venv/
+.uv/
+__pycache__/
+*.pyc
+*.DS_Store
+.claude-overnight/
+claude_test/__pycache__/
+dashboard/faers_dashboard.log
