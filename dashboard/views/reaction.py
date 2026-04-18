@@ -6,21 +6,26 @@ from dashboard import charts, queries
 from dashboard.data_loader import get_all_reaction_terms
 from dashboard.logging_utils import get_logger
 from dashboard.reaction_search import find_reaction_terms
-from dashboard.ui import metric_card
+from dashboard.ui import (
+    format_compact,
+    metric_card,
+    render_helper_text,
+    render_section_intro,
+    render_table,
+)
 
 
 logger = get_logger(__name__)
 
 
 def _empty_state() -> None:
-    st.info("Try symptoms like 'heart attack', 'stroke', 'vomiting', 'rash'.")
-    st.markdown("#### Most reported adverse reactions")
-    st.dataframe(queries.load_reac_summary().head(20), width="stretch", hide_index=True)
+    render_table(queries.load_reac_summary().head(20), height=420)
 
 
 def render(filters: dict) -> None:
-    st.markdown("### Reaction Explorer")
+    render_section_intro("Reaction explorer")
     q = st.text_input("Search symptom/reaction", placeholder="e.g., heart attack")
+    render_helper_text("Try symptoms like heart attack, stroke, vomiting, or rash")
     if not q.strip():
         _empty_state()
         return
@@ -48,56 +53,40 @@ def render(filters: dict) -> None:
     terms = tuple(selected)
     quarters = tuple(filters["quarters"])
     role = filters["role_filter"]
-    top_n = filters["top_n"]
+    top_n = int(filters["top_n"])
 
-    top_drugs = queries.reaction_top_drugs(terms, top_n, quarters, role)
+    top_drugs = queries.reaction_top_drugs(terms, min(top_n, 10), quarters, role).head(10)
     outcomes = queries.reaction_outcomes(terms, top_n, quarters, role)
     trend = queries.reaction_trend(terms, quarters, role)
-
-    st.markdown("#### At a glance")
-    if not top_drugs.empty:
-        lead = top_drugs.iloc[0]
-        st.info(
-            f"Top associated drug is **{lead['drugname']}** with **{int(lead['n_cases']):,}** case reports."
-        )
-    else:
-        st.info("No associated drug signals found for the selected terms and filters.")
-
-    left, right = st.columns([2, 1])
-    with right:
-        st.markdown("#### Match Scores")
-        st.dataframe(scored, width="stretch", hide_index=True)
-
     kpi = queries.reaction_kpis(terms, quarters, role)
+
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        metric_card("Cases Reporting", format_compact(kpi["cases"]))
+    with c2:
+        metric_card("Deaths", format_compact(kpi["deaths"]), f"{kpi['death_pct']:.1f}%")
+    with c3:
+        metric_card("Any Serious Outcome", format_compact(kpi["serious"]))
+    with c4:
+        metric_card("Selected Terms", format_compact(kpi["n_terms"]))
+
+    left, right = st.columns([1, 1])
     with left:
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            metric_card("Cases Reporting", f"{kpi['cases']:,}")
-        with c2:
-            metric_card("Deaths", f"{kpi['deaths']:,}", f"{kpi['death_pct']:.1f}%")
-        with c3:
-            metric_card("Any Serious Outcome", f"{kpi['serious']:,}")
-        with c4:
-            metric_card("Selected Terms", f"{kpi['n_terms']:,}")
-
-        a, b = st.columns(2)
-        with a:
-            st.plotly_chart(
-                charts.bar_horizontal(
-                    top_drugs, "n_cases", "drugname", "Top associated drugs"
-                ),
-                width="stretch",
-                key="reaction_top_drugs",
-            )
-        with b:
-            st.plotly_chart(
-                charts.donut(outcomes, "outc_cod", "n_cases", "Outcome distribution"),
-                width="stretch",
-                key="reaction_outcomes",
-            )
-
         st.plotly_chart(
-            charts.line_chart(trend, "year_q", "n_cases", "Case reports by quarter"),
-            width="stretch",
-            key="reaction_quarterly_trend",
+            charts.bar_horizontal(top_drugs, "n_cases", "drugname", "Top associated drugs"),
+            use_container_width=True,
+            key="reaction_top_drugs",
         )
+    with right:
+        render_table(scored, height=430)
+
+    st.plotly_chart(
+        charts.donut(outcomes, "outc_cod", "n_cases", "Outcome distribution"),
+        use_container_width=True,
+        key="reaction_outcomes",
+    )
+    st.plotly_chart(
+        charts.line_chart(trend, "year_q", "n_cases", "Case reports by quarter"),
+        use_container_width=True,
+        key="reaction_quarterly_trend",
+    )

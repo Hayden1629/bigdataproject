@@ -13,46 +13,48 @@ def render_sidebar(default_top_n: int = 20) -> dict[str, Any]:
     quarters = profile.get("quarters", [])
 
     with st.sidebar:
-        st.header("Global Filters")
+        st.markdown("### Filters")
+
         selected_quarters = st.multiselect(
             "Quarters",
             options=quarters,
             default=quarters,
-            help="Filters all tabs by selected quarter range.",
+            help="Filters all views by the selected quarter range.",
         )
 
         role_filter = st.selectbox(
             "Drug role",
             options=["all", "PS", "SS", "C"],
             index=0,
-            help="PS=Primary suspect, SS=Secondary suspect, C=Concomitant",
+            help="PS = Primary suspect, SS = Secondary suspect, C = Concomitant.",
         )
 
         top_n = st.slider(
-            "Top N per chart", min_value=5, max_value=50, value=default_top_n, step=1
+            "Chart depth",
+            min_value=5,
+            max_value=50,
+            value=default_top_n,
+            step=1,
+            help="Controls how many categories appear in ranking charts.",
         )
 
         st.divider()
-        st.subheader("Dataset Summary")
+        st.markdown("### Snapshot")
         kpi = queries.global_kpis(tuple(selected_quarters), role_filter)
+        st.metric("Case reports", f"{kpi['cases']:,}")
+        snap_left, snap_right = st.columns(2)
+        with snap_left:
+            st.metric("Deaths", f"{kpi['deaths']:,}")
+        with snap_right:
+            st.metric("Drugs", f"{kpi['unique_drugs']:,}")
+        st.caption(f"Reaction terms: {kpi['unique_reactions']:,}")
         st.caption(f"Mode: {profile.get('mode', 'unknown')}")
-        st.write(f"Cases: **{kpi['cases']:,}**")
-        st.write(f"Deaths: **{kpi['deaths']:,}**")
-        st.write(f"Unique drugs: **{kpi['unique_drugs']:,}**")
-        st.write(f"MedDRA PTs: **{kpi['unique_reactions']:,}**")
         st.caption(
-            f"Quarter range: {profile.get('quarter_min', '-')} to {profile.get('quarter_max', '-')}"
-        )
-
-        st.divider()
-        st.subheader("About")
-        st.caption(
-            "FAERS is a spontaneous reporting system. Signals represent disproportionate reporting, not causality. "
-            "Official FDA dashboard: https://www.fda.gov/drugs/fdas-adverse-event-reporting-system-faers"
+            f"Coverage: {profile.get('quarter_min', '-')} to {profile.get('quarter_max', '-')}"
         )
 
     return {
         "quarters": selected_quarters,
         "role_filter": role_filter,
-        "top_n": top_n,
+        "top_n": int(top_n),
     }

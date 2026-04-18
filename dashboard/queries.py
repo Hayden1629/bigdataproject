@@ -61,6 +61,7 @@ def _primaryids_from_filters(quarters: list[str] | None) -> set[str]:
 def _top_counts(
     df: pd.DataFrame, col: str, top_n: int, label_map: dict[str, str] | None = None
 ) -> pd.DataFrame:
+    top_n = int(top_n)
     if df.empty or col not in df.columns:
         return pd.DataFrame(columns=[col, "n_cases"])
     out = (
@@ -175,6 +176,7 @@ def global_quarterly_trend(quarters: tuple[str, ...], role_filter: str) -> pd.Da
 
 
 def _trend_delta(fact_df: pd.DataFrame, key_col: str, top_n: int) -> pd.DataFrame:
+    top_n = int(top_n)
     if fact_df.empty or key_col not in fact_df.columns:
         return pd.DataFrame(columns=[key_col, "delta"])
     last_two = sorted(fact_df["year_q"].dropna().astype(str).unique().tolist())[-2:]
@@ -265,6 +267,7 @@ def drug_query_bundle(
     role_filter: str,
     quarters: tuple[str, ...],
 ) -> dict[str, Any]:
+    top_n = int(top_n)
     t = _tables()
     ids = _resolve_drug_primaryids(list(matched_names), list(quarters), role_filter)
     logger.info(
