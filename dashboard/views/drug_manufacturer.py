@@ -4,6 +4,7 @@ import streamlit as st
 
 from dashboard import charts
 from dashboard.logging_utils import get_logger
+from dashboard.ui import render_section_intro, render_table
 
 
 logger = get_logger(__name__)
@@ -15,21 +16,21 @@ def render(bundle: dict, top_n: int) -> None:
         len(bundle.get("cases", [])),
         top_n,
     )
-    st.markdown("#### Active Ingredients")
-    st.dataframe(bundle["ingredients"], width="stretch", hide_index=True)
+    render_section_intro("Manufacturer view")
+    render_table(bundle["ingredients"], height=280)
 
+    st.plotly_chart(
+        charts.bar_horizontal(
+            bundle["manufacturer_counts"],
+            "n_cases",
+            "manufacturer",
+            f"Top manufacturers (top {top_n})",
+        ),
+        use_container_width=True,
+        key="drug_mfr_manufacturer_counts",
+    )
     c1, c2 = st.columns(2)
     with c1:
-        st.plotly_chart(
-            charts.bar_horizontal(
-                bundle["manufacturer_counts"],
-                "n_cases",
-                "manufacturer",
-                f"Top manufacturers (top {top_n})",
-            ),
-            width="stretch",
-            key="drug_mfr_manufacturer_counts",
-        )
         st.plotly_chart(
             charts.bar_horizontal(
                 bundle["outcome_counts"],
@@ -37,7 +38,7 @@ def render(bundle: dict, top_n: int) -> None:
                 "outc_cod",
                 f"Outcome distribution (top {top_n})",
             ),
-            width="stretch",
+            use_container_width=True,
             key="drug_mfr_outcome_counts",
         )
     with c2:
@@ -48,7 +49,7 @@ def render(bundle: dict, top_n: int) -> None:
                 "country",
                 f"Top reporting countries (top {top_n})",
             ),
-            width="stretch",
+            use_container_width=True,
             key="drug_mfr_country_counts",
         )
         st.plotly_chart(
@@ -58,24 +59,19 @@ def render(bundle: dict, top_n: int) -> None:
                 "dose_form",
                 f"Dosage form distribution (top {top_n})",
             ),
-            width="stretch",
+            use_container_width=True,
             key="drug_mfr_dose_form_counts",
         )
 
-    st.markdown("#### Case Table")
+    render_section_intro("Cases")
     page = st.number_input("Page", min_value=1, value=1, step=1, key="drug_mfr_page")
-    start = (page - 1) * 100
-    st.dataframe(
-        bundle["cases"].iloc[start : start + 100],
-        width="stretch",
-        hide_index=True,
-    )
+    start = (int(page) - 1) * 100
+    render_table(bundle["cases"].iloc[start : start + 100], height=430)
 
-    st.markdown("#### Case reports by quarter")
     st.plotly_chart(
         charts.line_chart(
             bundle["quarterly_trend"], "year_q", "n_cases", "Case reports by quarter"
         ),
-        width="stretch",
+        use_container_width=True,
         key="drug_mfr_quarterly_trend",
     )

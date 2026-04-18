@@ -1,1 +1,0 @@
-"""FAERS dashboard package."""
