@@ -6,12 +6,12 @@ import plotly.express as px
 
 PALETTE = [
     "#2F6FED",
-    "#148A7B",
-    "#5AA7A0",
-    "#F0A63A",
-    "#C44949",
-    "#7E8DA5",
-    "#17324D",
+    "#5A92F5",
+    "#85B4F8",
+    "#A8C8FA",
+    "#C4D9FB",
+    "#DDE9FD",
+    "#EEF3FE",
 ]
 
 AXIS_LABELS = {
@@ -105,9 +105,9 @@ def _overview_drug_bar_colors(n: int) -> list[str]:
         if rank_from_top == 0:
             out.append("#2F6FED")
         elif rank_from_top <= 3:
-            out.append("#148A7B")
+            out.append("#5A92F5")
         else:
-            out.append("#9CD8CF")
+            out.append("#A8C8FA")
     return out
 
 
@@ -116,11 +116,11 @@ def _overview_reaction_bar_colors(n: int) -> list[str]:
     for i in range(n):
         rank_from_top = n - 1 - i
         if rank_from_top == 0:
-            out.append("#17324D")
-        elif rank_from_top <= 3:
             out.append("#2F6FED")
+        elif rank_from_top <= 3:
+            out.append("#5A92F5")
         else:
-            out.append("#9FC1FF")
+            out.append("#A8C8FA")
     return out
 
 
