@@ -11,3 +11,5 @@ __pycache__/
 .claude-overnight/
 claude_test/__pycache__/
 dashboard/faers_dashboard.log
+# Databricks
+.databricks/

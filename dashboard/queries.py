@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from dashboard import data_loader as dl
+from dashboard import spark_backend
 from dashboard.logging_utils import get_logger
 
 
@@ -83,6 +84,8 @@ def _top_counts(
 
 @st.cache_data(show_spinner=False)
 def load_drug_summary() -> pd.DataFrame:
+    if spark_backend.is_enabled():
+        return spark_backend.load_drug_summary()
     t = _tables()
     if not t["drug_summary"].empty:
         return t["drug_summary"]
@@ -91,6 +94,8 @@ def load_drug_summary() -> pd.DataFrame:
 
 @st.cache_data(show_spinner=False)
 def load_reac_summary() -> pd.DataFrame:
+    if spark_backend.is_enabled():
+        return spark_backend.load_reac_summary()
     t = _tables()
     if not t["reac_summary"].empty:
         return t["reac_summary"]
@@ -99,6 +104,8 @@ def load_reac_summary() -> pd.DataFrame:
 
 @st.cache_data(show_spinner=False)
 def load_manufacturer_summary() -> pd.DataFrame:
+    if spark_backend.is_enabled():
+        return spark_backend.load_manufacturer_summary()
     t = _tables()
     if not t["manufacturer_summary"].empty:
         return t["manufacturer_summary"]
@@ -107,6 +114,8 @@ def load_manufacturer_summary() -> pd.DataFrame:
 
 @st.cache_data(show_spinner=False)
 def global_kpis(quarters: tuple[str, ...], role_filter: str) -> dict[str, Any]:
+    if spark_backend.is_enabled():
+        return spark_backend.global_kpis(quarters, role_filter)
     t = _tables()
     demo = _filter_by_quarters(t["demo_slim"], list(quarters))
     ids = set(demo["primaryid"].astype(str).unique())
@@ -154,6 +163,8 @@ def global_kpis(quarters: tuple[str, ...], role_filter: str) -> dict[str, Any]:
 
 @st.cache_data(show_spinner=False)
 def global_quarterly_trend(quarters: tuple[str, ...], role_filter: str) -> pd.DataFrame:
+    if spark_backend.is_enabled():
+        return spark_backend.global_quarterly_trend(quarters, role_filter)
     t = _tables()
     demo = t["demo_slim"]
     demo = _filter_by_quarters(demo, list(quarters))
@@ -201,6 +212,8 @@ def _trend_delta(fact_df: pd.DataFrame, key_col: str, top_n: int) -> pd.DataFram
 
 @st.cache_data(show_spinner=False)
 def trending_drugs(top_n: int = 10) -> pd.DataFrame:
+    if spark_backend.is_enabled():
+        return spark_backend.trending_drugs(top_n)
     t = _tables()
     fact = t["fact_drug_quarter"]
     if fact.empty:
@@ -210,6 +223,8 @@ def trending_drugs(top_n: int = 10) -> pd.DataFrame:
 
 @st.cache_data(show_spinner=False)
 def trending_reactions(top_n: int = 10) -> pd.DataFrame:
+    if spark_backend.is_enabled():
+        return spark_backend.trending_reactions(top_n)
     t = _tables()
     fact = t["fact_reac_quarter"]
     if fact.empty:
@@ -268,6 +283,10 @@ def drug_query_bundle(
     role_filter: str,
     quarters: tuple[str, ...],
 ) -> dict[str, Any]:
+    if spark_backend.is_enabled():
+        return spark_backend.drug_query_bundle(
+            matched_names, top_n, role_filter, quarters
+        )
     t0 = time.perf_counter()
     top_n = int(top_n)
     t = _tables()
@@ -524,6 +543,10 @@ def drug_provider_bundle(
     quarters: tuple[str, ...],
     matched_names: tuple[str, ...] = (),
 ) -> dict[str, Any]:
+    if spark_backend.is_enabled():
+        return spark_backend.drug_provider_bundle(
+            primaryids, top_n, role_filter, quarters, matched_names
+        )
     t0 = time.perf_counter()
     t = _tables()
     ids = set(primaryids)
@@ -604,6 +627,10 @@ def drug_manufacturer_bundle(
     quarters: tuple[str, ...],
     matched_names: tuple[str, ...] = (),
 ) -> dict[str, Any]:
+    if spark_backend.is_enabled():
+        return spark_backend.drug_manufacturer_bundle(
+            primaryids, top_n, role_filter, quarters, matched_names
+        )
     t0 = time.perf_counter()
     t = _tables()
     ids = set(primaryids)
@@ -692,6 +719,10 @@ def manufacturer_query_bundle(
     role_filter: str,
     quarters: tuple[str, ...],
 ) -> dict[str, Any]:
+    if spark_backend.is_enabled():
+        return spark_backend.manufacturer_query_bundle(
+            canonical_names, top_n, role_filter, quarters
+        )
     t0 = time.perf_counter()
     t = _tables()
     if not canonical_names:
@@ -782,6 +813,8 @@ def manufacturer_query_bundle(
 def reaction_kpis(
     terms: tuple[str, ...], quarters: tuple[str, ...], role_filter: str
 ) -> dict[str, Any]:
+    if spark_backend.is_enabled():
+        return spark_backend.reaction_kpis(terms, quarters, role_filter)
     t = _tables()
     if not terms:
         return {"cases": 0, "deaths": 0, "death_pct": 0.0, "serious": 0, "n_terms": 0}
@@ -815,6 +848,8 @@ def reaction_kpis(
 def reaction_top_drugs(
     terms: tuple[str, ...], top_n: int, quarters: tuple[str, ...], role_filter: str
 ) -> pd.DataFrame:
+    if spark_backend.is_enabled():
+        return spark_backend.reaction_top_drugs(terms, top_n, quarters, role_filter)
     t = _tables()
     if not terms:
         return pd.DataFrame(columns=["drugname", "n_cases"])
@@ -833,6 +868,8 @@ def reaction_top_drugs(
 def reaction_outcomes(
     terms: tuple[str, ...], top_n: int, quarters: tuple[str, ...], role_filter: str
 ) -> pd.DataFrame:
+    if spark_backend.is_enabled():
+        return spark_backend.reaction_outcomes(terms, top_n, quarters, role_filter)
     t = _tables()
     if not terms:
         return pd.DataFrame(columns=["outc_cod", "n_cases"])
@@ -854,6 +891,8 @@ def reaction_outcomes(
 def reaction_trend(
     terms: tuple[str, ...], quarters: tuple[str, ...], role_filter: str
 ) -> pd.DataFrame:
+    if spark_backend.is_enabled():
+        return spark_backend.reaction_trend(terms, quarters, role_filter)
     t = _tables()
     if not terms:
         return pd.DataFrame(columns=["year_q", "n_cases"])

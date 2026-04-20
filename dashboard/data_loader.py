@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.logging_utils import get_logger
+from dashboard import spark_backend
 
 logger = get_logger(__name__)
 
@@ -231,8 +232,13 @@ def _normalize_raw_tables(raw: dict[str, pd.DataFrame]) -> dict[str, pd.DataFram
     elapsed = time.perf_counter() - t0
     logger.info(
         "Normalization done (%.2fs): demo=%d drug=%d reac=%d outc=%d rpsr=%d indi=%d",
-        elapsed, len(demo_slim), len(drug_records_slim), len(reac_slim),
-        len(outc_slim), len(rpsr_slim), len(indi_slim),
+        elapsed,
+        len(demo_slim),
+        len(drug_records_slim),
+        len(reac_slim),
+        len(outc_slim),
+        len(rpsr_slim),
+        len(indi_slim),
     )
     return {
         "demo_slim": demo_slim,
@@ -277,6 +283,8 @@ def canonicalize_mfr(text) -> str:
 
 @st.cache_resource(show_spinner=False)
 def load_runtime_tables() -> dict[str, pd.DataFrame]:
+    if spark_backend.is_enabled():
+        return {}
     logger.info("Loading runtime tables from cache dir: %s", cache_dir())
     t_start = time.perf_counter()
     cdir = cache_dir()
@@ -342,10 +350,15 @@ def load_runtime_tables() -> dict[str, pd.DataFrame]:
 
 
 def warm_all_tables() -> None:
+    if spark_backend.is_enabled():
+        spark_backend.warm_all_tables()
+        return
     load_runtime_tables()
 
 
 def get_dataset_profile() -> dict[str, Any]:
+    if spark_backend.is_enabled():
+        return spark_backend.get_dataset_profile()
     t = load_runtime_tables()
     demo = t["demo_slim"]
     if demo.empty:
@@ -367,11 +380,15 @@ def get_dataset_profile() -> dict[str, Any]:
 
 
 def get_quarters() -> list[str]:
+    if spark_backend.is_enabled():
+        return spark_backend.get_quarters()
     profile = get_dataset_profile()
     return profile["quarters"]
 
 
 def load_drug_name_lookup() -> pd.DataFrame:
+    if spark_backend.is_enabled():
+        return spark_backend.load_drug_name_lookup()
     t = load_runtime_tables()
     lookup = t.get("drug_name_lookup", pd.DataFrame())
     if not lookup.empty:
@@ -387,6 +404,8 @@ def load_drug_name_lookup() -> pd.DataFrame:
 
 
 def load_manufacturer_lookup() -> pd.DataFrame:
+    if spark_backend.is_enabled():
+        return spark_backend.load_manufacturer_lookup()
     t = load_runtime_tables()
     lookup = t.get("manufacturer_name_lookup", pd.DataFrame())
     if not lookup.empty:
@@ -406,6 +425,8 @@ def load_manufacturer_lookup() -> pd.DataFrame:
 
 
 def get_all_reaction_terms() -> list[str]:
+    if spark_backend.is_enabled():
+        return spark_backend.get_all_reaction_terms()
     t = load_runtime_tables()
     reac = t["reac_slim"]
     if reac.empty:
