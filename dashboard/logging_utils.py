@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 import logging
 import os
 import sys
+import time
 
 
 def setup_logging() -> None:
@@ -21,3 +23,13 @@ def setup_logging() -> None:
 
 def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name)
+
+
+@contextmanager
+def log_timing(logger: logging.Logger, label: str, level: int = logging.INFO):
+    start = time.perf_counter()
+    try:
+        yield
+    finally:
+        elapsed = time.perf_counter() - start
+        logger.log(level, "%s completed in %.3fs", label, elapsed)
