@@ -212,6 +212,7 @@ def inject_css() -> None:
           .faers-hero h1,
           [data-testid="stMain"] .faers-hero h1 {
             color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
             font-size: 1.85rem !important;
             font-weight: 800 !important;
             margin: 0 !important;
@@ -385,7 +386,7 @@ def render_header() -> None:
     st.markdown(
         """
         <section class="faers-hero">
-          <h1 style="color: #ffffff !important;">FAERS Safety Intelligence Dashboard</h1>
+          <h1 style="color: #ffffff !important; -webkit-text-fill-color: #ffffff !important;">FAERS Safety Intelligence Dashboard</h1>
         </section>
         """,
         unsafe_allow_html=True,
@@ -448,7 +449,7 @@ def metric_card(label: str, value: str, help_text: str | None = None) -> None:
     subtext = help_text or ""
     st.markdown(
         f"""
-        <div class="faers-metric-card faers-metric-{tone}" title="{html.escape(help_text or '')}">
+        <div class="faers-metric-card faers-metric-{tone}" title="{html.escape(help_text or "")}">
           <div class="faers-metric-label">{html.escape(label)}</div>
           <div class="faers-metric-value">{html.escape(value)}</div>
           <div class="faers-metric-sub">{html.escape(subtext)}</div>
@@ -536,7 +537,11 @@ def render_table(df, *, height: int = 360) -> None:
                 cells.append(f"<td>{html.escape(val_str)}</td>")
         rows.append(f"<tr>{''.join(cells)}</tr>")
     header = "".join(f"<th>{col}</th>" for col in display_cols)
-    body = "".join(rows) if rows else f"<tr><td colspan='{max(len(display_cols),1)}'>No data</td></tr>"
+    body = (
+        "".join(rows)
+        if rows
+        else f"<tr><td colspan='{max(len(display_cols), 1)}'>No data</td></tr>"
+    )
     st.markdown(
         f"""
         <div class="faers-table-wrap" style="max-height:{int(height)}px;">

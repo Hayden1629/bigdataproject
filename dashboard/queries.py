@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from typing import Any
 
 import pandas as pd
@@ -267,6 +268,7 @@ def drug_query_bundle(
     role_filter: str,
     quarters: tuple[str, ...],
 ) -> dict[str, Any]:
+    t0 = time.perf_counter()
     top_n = int(top_n)
     t = _tables()
     ids = _resolve_drug_primaryids(list(matched_names), list(quarters), role_filter)
@@ -377,7 +379,7 @@ def drug_query_bundle(
             ~concomitants["drugname"].isin(list(matched_names))
         ].head(top_n)
 
-    return {
+    out = {
         "primaryids": ids,
         "kpi": _kpi_from_ids(ids),
         "recent": recent,
@@ -393,9 +395,20 @@ def drug_query_bundle(
         "indications": indications,
         "concomitants": concomitants,
     }
+    logger.info(
+        "drug_query_bundle timings: ids=%s demo=%s drug=%s reac=%s outc=%s elapsed=%.3fs",
+        len(ids),
+        len(demo),
+        len(drug),
+        len(reac),
+        len(outc),
+        time.perf_counter() - t0,
+    )
+    return out
 
 
 def _build_case_table(ids: set[str], include_lit_ref: bool = False) -> pd.DataFrame:
+    t0 = time.perf_counter()
     t = _tables()
     demo = t["demo_slim"][t["demo_slim"]["primaryid"].astype(str).isin(ids)][
         [
@@ -432,7 +445,10 @@ def _build_case_table(ids: set[str], include_lit_ref: bool = False) -> pd.DataFr
         ["primaryid", "indi_pt"]
     ]
 
-    rows = []
+    if drug.empty:
+        logger.info("_build_case_table: empty drug table (ids=%s)", len(ids))
+        return pd.DataFrame(columns=["primaryid"])
+
     outcome_map = (
         outc.groupby("primaryid")["outc_cod"]
         .apply(lambda s: ", ".join(sorted(set(s.astype(str)))))
@@ -454,42 +470,61 @@ def _build_case_table(ids: set[str], include_lit_ref: bool = False) -> pd.DataFr
         else {}
     )
 
-    if drug.empty:
-        return pd.DataFrame(columns=["primaryid"])
+    drug_first = drug.drop_duplicates("primaryid", keep="first").copy()
+    out = pd.DataFrame({"primaryid": drug_first["primaryid"].astype(str)})
+    out["event_dt"] = out["primaryid"].map(
+        lambda pid: demo_map.get(pid, {}).get("event_dt", "")
+    )
+    out["country"] = out["primaryid"].map(
+        lambda pid: demo_map.get(pid, {}).get("occr_country", "")
+    )
+    out["role"] = drug_first["role_cod"].astype(str)
+    out["route"] = drug_first["route"].astype(str)
+    out["dose"] = (
+        drug_first["dose_amt"].astype(str).str.strip()
+        + " "
+        + drug_first["dose_unit"].astype(str).str.strip()
+    ).str.strip()
+    out["dose_form"] = drug_first["dose_form"].astype(str)
+    out["dose_freq"] = drug_first["dose_freq"].astype(str)
+    out["manufacturer"] = out["primaryid"].map(
+        lambda pid: demo_map.get(pid, {}).get("mfr_sndr", "")
+    )
+    out["manufacturer"] = out["manufacturer"].where(
+        out["manufacturer"].astype(str).str.strip() != "",
+        drug_first["mfr_sndr"].astype(str),
+    )
+    out["canonical_mfr"] = out["primaryid"].map(
+        lambda pid: demo_map.get(pid, {}).get("canonical_mfr", "")
+    )
+    out["active_ingredient"] = drug_first["prod_ai"].astype(str)
+    out["top_reaction"] = out["primaryid"].map(lambda pid: top_reac.get(pid, ""))
+    out["outcomes"] = out["primaryid"].map(lambda pid: outcome_map.get(pid, ""))
+    out["top_indication"] = out["primaryid"].map(lambda pid: top_indi.get(pid, ""))
+    out["lit_ref"] = out["primaryid"].map(
+        lambda pid: demo_map.get(pid, {}).get("lit_ref", "")
+    )
 
-    for _, r in drug.drop_duplicates("primaryid").iterrows():
-        pid = str(r["primaryid"])
-        d = demo_map.get(pid, {})
-        row = {
-            "primaryid": pid,
-            "event_dt": d.get("event_dt", ""),
-            "country": d.get("occr_country", ""),
-            "role": r.get("role_cod", ""),
-            "route": r.get("route", ""),
-            "dose": f"{r.get('dose_amt', '')} {r.get('dose_unit', '')}".strip(),
-            "dose_form": r.get("dose_form", ""),
-            "dose_freq": r.get("dose_freq", ""),
-            "manufacturer": d.get("mfr_sndr", "") or r.get("mfr_sndr", ""),
-            "canonical_mfr": d.get("canonical_mfr", ""),
-            "active_ingredient": r.get("prod_ai", ""),
-            "top_reaction": top_reac.get(pid, ""),
-            "outcomes": outcome_map.get(pid, ""),
-            "top_indication": top_indi.get(pid, ""),
-            "lit_ref": d.get("lit_ref", ""),
-        }
-        rows.append(row)
-
-    out = pd.DataFrame(rows)
     if include_lit_ref and "lit_ref" not in out.columns:
         out["lit_ref"] = ""
+    logger.info(
+        "_build_case_table: ids=%s rows=%s elapsed=%.3fs",
+        len(ids),
+        len(out),
+        time.perf_counter() - t0,
+    )
     return out
 
 
 @st.cache_data(show_spinner=False)
 def drug_provider_bundle(
-    primaryids: tuple[str, ...], top_n: int, role_filter: str, quarters: tuple[str, ...],
+    primaryids: tuple[str, ...],
+    top_n: int,
+    role_filter: str,
+    quarters: tuple[str, ...],
     matched_names: tuple[str, ...] = (),
 ) -> dict[str, Any]:
+    t0 = time.perf_counter()
     t = _tables()
     ids = set(primaryids)
     if quarters:
@@ -532,7 +567,7 @@ def drug_provider_bundle(
     if matched_names:
         queried_drug = drug[drug["drugname"].astype(str).isin(list(matched_names))]
 
-    return {
+    out = {
         "ingredients": _top_counts(
             queried_drug.rename(columns={"prod_ai": "ingredient"}), "ingredient", top_n
         ),
@@ -548,13 +583,28 @@ def drug_provider_bundle(
         "indications": _top_counts(indi, "indi_pt", top_n),
         "cases": _build_case_table(ids2, include_lit_ref=True),
     }
+    logger.info(
+        "drug_provider_bundle timings: ids=%s ids_post_role=%s drug=%s reac=%s outc=%s indi=%s elapsed=%.3fs",
+        len(ids),
+        len(ids2),
+        len(drug),
+        len(reac),
+        len(outc),
+        len(indi),
+        time.perf_counter() - t0,
+    )
+    return out
 
 
 @st.cache_data(show_spinner=False)
 def drug_manufacturer_bundle(
-    primaryids: tuple[str, ...], top_n: int, role_filter: str, quarters: tuple[str, ...],
+    primaryids: tuple[str, ...],
+    top_n: int,
+    role_filter: str,
+    quarters: tuple[str, ...],
     matched_names: tuple[str, ...] = (),
 ) -> dict[str, Any]:
+    t0 = time.perf_counter()
     t = _tables()
     ids = set(primaryids)
     if quarters:
@@ -604,7 +654,7 @@ def drug_manufacturer_bundle(
     if matched_names:
         queried_drug = drug[drug["drugname"].astype(str).isin(list(matched_names))]
 
-    return {
+    out = {
         "ingredients": _top_counts(
             queried_drug.rename(columns={"prod_ai": "ingredient"}), "ingredient", top_n
         ),
@@ -623,6 +673,16 @@ def drug_manufacturer_bundle(
         "cases": cases,
         "quarterly_trend": trend,
     }
+    logger.info(
+        "drug_manufacturer_bundle timings: ids=%s ids_post_role=%s drug=%s demo=%s outc=%s elapsed=%.3fs",
+        len(ids),
+        len(ids2),
+        len(drug),
+        len(demo),
+        len(outc),
+        time.perf_counter() - t0,
+    )
+    return out
 
 
 @st.cache_data(show_spinner=False)
@@ -632,6 +692,7 @@ def manufacturer_query_bundle(
     role_filter: str,
     quarters: tuple[str, ...],
 ) -> dict[str, Any]:
+    t0 = time.perf_counter()
     t = _tables()
     if not canonical_names:
         logger.info("manufacturer_query_bundle: empty canonical names")
@@ -688,7 +749,7 @@ def manufacturer_query_bundle(
     kpi["unique_drugs"] = int(drug["drugname"].nunique()) if not drug.empty else 0
     kpi["countries"] = int(demo["occr_country"].nunique()) if not demo.empty else 0
 
-    return {
+    out = {
         "kpi": kpi,
         "drug_counts": _top_counts(drug, "drugname", top_n),
         "ingredient_counts": _top_counts(
@@ -704,6 +765,17 @@ def manufacturer_query_bundle(
         "cases": table,
         "quarterly_trend": trend,
     }
+    logger.info(
+        "manufacturer_query_bundle timings: canonical=%s ids=%s demo=%s drug=%s outc=%s indi=%s elapsed=%.3fs",
+        len(canonical_names),
+        len(ids),
+        len(demo),
+        len(drug),
+        len(outc),
+        len(indi),
+        time.perf_counter() - t0,
+    )
+    return out
 
 
 @st.cache_data(show_spinner=False)
