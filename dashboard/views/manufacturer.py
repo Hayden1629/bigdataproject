@@ -75,6 +75,13 @@ def render(filters: dict) -> None:
         key="mfr_lookup_drug_counts",
     )
     st.plotly_chart(
+        charts.line_chart(
+            bundle["quarterly_trend"], "year_q", "n_cases", "Case reports by quarter"
+        ),
+        use_container_width=True,
+        key="mfr_lookup_quarterly_trend",
+    )
+    st.plotly_chart(
         charts.bar_horizontal(
             bundle["ingredient_counts"],
             "n_cases",
@@ -113,11 +120,3 @@ def render(filters: dict) -> None:
     page = st.number_input("Page", min_value=1, value=1, step=1, key="mfr_lookup_page")
     start = (int(page) - 1) * 100
     render_table(bundle["cases"].iloc[start : start + 100], height=430)
-
-    st.plotly_chart(
-        charts.line_chart(
-            bundle["quarterly_trend"], "year_q", "n_cases", "Case reports by quarter"
-        ),
-        use_container_width=True,
-        key="mfr_lookup_quarterly_trend",
-    )

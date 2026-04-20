@@ -42,11 +42,8 @@ def render_sidebar(default_top_n: int = 20) -> dict[str, Any]:
         st.markdown("### Snapshot")
         kpi = queries.global_kpis(tuple(selected_quarters), role_filter)
         st.metric("Case reports", f"{kpi['cases']:,}")
-        snap_left, snap_right = st.columns(2)
-        with snap_left:
-            st.metric("Deaths", f"{kpi['deaths']:,}")
-        with snap_right:
-            st.metric("Drugs", f"{kpi['unique_drugs']:,}")
+        st.metric("Deaths", f"{kpi['deaths']:,}")
+        st.metric("Drugs", f"{kpi['unique_drugs']:,}")
         st.caption(f"Reaction terms: {kpi['unique_reactions']:,}")
         st.caption(f"Mode: {profile.get('mode', 'unknown')}")
         st.caption(
