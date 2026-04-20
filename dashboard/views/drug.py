@@ -146,16 +146,7 @@ def _render_default_view(bundle: dict, approval: dict, label: dict) -> None:
             key="drug_default_demographics_age",
         )
     with d2:
-        st.plotly_chart(
-            charts.bar_horizontal(
-                bundle["demographics"]["reporter"],
-                "n_cases",
-                "rpsr_cod",
-                "Reporter type distribution",
-            ),
-            use_container_width=True,
-            key="drug_default_demographics_reporter",
-        )
+        st.markdown("**Reporting countries**")
         render_table(bundle["countries"], height=430)
 
     render_section_intro("Clinical context")
@@ -170,23 +161,24 @@ def _render_default_view(bundle: dict, approval: dict, label: dict) -> None:
         key="drug_default_concomitants",
     )
 
-    with st.expander("Optional External Context"):
-        t1, t2, t3 = st.tabs(["Clinical Trials", "Literature", "Recalls & Enforcement"])
-        with t1:
-            render_table(
-                research_connector.search_clinical_trials(str(st.session_state.get("drug_query", ""))),
-                height=360,
-            )
-        with t2:
-            render_table(
-                research_connector.search_pubmed(str(st.session_state.get("drug_query", ""))),
-                height=360,
-            )
-        with t3:
-            render_table(
-                research_connector.get_drug_enforcement(str(st.session_state.get("drug_query", ""))),
-                height=360,
-            )
+    render_section_intro("Clinical Trials")
+    render_table(
+        research_connector.search_clinical_trials(str(st.session_state.get("drug_query", ""))),
+        height=360,
+    )
+
+    render_section_intro("Literature")
+    render_table(
+        research_connector.search_pubmed(str(st.session_state.get("drug_query", ""))),
+        height=360,
+    )
+
+    render_section_intro("Recalls & Enforcement")
+    st.caption("Note: results may include reports outside the currently selected quarter range.")
+    render_table(
+        research_connector.get_drug_enforcement(str(st.session_state.get("drug_query", ""))),
+        height=360,
+    )
 
 
 def render(filters: dict) -> None:

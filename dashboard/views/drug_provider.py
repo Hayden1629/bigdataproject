@@ -15,6 +15,18 @@ def render(bundle: dict, top_n: int) -> None:
         "Provider view render: cases=%s top_n=%s", len(bundle.get("cases", [])), top_n
     )
     render_section_intro("Provider view")
+
+    st.plotly_chart(
+        charts.bar_horizontal(
+            bundle["reactions"],
+            "n_cases",
+            "pt",
+            f"Top reactions (top {top_n})",
+        ),
+        use_container_width=True,
+        key="drug_provider_reaction_counts",
+    )
+
     render_table(bundle["ingredients"], height=280)
 
     st.plotly_chart(
@@ -72,7 +84,7 @@ def render(bundle: dict, top_n: int) -> None:
                 bundle["dose_counts"],
                 "n_cases",
                 "dose",
-                f"Dose distribution (top {top_n})",
+                f"Dose amount (top {top_n})",
             ),
             use_container_width=True,
             key="drug_provider_dose_counts",
@@ -84,17 +96,6 @@ def render(bundle: dict, top_n: int) -> None:
             use_container_width=True,
             key="drug_provider_indications",
         )
-
-    st.plotly_chart(
-        charts.bar_horizontal(
-            bundle["reactions"],
-            "n_cases",
-            "pt",
-            f"Top reactions (top {top_n})",
-        ),
-        use_container_width=True,
-        key="drug_provider_reaction_counts",
-    )
 
     render_section_intro("Cases")
     only_lit = st.toggle(

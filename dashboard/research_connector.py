@@ -107,10 +107,10 @@ def search_clinical_trials(drug_name: str) -> list[dict[str, str]]:
         return []
     try:
         url = "https://clinicaltrials.gov/api/v2/studies"
-        params = {"query.term": q, "pageSize": 5}
+        params = {"query.term": q, "pageSize": 10}
         payload = requests.get(url, params=params, timeout=10).json()
         out = []
-        for s in payload.get("studies", [])[:5]:
+        for s in payload.get("studies", [])[:10]:
             proto = s.get("protocolSection", {})
             ident = proto.get("identificationModule", {})
             status = proto.get("statusModule", {})
@@ -134,7 +134,7 @@ def search_pubmed(query: str) -> list[dict[str, str]]:
         base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
         esearch = requests.get(
             f"{base}/esearch.fcgi",
-            params={"db": "pubmed", "retmode": "json", "term": q, "retmax": 5},
+            params={"db": "pubmed", "retmode": "json", "term": q, "retmax": 10},
             timeout=10,
         ).json()
         ids = esearch.get("esearchresult", {}).get("idlist", [])
