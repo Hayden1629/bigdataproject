@@ -2,11 +2,16 @@ from __future__ import annotations
 
 import ast
 import os
+import time
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 import streamlit as st
+
+from dashboard.logging_utils import get_logger
+
+logger = get_logger(__name__)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -29,7 +34,11 @@ def _empty(columns: list[str]) -> pd.DataFrame:
 def _safe_read_parquet(path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
-    return pd.read_parquet(path)
+    t0 = time.perf_counter()
+    df = pd.read_parquet(path)
+    elapsed = time.perf_counter() - t0
+    logger.info("Loaded %s (%d rows, %.2fs)", path.name, len(df), elapsed)
+    return df
 
 
 def _normalize_text(value: Any) -> str:
@@ -62,6 +71,8 @@ def _parse_listish(value: Any) -> list[str]:
 
 
 def _normalize_raw_tables(raw: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
+    logger.info("Normalizing raw tables...")
+    t0 = time.perf_counter()
     demo = raw.get("demo", pd.DataFrame()).copy()
     drug = raw.get("drug", pd.DataFrame()).copy()
     reac = raw.get("reac", pd.DataFrame()).copy()
@@ -217,6 +228,12 @@ def _normalize_raw_tables(raw: dict[str, pd.DataFrame]) -> dict[str, pd.DataFram
             }
         ).drop_duplicates()
 
+    elapsed = time.perf_counter() - t0
+    logger.info(
+        "Normalization done (%.2fs): demo=%d drug=%d reac=%d outc=%d rpsr=%d indi=%d",
+        elapsed, len(demo_slim), len(drug_records_slim), len(reac_slim),
+        len(outc_slim), len(rpsr_slim), len(indi_slim),
+    )
     return {
         "demo_slim": demo_slim,
         "drug_records_slim": drug_records_slim,
@@ -227,9 +244,11 @@ def _normalize_raw_tables(raw: dict[str, pd.DataFrame]) -> dict[str, pd.DataFram
     }
 
 
-def canonicalize_mfr(text: str) -> str:
+def canonicalize_mfr(text) -> str:
+    if not isinstance(text, str):
+        return ""
     cleaned = "".join(
-        ch.lower() if ch.isalnum() or ch.isspace() else " " for ch in text or ""
+        ch.lower() if ch.isalnum() or ch.isspace() else " " for ch in text
     )
     tokens = [t for t in cleaned.split() if t]
     suffixes = {
@@ -258,6 +277,8 @@ def canonicalize_mfr(text: str) -> str:
 
 @st.cache_resource(show_spinner=False)
 def load_runtime_tables() -> dict[str, pd.DataFrame]:
+    logger.info("Loading runtime tables from cache dir: %s", cache_dir())
+    t_start = time.perf_counter()
     cdir = cache_dir()
     tables = {
         "demo_slim": _safe_read_parquet(cdir / "demo_slim.parquet"),
@@ -299,8 +320,11 @@ def load_runtime_tables() -> dict[str, pd.DataFrame]:
 
     has_cache = any(not df.empty for df in tables.values())
     if has_cache:
+        elapsed = time.perf_counter() - t_start
+        logger.info("Runtime tables loaded from cache (%.2fs total)", elapsed)
         return tables
 
+    logger.info("No cache found, loading raw parquet from: %s", parquet_dir())
     pdir = parquet_dir()
     raw = {
         "demo": _safe_read_parquet(pdir / "demo.parquet"),
@@ -312,6 +336,8 @@ def load_runtime_tables() -> dict[str, pd.DataFrame]:
     }
     normalized = _normalize_raw_tables(raw)
     tables.update(normalized)
+    elapsed = time.perf_counter() - t_start
+    logger.info("Runtime tables ready (%.2fs total, raw → normalized)", elapsed)
     return tables
 
 

@@ -26,14 +26,14 @@ def render(bundle: dict, top_n: int) -> None:
             "manufacturer",
             f"Top manufacturers (top {top_n})",
         ),
-        use_container_width=True,
+        width="stretch",
         key="drug_mfr_manufacturer_counts",
     )
     st.plotly_chart(
         charts.line_chart(
             bundle["quarterly_trend"], "year_q", "n_cases", "Case reports by quarter"
         ),
-        use_container_width=True,
+        width="stretch",
         key="drug_mfr_quarterly_trend",
     )
     st.plotly_chart(
@@ -43,7 +43,7 @@ def render(bundle: dict, top_n: int) -> None:
             "dose_form",
             f"Dosage form distribution (top {top_n})",
         ),
-        use_container_width=True,
+        width="stretch",
         key="drug_mfr_dose_form_counts",
     )
 
@@ -56,7 +56,7 @@ def render(bundle: dict, top_n: int) -> None:
                 "outc_cod",
                 f"Outcome distribution (top {top_n})",
             ),
-            use_container_width=True,
+            width="stretch",
             key="drug_mfr_outcome_counts",
         )
     with c2:
@@ -67,7 +67,7 @@ def render(bundle: dict, top_n: int) -> None:
                 "country",
                 f"Top reporting countries (top {top_n})",
             ),
-            use_container_width=True,
+            width="stretch",
             key="drug_mfr_country_counts",
         )
 

@@ -23,7 +23,7 @@ def render(bundle: dict, top_n: int) -> None:
             "pt",
             f"Top reactions (top {top_n})",
         ),
-        use_container_width=True,
+        width="stretch",
         key="drug_provider_reaction_counts",
     )
 
@@ -36,7 +36,7 @@ def render(bundle: dict, top_n: int) -> None:
             "role_cod",
             f"Role code distribution (top {top_n})",
         ),
-        use_container_width=True,
+        width="stretch",
         key="drug_provider_role_counts",
     )
     st.plotly_chart(
@@ -46,7 +46,7 @@ def render(bundle: dict, top_n: int) -> None:
             "route",
             f"Administration route distribution (top {top_n})",
         ),
-        use_container_width=True,
+        width="stretch",
         key="drug_provider_route_counts",
     )
     st.plotly_chart(
@@ -56,7 +56,7 @@ def render(bundle: dict, top_n: int) -> None:
             "dose_form",
             f"Dosage form distribution (top {top_n})",
         ),
-        use_container_width=True,
+        width="stretch",
         key="drug_provider_dose_form_counts",
     )
     f1, f2 = st.columns(2)
@@ -68,14 +68,14 @@ def render(bundle: dict, top_n: int) -> None:
                 "dose_freq",
                 f"Dose frequency distribution (top {top_n})",
             ),
-            use_container_width=True,
+            width="stretch",
             key="drug_provider_dose_freq_counts",
         )
         st.plotly_chart(
             charts.bar_horizontal(
                 bundle["outcomes"], "n_cases", "outc_cod", "Outcome distribution"
             ),
-            use_container_width=True,
+            width="stretch",
             key="drug_provider_outcomes",
         )
     with f2:
@@ -86,24 +86,21 @@ def render(bundle: dict, top_n: int) -> None:
                 "dose",
                 f"Dose amount (top {top_n})",
             ),
-            use_container_width=True,
+            width="stretch",
             key="drug_provider_dose_counts",
         )
         st.plotly_chart(
             charts.bar_horizontal(
                 bundle["indications"], "n_cases", "indi_pt", "Top indications"
             ),
-            use_container_width=True,
+            width="stretch",
             key="drug_provider_indications",
         )
 
     render_section_intro("Cases")
-    only_lit = st.toggle(
-        "Only cases with literature reference", value=False, key="provider_only_lit"
-    )
     cases = bundle["cases"]
-    if only_lit and not cases.empty and "lit_ref" in cases.columns:
-        cases = cases[cases["lit_ref"].astype(str).str.strip() != ""]
+    if not cases.empty and "lit_ref" in cases.columns:
+        cases = cases.drop(columns=["lit_ref"])
 
     page = st.number_input("Page", min_value=1, value=1, step=1, key="provider_page")
     start = (int(page) - 1) * 100

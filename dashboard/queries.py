@@ -330,6 +330,7 @@ def drug_query_bundle(
         if set(recent_cols).issubset(drug.columns)
         else drug.copy()
     )
+    recent = _filter_drug_role(recent, role_filter)
     recent = recent.head(100)
 
     trend = (
@@ -486,7 +487,8 @@ def _build_case_table(ids: set[str], include_lit_ref: bool = False) -> pd.DataFr
 
 @st.cache_data(show_spinner=False)
 def drug_provider_bundle(
-    primaryids: tuple[str, ...], top_n: int, role_filter: str, quarters: tuple[str, ...]
+    primaryids: tuple[str, ...], top_n: int, role_filter: str, quarters: tuple[str, ...],
+    matched_names: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     t = _tables()
     ids = set(primaryids)
@@ -525,9 +527,14 @@ def drug_provider_bundle(
     ).str.strip()
     tmp["dose_bucket"] = tmp["dose_bucket"].replace("", "Not reported")
 
+    # Ingredients: only from the queried drug, not co-reported drugs
+    queried_drug = drug
+    if matched_names:
+        queried_drug = drug[drug["drugname"].astype(str).isin(list(matched_names))]
+
     return {
         "ingredients": _top_counts(
-            drug.rename(columns={"prod_ai": "ingredient"}), "ingredient", top_n
+            queried_drug.rename(columns={"prod_ai": "ingredient"}), "ingredient", top_n
         ),
         "role_counts": _top_counts(drug, "role_cod", top_n, label_map=ROLE_LABELS),
         "route_counts": _top_counts(drug, "route", top_n),
@@ -545,7 +552,8 @@ def drug_provider_bundle(
 
 @st.cache_data(show_spinner=False)
 def drug_manufacturer_bundle(
-    primaryids: tuple[str, ...], top_n: int, role_filter: str, quarters: tuple[str, ...]
+    primaryids: tuple[str, ...], top_n: int, role_filter: str, quarters: tuple[str, ...],
+    matched_names: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     t = _tables()
     ids = set(primaryids)
@@ -591,9 +599,14 @@ def drug_manufacturer_bundle(
     if not cases.empty:
         cases = cases[keep].sort_values("event_dt", ascending=False)
 
+    # Ingredients: only from the queried drug, not co-reported drugs
+    queried_drug = drug
+    if matched_names:
+        queried_drug = drug[drug["drugname"].astype(str).isin(list(matched_names))]
+
     return {
         "ingredients": _top_counts(
-            drug.rename(columns={"prod_ai": "ingredient"}), "ingredient", top_n
+            queried_drug.rename(columns={"prod_ai": "ingredient"}), "ingredient", top_n
         ),
         "manufacturer_counts": _top_counts(
             demo.rename(columns={"canonical_mfr": "manufacturer"}),

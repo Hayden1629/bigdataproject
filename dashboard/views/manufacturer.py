@@ -71,14 +71,14 @@ def render(filters: dict) -> None:
 
     st.plotly_chart(
         charts.bar_horizontal(bundle["drug_counts"], "n_cases", "drugname", "Top drugs"),
-        use_container_width=True,
+        width="stretch",
         key="mfr_lookup_drug_counts",
     )
     st.plotly_chart(
         charts.line_chart(
             bundle["quarterly_trend"], "year_q", "n_cases", "Case reports by quarter"
         ),
-        use_container_width=True,
+        width="stretch",
         key="mfr_lookup_quarterly_trend",
     )
     st.plotly_chart(
@@ -88,14 +88,14 @@ def render(filters: dict) -> None:
             "ingredient",
             "Top active ingredients",
         ),
-        use_container_width=True,
+        width="stretch",
         key="mfr_lookup_ingredient_counts",
     )
     st.plotly_chart(
         charts.bar_horizontal(
             bundle["outcome_counts"], "n_cases", "outc_cod", "Outcome distribution"
         ),
-        use_container_width=True,
+        width="stretch",
         key="mfr_lookup_outcome_counts",
     )
     st.plotly_chart(
@@ -105,14 +105,14 @@ def render(filters: dict) -> None:
             "country",
             "Top reporting countries",
         ),
-        use_container_width=True,
+        width="stretch",
         key="mfr_lookup_country_counts",
     )
     st.plotly_chart(
         charts.bar_horizontal(
             bundle["indication_counts"], "n_cases", "indi_pt", "Top indications"
         ),
-        use_container_width=True,
+        width="stretch",
         key="mfr_lookup_indication_counts",
     )
 

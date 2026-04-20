@@ -39,11 +39,11 @@ def render(filters: dict) -> None:
         return
 
     scored = matches[:10]
-    default_terms = [m["term"] for m in scored[:3]]
+    default_terms = [m["term"] for m in matches if m["score"] >= 80]
     selected = st.multiselect(
         "Select MedDRA PT terms",
         options=[m["term"] for m in matches],
-        default=default_terms,
+        default=default_terms if default_terms else [matches[0]["term"]],
     )
     if not selected:
         st.warning("Select at least one term to continue.")
@@ -74,7 +74,7 @@ def render(filters: dict) -> None:
     with left:
         st.plotly_chart(
             charts.bar_horizontal(top_drugs, "n_cases", "drugname", "Top associated drugs"),
-            use_container_width=True,
+            width="stretch",
             key="reaction_top_drugs",
         )
     with right:
@@ -82,11 +82,11 @@ def render(filters: dict) -> None:
 
     st.plotly_chart(
         charts.donut(outcomes, "outc_cod", "n_cases", "Outcome distribution"),
-        use_container_width=True,
+        width="stretch",
         key="reaction_outcomes",
     )
     st.plotly_chart(
         charts.line_chart(trend, "year_q", "n_cases", "Case reports by quarter"),
-        use_container_width=True,
+        width="stretch",
         key="reaction_quarterly_trend",
     )

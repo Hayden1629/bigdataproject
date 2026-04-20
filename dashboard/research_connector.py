@@ -114,11 +114,13 @@ def search_clinical_trials(drug_name: str) -> list[dict[str, str]]:
             proto = s.get("protocolSection", {})
             ident = proto.get("identificationModule", {})
             status = proto.get("statusModule", {})
+            nct_id = ident.get("nctId", "")
             out.append(
                 {
-                    "nct_id": ident.get("nctId", ""),
+                    "nct_id": nct_id,
                     "title": ident.get("briefTitle", ""),
                     "status": status.get("overallStatus", ""),
+                    "link": f"https://clinicaltrials.gov/study/{nct_id}" if nct_id else "",
                 }
             )
         return out
@@ -148,7 +150,11 @@ def search_pubmed(query: str) -> list[dict[str, str]]:
         out = []
         for pid in ids:
             rec = esummary.get("result", {}).get(pid, {})
-            out.append({"pmid": pid, "title": rec.get("title", "")})
+            out.append({
+                "pmid": pid,
+                "title": rec.get("title", ""),
+                "link": f"https://pubmed.ncbi.nlm.nih.gov/{pid}/",
+            })
         return out
     except Exception:
         return []

@@ -209,7 +209,8 @@ def inject_css() -> None:
             margin-bottom: 0.95rem;
           }
 
-          .faers-hero h1 {
+          .faers-hero h1,
+          [data-testid="stMain"] .faers-hero h1 {
             color: #ffffff !important;
             font-size: 1.85rem !important;
             font-weight: 800 !important;
@@ -384,7 +385,7 @@ def render_header() -> None:
     st.markdown(
         """
         <section class="faers-hero">
-          <h1>FAERS Safety Intelligence Dashboard</h1>
+          <h1 style="color: #ffffff !important;">FAERS Safety Intelligence Dashboard</h1>
         </section>
         """,
         unsafe_allow_html=True,
@@ -457,6 +458,57 @@ def metric_card(label: str, value: str, help_text: str | None = None) -> None:
     )
 
 
+DISPLAY_HEADERS: dict[str, str] = {
+    "primaryid": "Case ID",
+    "event_dt": "Original Event Occurrence",
+    "occr_country": "Reporting Country",
+    "mfr_sndr": "Manufacturer",
+    "canonical_mfr": "Manufacturer (Canonical)",
+    "lit_ref": "Literature Reference",
+    "role_cod": "Drug Role",
+    "role": "Drug Role",
+    "route": "Administration Route",
+    "dose_amt": "Dose Amount",
+    "dose_unit": "Dose Unit",
+    "dose_form": "Dosage Form",
+    "dose_freq": "Dose Frequency",
+    "prod_ai": "Active Ingredient",
+    "active_ingredient": "Active Ingredient",
+    "drugname": "Drug Name",
+    "drug_name": "Drug Name",
+    "pt": "Reaction Term",
+    "top_reaction": "Top Reaction",
+    "top_indication": "Top Indication",
+    "outc_cod": "Outcome",
+    "outcomes": "Outcomes",
+    "indi_pt": "Indication",
+    "n_cases": "Cases",
+    "country": "Country",
+    "manufacturer": "Manufacturer",
+    "dose": "Dose",
+    "nct_id": "NCT ID",
+    "pmid": "PMID",
+    "title": "Title",
+    "status": "Status",
+    "recall_number": "Recall Number",
+    "classification": "Classification",
+    "reason": "Reason",
+    "report_date": "Report Date",
+    "ingredient": "Active Ingredient",
+    "matched_drugname": "Matched Drug Name",
+    "term": "Term",
+    "score": "Match Score",
+    "sex": "Sex",
+    "age_group": "Age Group",
+    "rpsr_cod": "Reporter Type",
+    "delta": "Quarter Change",
+    "link": "Link",
+}
+
+# Columns whose cell values should be rendered as clickable hyperlinks
+_LINK_COLUMNS = {"link"}
+
+
 def render_table(df, *, height: int = 360) -> None:
     if isinstance(df, dict):
         df = pd.DataFrame(df)
@@ -464,13 +516,27 @@ def render_table(df, *, height: int = 360) -> None:
         df = pd.DataFrame(df)
 
     safe_df = df.copy()
-    safe_df.columns = [html.escape(str(col)) for col in safe_df.columns]
+    raw_cols = [str(col) for col in safe_df.columns]
+    # Map column names to professional display headers
+    display_cols = [
+        html.escape(DISPLAY_HEADERS.get(c, c.replace("_", " ").title()))
+        for c in raw_cols
+    ]
     rows = []
     for _, row in safe_df.iterrows():
-        cells = "".join(f"<td>{html.escape(str(value))}</td>" for value in row.tolist())
-        rows.append(f"<tr>{cells}</tr>")
-    header = "".join(f"<th>{col}</th>" for col in safe_df.columns)
-    body = "".join(rows) if rows else f"<tr><td colspan='{max(len(safe_df.columns),1)}'>No data</td></tr>"
+        cells = []
+        for col_name, value in zip(raw_cols, row.tolist()):
+            val_str = str(value)
+            if col_name in _LINK_COLUMNS and val_str.startswith("http"):
+                cells.append(
+                    f'<td><a href="{html.escape(val_str)}" target="_blank" '
+                    f'style="color:var(--faers-blue);text-decoration:none;">View</a></td>'
+                )
+            else:
+                cells.append(f"<td>{html.escape(val_str)}</td>")
+        rows.append(f"<tr>{''.join(cells)}</tr>")
+    header = "".join(f"<th>{col}</th>" for col in display_cols)
+    body = "".join(rows) if rows else f"<tr><td colspan='{max(len(display_cols),1)}'>No data</td></tr>"
     st.markdown(
         f"""
         <div class="faers-table-wrap" style="max-height:{int(height)}px;">

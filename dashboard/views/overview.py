@@ -121,7 +121,7 @@ def render(filters: dict) -> None:
                 "Top 10 drugs by case reports",
                 overview_palette="drugs",
             ),
-            use_container_width=True,
+            width="stretch",
             key="overview_top_drugs",
         )
 
@@ -139,7 +139,7 @@ def render(filters: dict) -> None:
                 "Top 10 reactions by case reports",
                 overview_palette="reactions",
             ),
-            use_container_width=True,
+            width="stretch",
             key="overview_top_reactions",
         )
 
@@ -158,7 +158,7 @@ def render(filters: dict) -> None:
                     "drugname",
                     "Top 10 drug quarter-over-quarter increases",
                 ),
-                use_container_width=True,
+                width="stretch",
                 key="overview_qoq_drugs",
             )
     with d2:
@@ -174,7 +174,7 @@ def render(filters: dict) -> None:
                     "pt",
                     "Top 10 reaction quarter-over-quarter increases",
                 ),
-                use_container_width=True,
+                width="stretch",
                 key="overview_qoq_reactions",
             )
 
@@ -192,6 +192,6 @@ def render(filters: dict) -> None:
                 "Case reports by quarter",
                 overview_style=True,
             ),
-            use_container_width=True,
+            width="stretch",
             key="overview_quarterly_trend",
         )
