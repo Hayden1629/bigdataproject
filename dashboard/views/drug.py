@@ -204,10 +204,12 @@ def render(filters: dict) -> None:
     display_name = _display_drug_name(q, match)
     _render_header(display_name, match, role_filter)
 
+    matched_names = tuple(match["matched_faers_names"])
+
     with ThreadPoolExecutor(max_workers=6) as pool:
         f_bundle = pool.submit(
             queries.drug_query_bundle,
-            tuple(match["matched_faers_names"]),
+            matched_names,
             top_n,
             role_filter,
             quarters,
@@ -221,14 +223,6 @@ def render(filters: dict) -> None:
         )
 
         bundle = f_bundle.result()
-        ids = tuple(sorted(bundle.get("primaryids", set())))
-        matched_names = tuple(match["matched_faers_names"])
-        provider_bundle = pool.submit(
-            queries.drug_provider_bundle, ids, top_n, role_filter, quarters, matched_names
-        ).result()
-        mfr_bundle = pool.submit(
-            queries.drug_manufacturer_bundle, ids, top_n, role_filter, quarters, matched_names
-        ).result()
         drug_class = f_class.result()
         approval = f_approval.result()
         label = f_label.result()
@@ -246,6 +240,14 @@ def render(filters: dict) -> None:
         with st.expander("Matched Drug Name Strings"):
             render_table({"matched_drugname": match["matched_faers_names"]}, height=280)
     with tab_provider:
+        ids = tuple(sorted(bundle.get("primaryids", set())))
+        provider_bundle = queries.drug_provider_bundle(
+            ids, top_n, role_filter, quarters, matched_names
+        )
         drug_provider.render(provider_bundle, top_n)
     with tab_mfr:
+        ids = tuple(sorted(bundle.get("primaryids", set())))
+        mfr_bundle = queries.drug_manufacturer_bundle(
+            ids, top_n, role_filter, quarters, matched_names
+        )
         drug_manufacturer.render(mfr_bundle, top_n)
