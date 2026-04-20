@@ -37,17 +37,24 @@ def _get_connection():
     from databricks.sdk import WorkspaceClient
 
     w = WorkspaceClient()
-    host = w.config.host.rstrip("/")
+    host = (w.config.host or "").rstrip("/")
     if host.startswith("https://"):
         host = host[len("https://"):]
 
     warehouse_id = os.environ.get("DATABRICKS_WAREHOUSE_ID", "").strip()
     http_path = f"/sql/1.0/warehouses/{warehouse_id}" if warehouse_id else ""
 
+    logger.info("Connecting to %s warehouse=%s", host, warehouse_id)
+
+    # Get token from SDK (handles OAuth/PAT/service principal automatically)
+    headers = w.config.authenticate()
+    token = headers.get("Authorization", "").replace("Bearer ", "")
+
     conn = dbsql.connect(
         server_hostname=host,
         http_path=http_path,
-        credentials_provider=w.config.authenticate,
+        access_token=token,
+        use_cloud_fetch=False,
     )
     _local.conn = conn
     return conn
@@ -241,7 +248,7 @@ def _kpi_from_ids(ids_sql: str) -> dict[str, Any]:
     }
 
 
-def _build_case_table(ids_sql: str, include_lit_ref: bool = False) -> pd.DataFrame:
+def _build_case_table(ids_sql: str, include_lit_ref: bool = False, limit: int = 1000) -> pd.DataFrame:
     sql = f"""
         WITH ids AS ({ids_sql}),
         demo AS (
@@ -312,6 +319,7 @@ def _build_case_table(ids_sql: str, include_lit_ref: bool = False) -> pd.DataFra
         LEFT JOIN reac r ON d.primaryid = r.primaryid
         LEFT JOIN indi i ON d.primaryid = i.primaryid
         LEFT JOIN outc o ON d.primaryid = o.primaryid
+        LIMIT {int(limit)}
     """
     out = _run_sql(sql)
     if not include_lit_ref and "lit_ref" in out.columns:
@@ -554,6 +562,8 @@ def drug_query_bundle(
     role_filter: str,
     quarters: tuple[str, ...],
 ) -> dict[str, Any]:
+    from concurrent.futures import ThreadPoolExecutor
+
     ids_sql = _ids_sql_for_drug(matched_names, quarters, role_filter)
     ids = _ids_set(ids_sql)
     if not ids:
@@ -569,72 +579,80 @@ def drug_query_bundle(
             "indications": pd.DataFrame(),
             "concomitants": pd.DataFrame(),
         }
-    recent = _run_sql(
-        f"""
-        SELECT CAST(d.primaryid AS STRING) AS primaryid, CAST(d.role_cod AS STRING) AS role_cod,
-               CAST(d.drugname AS STRING) AS drugname, CAST(d.prod_ai AS STRING) AS prod_ai,
-               CAST(d.route AS STRING) AS route, CAST(d.dose_amt AS STRING) AS dose_amt,
-               CAST(d.dose_unit AS STRING) AS dose_unit, CAST(d.dose_form AS STRING) AS dose_form,
-               CAST(d.dose_freq AS STRING) AS dose_freq
-        FROM {_table("drug_records_slim")} d
-        INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid
-        LIMIT 100
-        """
-    )
-    trend = _run_sql(
-        f"SELECT CAST(d.year_q AS STRING) AS year_q, COUNT(DISTINCT CAST(d.primaryid AS STRING)) AS n_cases FROM {_table('demo_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid GROUP BY CAST(d.year_q AS STRING) ORDER BY year_q"
-    )
-    sex = _run_sql(
-        f"SELECT CAST(d.sex AS STRING) AS sex, COUNT(DISTINCT CAST(d.primaryid AS STRING)) AS n_cases FROM {_table('demo_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid GROUP BY CAST(d.sex AS STRING) ORDER BY n_cases DESC"
-    )
-    age_df = _run_sql(
-        f"""
-        SELECT age_group, COUNT(DISTINCT primaryid) AS n_cases
-        FROM (
-          SELECT CAST(d.primaryid AS STRING) AS primaryid,
-                 CASE
-                   WHEN CAST(d.age AS DOUBLE) BETWEEN 0 AND 17 THEN '0-17'
-                   WHEN CAST(d.age AS DOUBLE) > 17 AND CAST(d.age AS DOUBLE) <= 35 THEN '18-35'
-                   WHEN CAST(d.age AS DOUBLE) > 35 AND CAST(d.age AS DOUBLE) <= 50 THEN '36-50'
-                   WHEN CAST(d.age AS DOUBLE) > 50 AND CAST(d.age AS DOUBLE) <= 65 THEN '51-65'
-                   WHEN CAST(d.age AS DOUBLE) > 65 THEN '66+'
-                   ELSE NULL
-                 END AS age_group
-          FROM {_table("demo_slim")} d
-          INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid
-        ) x
-        WHERE age_group IS NOT NULL
-        GROUP BY age_group
-        """
-    )
-    reporter = _top_counts_by_ids("rpsr_slim", "rpsr_cod", top_n, ids_sql)
-    countries = _top_counts_by_ids("demo_slim", "occr_country", top_n, ids_sql)
-    top_reactions = _top_counts_by_ids("reac_slim", "pt", top_n, ids_sql)
-    outcomes = _top_counts_by_ids("outc_slim", "outc_cod", top_n, ids_sql)
-    indications = _top_counts_by_ids("indi_slim", "indi_pt", top_n, ids_sql)
-    concomitants = _top_counts_by_ids(
-        "drug_records_slim", "drugname", top_n + 5, ids_sql
-    )
-    if not concomitants.empty and matched_names:
-        concomitants = concomitants[
-            ~concomitants["drugname"].isin([str(x) for x in matched_names])
-        ].head(int(top_n))
-    return {
-        "primaryids": ids,
-        "kpi": _kpi_from_ids(ids_sql),
-        "recent": recent,
-        "top_reactions": top_reactions,
-        "outcomes": outcomes,
-        "trend": trend,
-        "demographics": {
-            "sex": sex,
-            "age_group": age_df,
-            "reporter": reporter,
-        },
-        "countries": countries,
-        "indications": indications,
-        "concomitants": concomitants,
-    }
+
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        f_kpi = pool.submit(_kpi_from_ids, ids_sql)
+        f_recent = pool.submit(
+            _run_sql,
+            f"""
+            SELECT CAST(d.primaryid AS STRING) AS primaryid, CAST(d.role_cod AS STRING) AS role_cod,
+                   CAST(d.drugname AS STRING) AS drugname, CAST(d.prod_ai AS STRING) AS prod_ai,
+                   CAST(d.route AS STRING) AS route, CAST(d.dose_amt AS STRING) AS dose_amt,
+                   CAST(d.dose_unit AS STRING) AS dose_unit, CAST(d.dose_form AS STRING) AS dose_form,
+                   CAST(d.dose_freq AS STRING) AS dose_freq
+            FROM {_table("drug_records_slim")} d
+            INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid
+            LIMIT 100
+            """,
+        )
+        f_trend = pool.submit(
+            _run_sql,
+            f"SELECT CAST(d.year_q AS STRING) AS year_q, COUNT(DISTINCT CAST(d.primaryid AS STRING)) AS n_cases FROM {_table('demo_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid GROUP BY CAST(d.year_q AS STRING) ORDER BY year_q",
+        )
+        f_sex = pool.submit(
+            _run_sql,
+            f"SELECT CAST(d.sex AS STRING) AS sex, COUNT(DISTINCT CAST(d.primaryid AS STRING)) AS n_cases FROM {_table('demo_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid GROUP BY CAST(d.sex AS STRING) ORDER BY n_cases DESC",
+        )
+        f_age = pool.submit(
+            _run_sql,
+            f"""
+            SELECT age_group, COUNT(DISTINCT primaryid) AS n_cases
+            FROM (
+              SELECT CAST(d.primaryid AS STRING) AS primaryid,
+                     CASE
+                       WHEN CAST(d.age AS DOUBLE) BETWEEN 0 AND 17 THEN '0-17'
+                       WHEN CAST(d.age AS DOUBLE) > 17 AND CAST(d.age AS DOUBLE) <= 35 THEN '18-35'
+                       WHEN CAST(d.age AS DOUBLE) > 35 AND CAST(d.age AS DOUBLE) <= 50 THEN '36-50'
+                       WHEN CAST(d.age AS DOUBLE) > 50 AND CAST(d.age AS DOUBLE) <= 65 THEN '51-65'
+                       WHEN CAST(d.age AS DOUBLE) > 65 THEN '66+'
+                       ELSE NULL
+                     END AS age_group
+              FROM {_table("demo_slim")} d
+              INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid
+            ) x
+            WHERE age_group IS NOT NULL
+            GROUP BY age_group
+            """,
+        )
+        f_reporter = pool.submit(_top_counts_by_ids, "rpsr_slim", "rpsr_cod", top_n, ids_sql)
+        f_countries = pool.submit(_top_counts_by_ids, "demo_slim", "occr_country", top_n, ids_sql)
+        f_reactions = pool.submit(_top_counts_by_ids, "reac_slim", "pt", top_n, ids_sql)
+        f_outcomes = pool.submit(_top_counts_by_ids, "outc_slim", "outc_cod", top_n, ids_sql)
+        f_indications = pool.submit(_top_counts_by_ids, "indi_slim", "indi_pt", top_n, ids_sql)
+        f_concomitants = pool.submit(_top_counts_by_ids, "drug_records_slim", "drugname", top_n + 5, ids_sql)
+
+        concomitants = f_concomitants.result()
+        if not concomitants.empty and matched_names:
+            concomitants = concomitants[
+                ~concomitants["drugname"].isin([str(x) for x in matched_names])
+            ].head(int(top_n))
+
+        return {
+            "primaryids": ids,
+            "kpi": f_kpi.result(),
+            "recent": f_recent.result(),
+            "top_reactions": f_reactions.result(),
+            "outcomes": f_outcomes.result(),
+            "trend": f_trend.result(),
+            "demographics": {
+                "sex": f_sex.result(),
+                "age_group": f_age.result(),
+                "reporter": f_reporter.result(),
+            },
+            "countries": f_countries.result(),
+            "indications": f_indications.result(),
+            "concomitants": concomitants,
+        }
 
 
 def _ids_sql_from_primaryids(primaryids: tuple[str, ...]) -> str:
@@ -654,6 +672,8 @@ def drug_provider_bundle(
     quarters: tuple[str, ...],
     matched_names: tuple[str, ...] = (),
 ) -> dict[str, Any]:
+    from concurrent.futures import ThreadPoolExecutor
+
     ids_sql = (
         _ids_sql_for_drug(matched_names, quarters, role_filter)
         if matched_names
@@ -675,43 +695,45 @@ def drug_provider_bundle(
     queried_ids_sql = ids_sql
     if matched_names:
         queried_ids_sql = _ids_sql_for_drug(matched_names, quarters, role_filter)
-    dose_counts = _run_sql(
-        f"""
-        SELECT dose, COUNT(DISTINCT primaryid) AS n_cases
-        FROM (
-          SELECT CAST(d.primaryid AS STRING) AS primaryid,
-                 TRIM(CONCAT(COALESCE(CAST(d.dose_amt AS STRING), ''), ' ', COALESCE(CAST(d.dose_unit AS STRING), ''))) AS dose
-          FROM {_table("drug_records_slim")} d
-          INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid
-        ) x
-        GROUP BY dose
-        ORDER BY n_cases DESC
-        LIMIT {int(top_n)}
-        """
-    )
-    ingredients = _top_counts_by_ids(
-        "drug_records_slim", "prod_ai", top_n, queried_ids_sql
-    ).rename(columns={"prod_ai": "ingredient"})
-    return {
-        "ingredients": ingredients,
-        "role_counts": _top_counts_by_ids(
-            "drug_records_slim", "role_cod", top_n, ids_sql
-        ),
-        "route_counts": _top_counts_by_ids(
-            "drug_records_slim", "route", top_n, ids_sql
-        ),
-        "dose_counts": dose_counts,
-        "dose_form_counts": _top_counts_by_ids(
-            "drug_records_slim", "dose_form", top_n, ids_sql
-        ),
-        "dose_freq_counts": _top_counts_by_ids(
-            "drug_records_slim", "dose_freq", top_n, ids_sql
-        ),
-        "reactions": _top_counts_by_ids("reac_slim", "pt", top_n, ids_sql),
-        "outcomes": _top_counts_by_ids("outc_slim", "outc_cod", top_n, ids_sql),
-        "indications": _top_counts_by_ids("indi_slim", "indi_pt", top_n, ids_sql),
-        "cases": _build_case_table(ids_sql, include_lit_ref=True),
-    }
+
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        f_dose = pool.submit(
+            _run_sql,
+            f"""
+            SELECT dose, COUNT(DISTINCT primaryid) AS n_cases
+            FROM (
+              SELECT CAST(d.primaryid AS STRING) AS primaryid,
+                     TRIM(CONCAT(COALESCE(CAST(d.dose_amt AS STRING), ''), ' ', COALESCE(CAST(d.dose_unit AS STRING), ''))) AS dose
+              FROM {_table("drug_records_slim")} d
+              INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid
+            ) x
+            GROUP BY dose
+            ORDER BY n_cases DESC
+            LIMIT {int(top_n)}
+            """,
+        )
+        f_ingredients = pool.submit(_top_counts_by_ids, "drug_records_slim", "prod_ai", top_n, queried_ids_sql)
+        f_role = pool.submit(_top_counts_by_ids, "drug_records_slim", "role_cod", top_n, ids_sql)
+        f_route = pool.submit(_top_counts_by_ids, "drug_records_slim", "route", top_n, ids_sql)
+        f_dose_form = pool.submit(_top_counts_by_ids, "drug_records_slim", "dose_form", top_n, ids_sql)
+        f_dose_freq = pool.submit(_top_counts_by_ids, "drug_records_slim", "dose_freq", top_n, ids_sql)
+        f_reactions = pool.submit(_top_counts_by_ids, "reac_slim", "pt", top_n, ids_sql)
+        f_outcomes = pool.submit(_top_counts_by_ids, "outc_slim", "outc_cod", top_n, ids_sql)
+        f_indications = pool.submit(_top_counts_by_ids, "indi_slim", "indi_pt", top_n, ids_sql)
+        f_cases = pool.submit(_build_case_table, ids_sql, True)
+
+        return {
+            "ingredients": f_ingredients.result().rename(columns={"prod_ai": "ingredient"}),
+            "role_counts": f_role.result(),
+            "route_counts": f_route.result(),
+            "dose_counts": f_dose.result(),
+            "dose_form_counts": f_dose_form.result(),
+            "dose_freq_counts": f_dose_freq.result(),
+            "reactions": f_reactions.result(),
+            "outcomes": f_outcomes.result(),
+            "indications": f_indications.result(),
+            "cases": f_cases.result(),
+        }
 
 
 def drug_manufacturer_bundle(
@@ -721,6 +743,8 @@ def drug_manufacturer_bundle(
     quarters: tuple[str, ...],
     matched_names: tuple[str, ...] = (),
 ) -> dict[str, Any]:
+    from concurrent.futures import ThreadPoolExecutor
+
     ids_sql = (
         _ids_sql_for_drug(matched_names, quarters, role_filter)
         if matched_names
@@ -739,37 +763,40 @@ def drug_manufacturer_bundle(
     queried_ids_sql = ids_sql
     if matched_names:
         queried_ids_sql = _ids_sql_for_drug(matched_names, quarters, role_filter)
-    trend = _run_sql(
-        f"SELECT CAST(d.year_q AS STRING) AS year_q, COUNT(DISTINCT CAST(d.primaryid AS STRING)) AS n_cases FROM {_table('demo_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid GROUP BY CAST(d.year_q AS STRING) ORDER BY year_q"
-    )
-    cases = _build_case_table(ids_sql)
-    if not cases.empty:
-        keep = [
-            "event_dt",
-            "manufacturer",
-            "country",
-            "active_ingredient",
-            "dose_form",
-            "outcomes",
-        ]
-        cases = cases[keep].sort_values("event_dt", ascending=False)
-    return {
-        "ingredients": _top_counts_by_ids(
-            "drug_records_slim", "prod_ai", top_n, queried_ids_sql
-        ).rename(columns={"prod_ai": "ingredient"}),
-        "manufacturer_counts": _top_counts_by_ids(
-            "demo_slim", "canonical_mfr", top_n, ids_sql
-        ).rename(columns={"canonical_mfr": "manufacturer"}),
-        "country_counts": _top_counts_by_ids(
-            "demo_slim", "occr_country", top_n, ids_sql
-        ).rename(columns={"occr_country": "country"}),
-        "outcome_counts": _top_counts_by_ids("outc_slim", "outc_cod", top_n, ids_sql),
-        "dose_form_counts": _top_counts_by_ids(
-            "drug_records_slim", "dose_form", top_n, ids_sql
-        ),
-        "cases": cases,
-        "quarterly_trend": trend,
-    }
+
+    with ThreadPoolExecutor(max_workers=7) as pool:
+        f_trend = pool.submit(
+            _run_sql,
+            f"SELECT CAST(d.year_q AS STRING) AS year_q, COUNT(DISTINCT CAST(d.primaryid AS STRING)) AS n_cases FROM {_table('demo_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid GROUP BY CAST(d.year_q AS STRING) ORDER BY year_q",
+        )
+        f_cases = pool.submit(_build_case_table, ids_sql)
+        f_ingredients = pool.submit(_top_counts_by_ids, "drug_records_slim", "prod_ai", top_n, queried_ids_sql)
+        f_mfr = pool.submit(_top_counts_by_ids, "demo_slim", "canonical_mfr", top_n, ids_sql)
+        f_country = pool.submit(_top_counts_by_ids, "demo_slim", "occr_country", top_n, ids_sql)
+        f_outcomes = pool.submit(_top_counts_by_ids, "outc_slim", "outc_cod", top_n, ids_sql)
+        f_dose_form = pool.submit(_top_counts_by_ids, "drug_records_slim", "dose_form", top_n, ids_sql)
+
+        cases = f_cases.result()
+        if not cases.empty:
+            keep = [
+                "event_dt",
+                "manufacturer",
+                "country",
+                "active_ingredient",
+                "dose_form",
+                "outcomes",
+            ]
+            cases = cases[keep].sort_values("event_dt", ascending=False)
+
+        return {
+            "ingredients": f_ingredients.result().rename(columns={"prod_ai": "ingredient"}),
+            "manufacturer_counts": f_mfr.result().rename(columns={"canonical_mfr": "manufacturer"}),
+            "country_counts": f_country.result().rename(columns={"occr_country": "country"}),
+            "outcome_counts": f_outcomes.result(),
+            "dose_form_counts": f_dose_form.result(),
+            "cases": cases,
+            "quarterly_trend": f_trend.result(),
+        }
 
 
 def manufacturer_query_bundle(
@@ -778,6 +805,8 @@ def manufacturer_query_bundle(
     role_filter: str,
     quarters: tuple[str, ...],
 ) -> dict[str, Any]:
+    from concurrent.futures import ThreadPoolExecutor
+
     ids_sql = _ids_sql_for_manufacturer(canonical_names, quarters, role_filter)
     if _ids_count(ids_sql) == 0:
         return {
@@ -790,58 +819,67 @@ def manufacturer_query_bundle(
             "cases": pd.DataFrame(),
             "quarterly_trend": pd.DataFrame(),
         }
-    trend = _run_sql(
-        f"SELECT CAST(d.year_q AS STRING) AS year_q, COUNT(DISTINCT CAST(d.primaryid AS STRING)) AS n_cases FROM {_table('demo_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid GROUP BY CAST(d.year_q AS STRING) ORDER BY year_q"
-    )
-    table = _build_case_table(ids_sql)
-    drug_name_by_id = _run_sql(
-        f"SELECT CAST(d.primaryid AS STRING) AS primaryid, FIRST(CAST(d.drugname AS STRING), true) AS drug_name FROM {_table('drug_records_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid GROUP BY CAST(d.primaryid AS STRING)"
-    )
-    if not table.empty and not drug_name_by_id.empty:
-        dmap = dict(
-            zip(
-                drug_name_by_id["primaryid"].astype(str),
-                drug_name_by_id["drug_name"].astype(str),
-            )
+
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        f_trend = pool.submit(
+            _run_sql,
+            f"SELECT CAST(d.year_q AS STRING) AS year_q, COUNT(DISTINCT CAST(d.primaryid AS STRING)) AS n_cases FROM {_table('demo_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid GROUP BY CAST(d.year_q AS STRING) ORDER BY year_q",
         )
-        table["drug_name"] = table["primaryid"].map(lambda x: dmap.get(str(x), ""))
-        table = table[
-            [
-                "event_dt",
-                "drug_name",
-                "active_ingredient",
-                "country",
-                "outcomes",
-                "top_indication",
-            ]
-        ].sort_values("event_dt", ascending=False)
-    kpi = _kpi_from_ids(ids_sql)
-    kpi["unique_drugs"] = int(
-        _run_sql(
-            f"SELECT COUNT(DISTINCT CAST(d.drugname AS STRING)) AS n FROM {_table('drug_records_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid WHERE TRIM(CAST(d.drugname AS STRING)) <> ''"
-        ).iloc[0]["n"]
-    )
-    kpi["countries"] = int(
-        _run_sql(
-            f"SELECT COUNT(DISTINCT CAST(d.occr_country AS STRING)) AS n FROM {_table('demo_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid WHERE TRIM(CAST(d.occr_country AS STRING)) <> ''"
-        ).iloc[0]["n"]
-    )
-    return {
-        "kpi": kpi,
-        "drug_counts": _top_counts_by_ids(
-            "drug_records_slim", "drugname", top_n, ids_sql
-        ),
-        "ingredient_counts": _top_counts_by_ids(
-            "drug_records_slim", "prod_ai", top_n, ids_sql
-        ).rename(columns={"prod_ai": "ingredient"}),
-        "outcome_counts": _top_counts_by_ids("outc_slim", "outc_cod", top_n, ids_sql),
-        "indication_counts": _top_counts_by_ids("indi_slim", "indi_pt", top_n, ids_sql),
-        "country_counts": _top_counts_by_ids(
-            "demo_slim", "occr_country", top_n, ids_sql
-        ).rename(columns={"occr_country": "country"}),
-        "cases": table,
-        "quarterly_trend": trend,
-    }
+        f_cases = pool.submit(_build_case_table, ids_sql)
+        f_drug_names = pool.submit(
+            _run_sql,
+            f"SELECT CAST(d.primaryid AS STRING) AS primaryid, FIRST(CAST(d.drugname AS STRING), true) AS drug_name FROM {_table('drug_records_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid GROUP BY CAST(d.primaryid AS STRING)",
+        )
+        f_kpi = pool.submit(_kpi_from_ids, ids_sql)
+        f_unique_drugs = pool.submit(
+            _run_sql,
+            f"SELECT COUNT(DISTINCT CAST(d.drugname AS STRING)) AS n FROM {_table('drug_records_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid WHERE TRIM(CAST(d.drugname AS STRING)) <> ''",
+        )
+        f_unique_countries = pool.submit(
+            _run_sql,
+            f"SELECT COUNT(DISTINCT CAST(d.occr_country AS STRING)) AS n FROM {_table('demo_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid WHERE TRIM(CAST(d.occr_country AS STRING)) <> ''",
+        )
+        f_drug_counts = pool.submit(_top_counts_by_ids, "drug_records_slim", "drugname", top_n, ids_sql)
+        f_ingredients = pool.submit(_top_counts_by_ids, "drug_records_slim", "prod_ai", top_n, ids_sql)
+        f_outcomes = pool.submit(_top_counts_by_ids, "outc_slim", "outc_cod", top_n, ids_sql)
+        f_indications = pool.submit(_top_counts_by_ids, "indi_slim", "indi_pt", top_n, ids_sql)
+        f_countries = pool.submit(_top_counts_by_ids, "demo_slim", "occr_country", top_n, ids_sql)
+
+        table = f_cases.result()
+        drug_name_by_id = f_drug_names.result()
+        if not table.empty and not drug_name_by_id.empty:
+            dmap = dict(
+                zip(
+                    drug_name_by_id["primaryid"].astype(str),
+                    drug_name_by_id["drug_name"].astype(str),
+                )
+            )
+            table["drug_name"] = table["primaryid"].map(lambda x: dmap.get(str(x), ""))
+            table = table[
+                [
+                    "event_dt",
+                    "drug_name",
+                    "active_ingredient",
+                    "country",
+                    "outcomes",
+                    "top_indication",
+                ]
+            ].sort_values("event_dt", ascending=False)
+
+        kpi = f_kpi.result()
+        kpi["unique_drugs"] = int(f_unique_drugs.result().iloc[0]["n"])
+        kpi["countries"] = int(f_unique_countries.result().iloc[0]["n"])
+
+        return {
+            "kpi": kpi,
+            "drug_counts": f_drug_counts.result(),
+            "ingredient_counts": f_ingredients.result().rename(columns={"prod_ai": "ingredient"}),
+            "outcome_counts": f_outcomes.result(),
+            "indication_counts": f_indications.result(),
+            "country_counts": f_countries.result().rename(columns={"occr_country": "country"}),
+            "cases": table,
+            "quarterly_trend": f_trend.result(),
+        }
 
 
 def reaction_kpis(
