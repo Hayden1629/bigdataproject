@@ -113,17 +113,17 @@ def _render_default_view(bundle: dict, approval: dict, label: dict) -> None:
 
     st.plotly_chart(
         charts.bar_horizontal(bundle["top_reactions"], "n_cases", "pt", "Top adverse reactions"),
-        use_container_width=True,
+        width="stretch",
         key="drug_default_top_reactions",
     )
     st.plotly_chart(
         charts.donut(bundle["outcomes"], "outc_cod", "n_cases", "Outcome distribution"),
-        use_container_width=True,
+        width="stretch",
         key="drug_default_outcomes",
     )
     st.plotly_chart(
         charts.line_chart(bundle["trend"], "year_q", "n_cases", "Case reports by quarter"),
-        use_container_width=True,
+        width="stretch",
         key="drug_default_quarterly_trend",
     )
 
@@ -132,7 +132,7 @@ def _render_default_view(bundle: dict, approval: dict, label: dict) -> None:
     with d1:
         st.plotly_chart(
             charts.donut(bundle["demographics"]["sex"], "sex", "n_cases", "Sex distribution"),
-            use_container_width=True,
+            width="stretch",
             key="drug_default_demographics_sex",
         )
         st.plotly_chart(
@@ -142,7 +142,7 @@ def _render_default_view(bundle: dict, approval: dict, label: dict) -> None:
                 "age_group",
                 "Age group distribution",
             ),
-            use_container_width=True,
+            width="stretch",
             key="drug_default_demographics_age",
         )
     with d2:
@@ -152,12 +152,12 @@ def _render_default_view(bundle: dict, approval: dict, label: dict) -> None:
     render_section_intro("Clinical context")
     st.plotly_chart(
         charts.bar_horizontal(bundle["indications"], "n_cases", "indi_pt", "Top indications"),
-        use_container_width=True,
+        width="stretch",
         key="drug_default_indications",
     )
     st.plotly_chart(
         charts.bar_horizontal(bundle["concomitants"], "n_cases", "drugname", "Top co-reported drugs"),
-        use_container_width=True,
+        width="stretch",
         key="drug_default_concomitants",
     )
 
@@ -222,11 +222,12 @@ def render(filters: dict) -> None:
 
         bundle = f_bundle.result()
         ids = tuple(sorted(bundle.get("primaryids", set())))
+        matched_names = tuple(match["matched_faers_names"])
         provider_bundle = pool.submit(
-            queries.drug_provider_bundle, ids, top_n, role_filter, quarters
+            queries.drug_provider_bundle, ids, top_n, role_filter, quarters, matched_names
         ).result()
         mfr_bundle = pool.submit(
-            queries.drug_manufacturer_bundle, ids, top_n, role_filter, quarters
+            queries.drug_manufacturer_bundle, ids, top_n, role_filter, quarters, matched_names
         ).result()
         drug_class = f_class.result()
         approval = f_approval.result()
