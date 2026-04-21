@@ -62,7 +62,7 @@ def _apply_professional_layout(
         },
         plot_bgcolor="rgba(255,255,255,0)",
         paper_bgcolor="rgba(255,255,255,0)",
-        margin=dict(l=24, r=36, t=56, b=24),
+        margin=dict(l=0, r=36, t=56, b=24),
         legend={"font": {"color": "#17324D", "size": 12}},
     )
     if x_col:

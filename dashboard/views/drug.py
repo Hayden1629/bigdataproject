@@ -161,24 +161,24 @@ def _render_default_view(bundle: dict, approval: dict, label: dict) -> None:
         key="drug_default_concomitants",
     )
 
-    render_section_intro("Clinical Trials")
-    render_table(
-        research_connector.search_clinical_trials(str(st.session_state.get("drug_query", ""))),
-        height=360,
-    )
+    with st.expander("Clinical Trials"):
+        render_table(
+            research_connector.search_clinical_trials(str(st.session_state.get("drug_query", ""))),
+            height=360,
+        )
 
-    render_section_intro("Literature")
-    render_table(
-        research_connector.search_pubmed(str(st.session_state.get("drug_query", ""))),
-        height=360,
-    )
+    with st.expander("Literature"):
+        render_table(
+            research_connector.search_pubmed(str(st.session_state.get("drug_query", ""))),
+            height=360,
+        )
 
-    render_section_intro("Recalls & Enforcement")
-    st.caption("Note: results may include reports outside the currently selected quarter range.")
-    render_table(
-        research_connector.get_drug_enforcement(str(st.session_state.get("drug_query", ""))),
-        height=360,
-    )
+    with st.expander("Recalls & Enforcement"):
+        st.caption("Note: results may include reports outside the currently selected quarter range.")
+        render_table(
+            research_connector.get_drug_enforcement(str(st.session_state.get("drug_query", ""))),
+            height=360,
+        )
 
 
 def render(filters: dict) -> None:
@@ -206,48 +206,45 @@ def render(filters: dict) -> None:
 
     matched_names = tuple(match["matched_faers_names"])
 
-    with ThreadPoolExecutor(max_workers=6) as pool:
-        f_bundle = pool.submit(
-            queries.drug_query_bundle,
-            matched_names,
-            top_n,
-            role_filter,
-            quarters,
-        )
-        f_class = pool.submit(research_connector.get_drug_class, match.get("rxcui"))
-        f_approval = pool.submit(
-            research_connector.get_fda_approval_info, match.get("canonical") or q
-        )
-        f_label = pool.submit(
-            research_connector.get_drug_label, match.get("canonical") or q
-        )
-
-        bundle = f_bundle.result()
-        drug_class = f_class.result()
-        approval = f_approval.result()
-        label = f_label.result()
-
-    if drug_class:
-        st.caption(
-            f"Primary class: {drug_class.get('class_name', '-') or '-'} ({drug_class.get('class_type', '-') or '-'})"
-        )
-
-    tab_default, tab_provider, tab_mfr = st.tabs(
-        ["Default / Full View", "Provider View", "Manufacturer View"]
+    view = st.radio(
+        "View",
+        ["Default / Full View", "Provider View", "Manufacturer View"],
+        horizontal=True,
+        key="drug_view_selector",
     )
-    with tab_default:
+
+    if view == "Default / Full View":
+        bundle = queries.drug_query_bundle(matched_names, top_n, role_filter, quarters)
+
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            f_class = pool.submit(research_connector.get_drug_class, match.get("rxcui"))
+            f_approval = pool.submit(
+                research_connector.get_fda_approval_info, match.get("canonical") or q
+            )
+            f_label = pool.submit(
+                research_connector.get_drug_label, match.get("canonical") or q
+            )
+            drug_class = f_class.result()
+            approval = f_approval.result()
+            label = f_label.result()
+
+        if drug_class:
+            st.caption(
+                f"Primary class: {drug_class.get('class_name', '-') or '-'} ({drug_class.get('class_type', '-') or '-'})"
+            )
+
         _render_default_view(bundle, approval, label)
         with st.expander("Matched Drug Name Strings"):
             render_table({"matched_drugname": match["matched_faers_names"]}, height=280)
-    with tab_provider:
-        ids = tuple(sorted(bundle.get("primaryids", set())))
+
+    elif view == "Provider View":
         provider_bundle = queries.drug_provider_bundle(
-            ids, top_n, role_filter, quarters, matched_names
+            (), top_n, role_filter, quarters, matched_names
         )
         drug_provider.render(provider_bundle, top_n)
-    with tab_mfr:
-        ids = tuple(sorted(bundle.get("primaryids", set())))
+
+    elif view == "Manufacturer View":
         mfr_bundle = queries.drug_manufacturer_bundle(
-            ids, top_n, role_filter, quarters, matched_names
+            (), top_n, role_filter, quarters, matched_names
         )
         drug_manufacturer.render(mfr_bundle, top_n)
