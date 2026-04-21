@@ -59,6 +59,11 @@ def render(bundle: dict, top_n: int) -> None:
             width="stretch",
             key="drug_mfr_outcome_counts",
         )
+        st.caption(
+            "DE = Death · LT = Life-Threatening · HO = Hospitalization · "
+            "DS = Disability · CA = Congenital Anomaly · RI = Required Intervention · "
+            "OT = Other Serious"
+        )
     with c2:
         st.plotly_chart(
             charts.bar_horizontal(

@@ -121,6 +121,11 @@ def _render_default_view(bundle: dict, approval: dict, label: dict) -> None:
         width="stretch",
         key="drug_default_outcomes",
     )
+    st.caption(
+        "DE = Death · LT = Life-Threatening · HO = Hospitalization · "
+        "DS = Disability · CA = Congenital Anomaly · RI = Required Intervention · "
+        "OT = Other Serious"
+    )
     st.plotly_chart(
         charts.line_chart(bundle["trend"], "year_q", "n_cases", "Case reports by quarter"),
         width="stretch",
@@ -161,13 +166,13 @@ def _render_default_view(bundle: dict, approval: dict, label: dict) -> None:
         key="drug_default_concomitants",
     )
 
-    with st.expander("Clinical Trials"):
+    with st.expander("Clinical Trials", expanded=True):
         render_table(
             research_connector.search_clinical_trials(str(st.session_state.get("drug_query", ""))),
             height=360,
         )
 
-    with st.expander("Literature"):
+    with st.expander("Literature", expanded=True):
         render_table(
             research_connector.search_pubmed(str(st.session_state.get("drug_query", ""))),
             height=360,
