@@ -98,6 +98,11 @@ def render(filters: dict) -> None:
         width="stretch",
         key="mfr_lookup_outcome_counts",
     )
+    st.caption(
+        "DE = Death · LT = Life-Threatening · HO = Hospitalization · "
+        "DS = Disability · CA = Congenital Anomaly · RI = Required Intervention · "
+        "OT = Other Serious"
+    )
     st.plotly_chart(
         charts.bar_horizontal(
             bundle["country_counts"],

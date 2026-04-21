@@ -85,6 +85,11 @@ def render(filters: dict) -> None:
         width="stretch",
         key="reaction_outcomes",
     )
+    st.caption(
+        "DE = Death · LT = Life-Threatening · HO = Hospitalization · "
+        "DS = Disability · CA = Congenital Anomaly · RI = Required Intervention · "
+        "OT = Other Serious"
+    )
     st.plotly_chart(
         charts.line_chart(trend, "year_q", "n_cases", "Case reports by quarter"),
         width="stretch",

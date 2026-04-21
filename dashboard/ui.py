@@ -191,6 +191,12 @@ def inject_css() -> None:
             color: #a3b3c8 !important;
           }
 
+          [data-testid="stSidebar"] [data-testid="stMetricValue"],
+          [data-testid="stSidebar"] [data-testid="stMetricLabel"],
+          [data-testid="stSidebar"] [data-testid="stMetricDelta"] {
+            color: white !important;
+          }
+
           [data-testid="stSidebar"] [data-baseweb="select"] > div,
           [data-testid="stSidebar"] [data-baseweb="input"] input,
           [data-testid="stSidebar"] [data-baseweb="base-input"] {
@@ -198,6 +204,20 @@ def inject_css() -> None:
             border-color: rgba(255, 255, 255, 0.15) !important;
             border-radius: 12px !important;
             color: white !important;
+          }
+
+          [data-testid="stSidebar"] button[kind="secondary"],
+          [data-testid="stSidebar"] .stButton button {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border: 1px solid rgba(255, 255, 255, 0.18) !important;
+            color: white !important;
+            border-radius: 10px !important;
+          }
+
+          [data-testid="stSidebar"] button[kind="secondary"]:hover,
+          [data-testid="stSidebar"] .stButton button:hover {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border-color: rgba(255, 255, 255, 0.3) !important;
           }
 
           .faers-hero {
