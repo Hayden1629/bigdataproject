@@ -1,18 +1,22 @@
 from __future__ import annotations
 
 import os
+import queue
 import threading
 import time
 from typing import Any
 
 import pandas as pd
+import streamlit as st
 
 from dashboard.logging_utils import get_logger
 
 
 logger = get_logger(__name__)
 
-_local = threading.local()
+_pool_lock = threading.Lock()
+_conn_pool: queue.Queue | None = None
+_POOL_SIZE = 12
 
 
 def is_enabled() -> bool:
@@ -20,19 +24,7 @@ def is_enabled() -> bool:
     return raw in {"1", "true", "yes", "on"}
 
 
-def _get_connection():
-    conn = getattr(_local, "conn", None)
-    if conn is not None:
-        try:
-            conn.cursor().execute("SELECT 1")
-            return conn
-        except Exception:
-            try:
-                conn.close()
-            except Exception:
-                pass
-            _local.conn = None
-
+def _make_connection():
     from databricks import sql as dbsql
     from databricks.sdk import WorkspaceClient
 
@@ -46,18 +38,44 @@ def _get_connection():
 
     logger.info("Connecting to %s warehouse=%s", host, warehouse_id)
 
-    # Get token from SDK (handles OAuth/PAT/service principal automatically)
     headers = w.config.authenticate()
     token = headers.get("Authorization", "").replace("Bearer ", "")
 
-    conn = dbsql.connect(
+    return dbsql.connect(
         server_hostname=host,
         http_path=http_path,
         access_token=token,
         use_cloud_fetch=False,
     )
-    _local.conn = conn
-    return conn
+
+
+def _get_pool() -> queue.Queue:
+    global _conn_pool
+    if _conn_pool is not None:
+        return _conn_pool
+    with _pool_lock:
+        if _conn_pool is not None:
+            return _conn_pool
+        _conn_pool = queue.Queue(maxsize=_POOL_SIZE)
+        for _ in range(_POOL_SIZE):
+            _conn_pool.put(_make_connection())
+        return _conn_pool
+
+
+def _get_connection():
+    pool = _get_pool()
+    return pool.get(timeout=60)
+
+
+def _return_connection(conn):
+    pool = _get_pool()
+    try:
+        pool.put_nowait(conn)
+    except queue.Full:
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 
 def _sql_str(value: str) -> str:
@@ -82,14 +100,23 @@ def _table(name: str) -> str:
 def _run_sql(sql: str) -> pd.DataFrame:
     t0 = time.perf_counter()
     conn = _get_connection()
-    cursor = conn.cursor()
     try:
-        cursor.execute(sql)
-        rows = cursor.fetchall()
-        columns = [desc[0] for desc in cursor.description]
-        out = pd.DataFrame(rows, columns=columns)
-    finally:
-        cursor.close()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            columns = [desc[0] for desc in cursor.description]
+            out = pd.DataFrame(rows, columns=columns)
+        finally:
+            cursor.close()
+    except Exception:
+        try:
+            conn.close()
+        except Exception:
+            pass
+        raise
+    else:
+        _return_connection(conn)
     logger.info(
         "sql completed (rows=%s, %.3fs)", len(out), time.perf_counter() - t0
     )
@@ -248,7 +275,7 @@ def _kpi_from_ids(ids_sql: str) -> dict[str, Any]:
     }
 
 
-def _build_case_table(ids_sql: str, include_lit_ref: bool = False, limit: int = 1000) -> pd.DataFrame:
+def _build_case_table(ids_sql: str, include_lit_ref: bool = False, limit: int = 100) -> pd.DataFrame:
     sql = f"""
         WITH ids AS ({ids_sql}),
         demo AS (
@@ -350,6 +377,7 @@ def warm_all_tables() -> None:
     logger.info("Table warm completed in %.3fs", time.perf_counter() - t0)
 
 
+@st.cache_data(show_spinner=False, ttl=3600)
 def get_quarters() -> list[str]:
     out = _run_sql(
         f"SELECT DISTINCT CAST(year_q AS STRING) AS year_q FROM {_table('demo_slim')} WHERE TRIM(CAST(year_q AS STRING)) <> '' ORDER BY year_q"
@@ -357,6 +385,7 @@ def get_quarters() -> list[str]:
     return out["year_q"].astype(str).tolist() if not out.empty else []
 
 
+@st.cache_data(show_spinner=False, ttl=3600)
 def get_dataset_profile() -> dict[str, Any]:
     quarters = get_quarters()
     out = _run_sql(
@@ -373,6 +402,7 @@ def get_dataset_profile() -> dict[str, Any]:
     }
 
 
+@st.cache_data(show_spinner=False, ttl=3600)
 def load_drug_name_lookup() -> pd.DataFrame:
     try:
         return _run_sql(
@@ -384,6 +414,7 @@ def load_drug_name_lookup() -> pd.DataFrame:
         )
 
 
+@st.cache_data(show_spinner=False, ttl=3600)
 def load_manufacturer_lookup() -> pd.DataFrame:
     try:
         return _run_sql(
@@ -395,6 +426,7 @@ def load_manufacturer_lookup() -> pd.DataFrame:
         )
 
 
+@st.cache_data(show_spinner=False, ttl=3600)
 def get_all_reaction_terms() -> list[str]:
     out = _run_sql(
         f"SELECT DISTINCT CAST(pt AS STRING) AS pt FROM {_table('reac_slim')} WHERE TRIM(CAST(pt AS STRING)) <> '' ORDER BY pt"
@@ -402,6 +434,7 @@ def get_all_reaction_terms() -> list[str]:
     return out["pt"].astype(str).tolist() if not out.empty else []
 
 
+@st.cache_data(show_spinner=False, ttl=3600)
 def load_drug_summary() -> pd.DataFrame:
     try:
         return _run_sql(f"SELECT drugname, n_cases FROM {_table('drug_summary')}")
@@ -411,6 +444,7 @@ def load_drug_summary() -> pd.DataFrame:
         )
 
 
+@st.cache_data(show_spinner=False, ttl=3600)
 def load_reac_summary() -> pd.DataFrame:
     try:
         return _run_sql(f"SELECT pt, n_cases FROM {_table('reac_summary')}")
@@ -420,6 +454,7 @@ def load_reac_summary() -> pd.DataFrame:
         )
 
 
+@st.cache_data(show_spinner=False, ttl=3600)
 def load_manufacturer_summary() -> pd.DataFrame:
     try:
         return _run_sql(
@@ -565,8 +600,8 @@ def drug_query_bundle(
     from concurrent.futures import ThreadPoolExecutor
 
     ids_sql = _ids_sql_for_drug(matched_names, quarters, role_filter)
-    ids = _ids_set(ids_sql)
-    if not ids:
+    count = _ids_count(ids_sql)
+    if count == 0:
         return {
             "primaryids": set(),
             "kpi": _kpi_from_ids(ids_sql),
@@ -638,7 +673,7 @@ def drug_query_bundle(
             ].head(int(top_n))
 
         return {
-            "primaryids": ids,
+            "primaryids": set(),
             "kpi": f_kpi.result(),
             "recent": f_recent.result(),
             "top_reactions": f_reactions.result(),

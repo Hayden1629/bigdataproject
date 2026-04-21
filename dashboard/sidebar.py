@@ -15,12 +15,34 @@ def render_sidebar(default_top_n: int = 20) -> dict[str, Any]:
     with st.sidebar:
         st.markdown("### Filters")
 
-        selected_quarters = st.multiselect(
-            "Quarters",
-            options=quarters,
-            default=quarters,
-            help="Filters all views by the selected quarter range.",
-        )
+        st.caption("Quarters")
+        col_all, col_none = st.columns(2)
+        with col_all:
+            select_all = st.button("All", use_container_width=True, key="q_all")
+        with col_none:
+            select_none = st.button("None", use_container_width=True, key="q_none")
+
+        if select_all:
+            st.session_state["_q_selection"] = set(quarters)
+        elif select_none:
+            st.session_state["_q_selection"] = set()
+
+        if "_q_selection" not in st.session_state:
+            st.session_state["_q_selection"] = set(quarters)
+
+        with st.container(height=200):
+            for q in quarters:
+                checked = st.checkbox(
+                    q,
+                    value=q in st.session_state["_q_selection"],
+                    key=f"q_{q}",
+                )
+                if checked:
+                    st.session_state["_q_selection"].add(q)
+                else:
+                    st.session_state["_q_selection"].discard(q)
+
+        selected_quarters = sorted(st.session_state["_q_selection"])
 
         role_filter = st.selectbox(
             "Drug role",
