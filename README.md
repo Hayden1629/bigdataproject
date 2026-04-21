@@ -1,5 +1,7 @@
 # FAERS Dashboard (One-Step Setup)
 
+**Now deployed on Databricks:** https://faers-dash-7474656618229428.aws.databricksapps.com/
+
 This repo now uses a **single setup script** to bootstrap and run the dashboard on macOS or Windows.
 
 ## Quick Start
