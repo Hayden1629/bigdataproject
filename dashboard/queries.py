@@ -112,7 +112,7 @@ def load_manufacturer_summary() -> pd.DataFrame:
     return _top_counts(t["drug_records_slim"], "canonical_mfr", 100)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=10)
 def global_kpis(quarters: tuple[str, ...], role_filter: str) -> dict[str, Any]:
     if spark_backend.is_enabled():
         return spark_backend.global_kpis(quarters, role_filter)

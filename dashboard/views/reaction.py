@@ -72,16 +72,18 @@ def render(filters: dict) -> None:
 
     left, right = st.columns([1, 1])
     with left:
+        st.markdown("#### Top associated drugs")
         st.plotly_chart(
-            charts.bar_horizontal(top_drugs, "n_cases", "drugname", "Top associated drugs"),
+            charts.bar_horizontal(top_drugs, "n_cases", "drugname"),
             width="stretch",
             key="reaction_top_drugs",
         )
     with right:
         render_table(scored, height=430)
 
+    st.markdown("#### Outcome distribution")
     st.plotly_chart(
-        charts.donut(outcomes, "outc_cod", "n_cases", "Outcome distribution"),
+        charts.donut(outcomes, "outc_cod", "n_cases"),
         width="stretch",
         key="reaction_outcomes",
     )
@@ -90,8 +92,9 @@ def render(filters: dict) -> None:
         "DS = Disability · CA = Congenital Anomaly · RI = Required Intervention · "
         "OT = Other Serious"
     )
+    st.markdown("#### Case reports by quarter")
     st.plotly_chart(
-        charts.line_chart(trend, "year_q", "n_cases", "Case reports by quarter"),
+        charts.line_chart(trend, "year_q", "n_cases"),
         width="stretch",
         key="reaction_quarterly_trend",
     )

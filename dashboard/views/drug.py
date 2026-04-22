@@ -64,17 +64,9 @@ def _empty_state() -> None:
 
 def _render_header(display_name: str, match: dict, role_filter: str) -> None:
     canonical = match.get("canonical") or "(unknown)"
-    rxcui = match.get("rxcui") or "-"
-    related = match.get("related", [])[:10]
     st.markdown(f"### {display_name}")
-    st.caption(
-        f"RxCUI: {rxcui} | Matched FAERS strings: {len(match.get('matched_faers_names', []))} | Role filter: {role_filter}"
-    )
     if canonical and canonical != display_name:
-        st.caption(f"RxNorm canonical name: {canonical}")
-    if related:
-        chips = "".join([f"<span class='pill'>{r}</span>" for r in related])
-        st.markdown(chips, unsafe_allow_html=True)
+        st.caption(f"Canonical name: {canonical}")
 
 
 def _render_default_view(bundle: dict, approval: dict, label: dict) -> None:
@@ -111,13 +103,15 @@ def _render_default_view(bundle: dict, approval: dict, label: dict) -> None:
     recent = bundle.get("recent", pd.DataFrame())
     render_table(recent.head(100), height=430)
 
+    st.markdown("#### Top adverse reactions")
     st.plotly_chart(
-        charts.bar_horizontal(bundle["top_reactions"], "n_cases", "pt", "Top adverse reactions"),
+        charts.bar_horizontal(bundle["top_reactions"], "n_cases", "pt"),
         width="stretch",
         key="drug_default_top_reactions",
     )
+    st.markdown("#### Outcome distribution")
     st.plotly_chart(
-        charts.donut(bundle["outcomes"], "outc_cod", "n_cases", "Outcome distribution"),
+        charts.donut(bundle["outcomes"], "outc_cod", "n_cases"),
         width="stretch",
         key="drug_default_outcomes",
     )
@@ -126,8 +120,9 @@ def _render_default_view(bundle: dict, approval: dict, label: dict) -> None:
         "DS = Disability · CA = Congenital Anomaly · RI = Required Intervention · "
         "OT = Other Serious"
     )
+    st.markdown("#### Case reports by quarter")
     st.plotly_chart(
-        charts.line_chart(bundle["trend"], "year_q", "n_cases", "Case reports by quarter"),
+        charts.line_chart(bundle["trend"], "year_q", "n_cases"),
         width="stretch",
         key="drug_default_quarterly_trend",
     )
@@ -135,33 +130,36 @@ def _render_default_view(bundle: dict, approval: dict, label: dict) -> None:
     render_section_intro("Demographics and geography")
     d1, d2 = st.columns(2)
     with d1:
+        st.markdown("#### Sex distribution")
         st.plotly_chart(
-            charts.donut(bundle["demographics"]["sex"], "sex", "n_cases", "Sex distribution"),
+            charts.donut(bundle["demographics"]["sex"], "sex", "n_cases"),
             width="stretch",
             key="drug_default_demographics_sex",
         )
+        st.markdown("#### Age group distribution")
         st.plotly_chart(
             charts.bar_horizontal(
                 bundle["demographics"]["age_group"],
                 "n_cases",
                 "age_group",
-                "Age group distribution",
             ),
             width="stretch",
             key="drug_default_demographics_age",
         )
     with d2:
-        st.markdown("**Reporting countries**")
+        st.markdown("#### Reporting countries")
         render_table(bundle["countries"], height=430)
 
     render_section_intro("Clinical context")
+    st.markdown("#### Top indications")
     st.plotly_chart(
-        charts.bar_horizontal(bundle["indications"], "n_cases", "indi_pt", "Top indications"),
+        charts.bar_horizontal(bundle["indications"], "n_cases", "indi_pt"),
         width="stretch",
         key="drug_default_indications",
     )
+    st.markdown("#### Top co-reported drugs")
     st.plotly_chart(
-        charts.bar_horizontal(bundle["concomitants"], "n_cases", "drugname", "Top co-reported drugs"),
+        charts.bar_horizontal(bundle["concomitants"], "n_cases", "drugname"),
         width="stretch",
         key="drug_default_concomitants",
     )
@@ -239,7 +237,7 @@ def render(filters: dict) -> None:
             )
 
         _render_default_view(bundle, approval, label)
-        with st.expander("Matched Drug Name Strings"):
+        with st.expander("Matched FAERS Drug Name Strings", expanded=False):
             render_table({"matched_drugname": match["matched_faers_names"]}, height=280)
 
     elif view == "Provider View":

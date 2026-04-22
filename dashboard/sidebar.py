@@ -44,12 +44,24 @@ def render_sidebar(default_top_n: int = 20) -> dict[str, Any]:
 
         selected_quarters = sorted(st.session_state["_q_selection"])
 
-        role_filter = st.selectbox(
+        role_options = {
+            "all": "All",
+            "PS": "PS - Primary suspect",
+            "SS": "SS - Secondary suspect",
+            "C": "C - Concomitant"
+        }
+        options = list(role_options.values())
+        default_index = list(role_options.keys()).index("all")
+        
+        selected_display = st.selectbox(
             "Drug role",
-            options=["all", "PS", "SS", "C"],
-            index=0,
-            help="PS = Primary suspect, SS = Secondary suspect, C = Concomitant.",
+            options=options,
+            index=default_index,
+            help="Filter drugs by their suspected role in adverse events.",
         )
+        
+        # Map display back to code
+        role_filter = [k for k, v in role_options.items() if v == selected_display][0]
 
         top_n = st.slider(
             "Chart depth",
@@ -68,9 +80,12 @@ def render_sidebar(default_top_n: int = 20) -> dict[str, Any]:
         st.metric("Drugs", f"{kpi['unique_drugs']:,}")
         st.caption(f"Reaction terms: {kpi['unique_reactions']:,}")
         st.caption(f"Mode: {profile.get('mode', 'unknown')}")
-        st.caption(
-            f"Coverage: {profile.get('quarter_min', '-')} to {profile.get('quarter_max', '-')}"
-        )
+        if selected_quarters:
+            q_sorted = sorted(selected_quarters)
+            coverage_text = f"Coverage: {q_sorted[0]} to {q_sorted[-1]}"
+        else:
+            coverage_text = f"Coverage: {profile.get('quarter_min', '-')} to {profile.get('quarter_max', '-')}"
+        st.caption(coverage_text)
 
     return {
         "quarters": selected_quarters,
