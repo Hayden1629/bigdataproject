@@ -6,12 +6,12 @@ import plotly.express as px
 
 PALETTE = [
     "#2F6FED",
-    "#148A7B",
-    "#5AA7A0",
-    "#F0A63A",
-    "#C44949",
-    "#7E8DA5",
-    "#17324D",
+    "#5A92F5",
+    "#85B4F8",
+    "#A8C8FA",
+    "#C4D9FB",
+    "#DDE9FD",
+    "#EEF3FE",
 ]
 
 AXIS_LABELS = {
@@ -60,10 +60,11 @@ def _apply_professional_layout(
             "bordercolor": "#D8DEE9",
             "font_family": "Manrope, Segoe UI, sans-serif",
         },
-        plot_bgcolor="rgba(255,255,255,0)",
-        paper_bgcolor="rgba(255,255,255,0)",
-        margin=dict(l=0, r=36, t=56, b=24),
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=24, r=36, t=56, b=24),
         legend={"font": {"color": "#17324D", "size": 12}},
+        showlegend=False,
     )
     if x_col:
         fig.update_xaxes(
@@ -105,9 +106,9 @@ def _overview_drug_bar_colors(n: int) -> list[str]:
         if rank_from_top == 0:
             out.append("#2F6FED")
         elif rank_from_top <= 3:
-            out.append("#148A7B")
+            out.append("#5A92F5")
         else:
-            out.append("#9CD8CF")
+            out.append("#A8C8FA")
     return out
 
 
@@ -116,11 +117,11 @@ def _overview_reaction_bar_colors(n: int) -> list[str]:
     for i in range(n):
         rank_from_top = n - 1 - i
         if rank_from_top == 0:
-            out.append("#17324D")
-        elif rank_from_top <= 3:
             out.append("#2F6FED")
+        elif rank_from_top <= 3:
+            out.append("#5A92F5")
         else:
-            out.append("#9FC1FF")
+            out.append("#A8C8FA")
     return out
 
 
@@ -144,7 +145,7 @@ def bar_horizontal(
         y=y_col,
         orientation="h",
         color_discrete_sequence=[PALETTE[0]],
-        title=title,
+        title=title or None,
         text=x_col,
     )
     if overview_palette == "drugs":
@@ -180,8 +181,19 @@ def bar_horizontal(
     if plot_df[x_col].max() > 0:
         fig.update_xaxes(range=[0, float(plot_df[x_col].max()) * 1.18])
     fig = _apply_professional_layout(fig, x_col=x_col, y_col=y_col)
+    if not title:
+        fig.update_layout(title=None)
+        fig.update_layout(title_text="")
+    fig.update_layout(
+        margin=dict(l=24, r=36, t=8, b=24)
+    ) if not title else None
     if overview_palette:
         fig.update_layout(font=dict(family="Manrope, system-ui, sans-serif", size=11))
+    fig.update_layout(
+        margin=dict(l=24, r=36, t=4, b=24),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+    )
     return fig
 
 
@@ -195,7 +207,7 @@ def line_chart(
 ):
     if df.empty or x_col not in df.columns or y_col not in df.columns:
         return empty_figure(title)
-    fig = px.line(df.sort_values(x_col), x=x_col, y=y_col, markers=True, title=title)
+    fig = px.line(df.sort_values(x_col), x=x_col, y=y_col, markers=True, title=title or None)
     if overview_style:
         fig.update_traces(
             line=dict(color="#2F6FED", width=3),
@@ -211,6 +223,12 @@ def line_chart(
         )
     fig.update_layout(height=360)
     fig = _apply_professional_layout(fig, x_col=x_col, y_col=y_col)
+    if not title:
+        fig.update_layout(title=None)
+        fig.update_layout(title_text="")
+    fig.update_layout(
+        margin=dict(l=24, r=36, t=8, b=24)
+    ) if not title else None
     if overview_style:
         fig.update_layout(font=dict(family="Manrope, system-ui, sans-serif", size=11))
     return fig

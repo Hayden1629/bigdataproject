@@ -107,91 +107,68 @@ def render(filters: dict) -> None:
         unsafe_allow_html=True,
     )
 
-    render_section_intro("Top drugs")
-    with st.container(border=True):
-        st.markdown(
-            "<p class='faers-o-card-title'>Top 10 drugs by case reports</p>",
-            unsafe_allow_html=True,
-        )
-        st.plotly_chart(
-            charts.bar_horizontal(
-                top_drugs,
-                "n_cases",
-                "drugname",
-                "Top 10 drugs by case reports",
-                overview_palette="drugs",
-            ),
-            width="stretch",
-            key="overview_top_drugs",
-        )
+    st.markdown("#### Top 10 drugs by case reports")
+    st.plotly_chart(
+        charts.bar_horizontal(
+            top_drugs,
+            "n_cases",
+            "drugname",
+            None,
+            overview_palette="drugs",
+        ),
+        use_container_width=True,
+        key="overview_top_drugs",
+    )
 
-    render_section_intro("Top reactions")
-    with st.container(border=True):
-        st.markdown(
-            "<p class='faers-o-card-title'>Top 10 reactions by case reports</p>",
-            unsafe_allow_html=True,
-        )
-        st.plotly_chart(
-            charts.bar_horizontal(
-                top_reac,
-                "n_cases",
-                "pt",
-                "Top 10 reactions by case reports",
-                overview_palette="reactions",
-            ),
-            width="stretch",
-            key="overview_top_reactions",
-        )
+    st.markdown("#### Top 10 reactions by case reports")
+    st.plotly_chart(
+        charts.bar_horizontal(
+            top_reac,
+            "n_cases",
+            "pt",
+            None,
+            overview_palette="reactions",
+        ),
+        use_container_width=True,
+        key="overview_top_reactions",
+    )
 
-    render_section_intro("Quarter-over-quarter movers")
+    st.markdown("### Quarter-over-quarter movers")
     d1, d2 = st.columns(2)
     with d1:
-        with st.container(border=True):
-            st.markdown(
-                "<p class='faers-o-card-title'>Drug increases</p>",
-                unsafe_allow_html=True,
-            )
-            st.plotly_chart(
-                charts.bar_horizontal(
-                    td,
-                    "delta",
-                    "drugname",
-                    "Top 10 drug quarter-over-quarter increases",
-                ),
-                width="stretch",
-                key="overview_qoq_drugs",
-            )
-    with d2:
-        with st.container(border=True):
-            st.markdown(
-                "<p class='faers-o-card-title'>Reaction increases</p>",
-                unsafe_allow_html=True,
-            )
-            st.plotly_chart(
-                charts.bar_horizontal(
-                    tr,
-                    "delta",
-                    "pt",
-                    "Top 10 reaction quarter-over-quarter increases",
-                ),
-                width="stretch",
-                key="overview_qoq_reactions",
-            )
-
-    render_section_intro("Case reports by quarter")
-    with st.container(border=True):
-        st.markdown(
-            "<p class='faers-o-card-title'>Quarterly case volume trend</p>",
-            unsafe_allow_html=True,
-        )
+        st.markdown("**Drug increases**")
         st.plotly_chart(
-            charts.line_chart(
-                trend,
-                "year_q",
-                "n_cases",
-                "Case reports by quarter",
-                overview_style=True,
+            charts.bar_horizontal(
+                td,
+                "delta",
+                "drugname",
+                None,
             ),
-            width="stretch",
-            key="overview_quarterly_trend",
+            use_container_width=True,
+            key="overview_qoq_drugs",
         )
+    with d2:
+        st.markdown("**Reaction increases**")
+        st.plotly_chart(
+            charts.bar_horizontal(
+                tr,
+                "delta",
+                "pt",
+                None,
+            ),
+            use_container_width=True,
+            key="overview_qoq_reactions",
+        )
+
+    st.markdown("#### Quarterly case volume trend")
+    st.plotly_chart(
+        charts.line_chart(
+            trend,
+            "year_q",
+            "n_cases",
+            None,
+            overview_style=True,
+        ),
+        use_container_width=True,
+        key="overview_quarterly_trend",
+    )
