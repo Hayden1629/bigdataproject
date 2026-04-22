@@ -44,11 +44,11 @@ def _pretty_axis_label(col: str) -> str:
 
 
 def _apply_professional_layout(
-    fig, *, x_col: str | None = None, y_col: str | None = None
+    fig, *, x_col: str | None = None, y_col: str | None = None, is_pie: bool = False
 ):
     fig.update_layout(
         template="plotly_white",
-        title={"x": 0.01, "xanchor": "left", "font": {"color": "#17324D", "size": 18}},
+        title=None,
         font={
             "family": "Manrope, Segoe UI, Helvetica, Arial, sans-serif",
             "size": 13,
@@ -62,9 +62,9 @@ def _apply_professional_layout(
         },
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=24, r=36, t=56, b=24),
+        margin=dict(l=24, r=36, t=16, b=24),
         legend={"font": {"color": "#17324D", "size": 12}},
-        showlegend=False,
+        showlegend=is_pie,
     )
     if x_col:
         fig.update_xaxes(
@@ -129,7 +129,7 @@ def bar_horizontal(
     df: pd.DataFrame,
     x_col: str,
     y_col: str,
-    title: str,
+    title: str = None,
     *,
     overview_palette: str | None = None,
 ):
@@ -145,7 +145,7 @@ def bar_horizontal(
         y=y_col,
         orientation="h",
         color_discrete_sequence=[PALETTE[0]],
-        title=title or None,
+        title=None,
         text=x_col,
     )
     if overview_palette == "drugs":
@@ -173,24 +173,19 @@ def bar_horizontal(
         automargin=True,
     )
     fig.update_layout(
-        height=dynamic_height,
+        height=440,
         showlegend=False,
         uniformtext_minsize=10,
         uniformtext_mode="show",
+        margin=dict(l=24, r=36, t=0, b=50),
     )
     if plot_df[x_col].max() > 0:
         fig.update_xaxes(range=[0, float(plot_df[x_col].max()) * 1.18])
-    fig = _apply_professional_layout(fig, x_col=x_col, y_col=y_col)
-    if not title:
-        fig.update_layout(title=None)
-        fig.update_layout(title_text="")
-    fig.update_layout(
-        margin=dict(l=24, r=36, t=8, b=24)
-    ) if not title else None
+    fig = _apply_professional_layout(fig, x_col=x_col, y_col=y_col, is_pie=False)
     if overview_palette:
         fig.update_layout(font=dict(family="Manrope, system-ui, sans-serif", size=11))
     fig.update_layout(
-        margin=dict(l=24, r=36, t=4, b=24),
+        margin=dict(l=24, r=36, t=0, b=50),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
     )
@@ -201,13 +196,13 @@ def line_chart(
     df: pd.DataFrame,
     x_col: str,
     y_col: str,
-    title: str,
+    title: str = None,
     *,
     overview_style: bool = False,
 ):
     if df.empty or x_col not in df.columns or y_col not in df.columns:
         return empty_figure(title)
-    fig = px.line(df.sort_values(x_col), x=x_col, y=y_col, markers=True, title=title or None)
+    fig = px.line(df.sort_values(x_col), x=x_col, y=y_col, markers=True, title=None)
     if overview_style:
         fig.update_traces(
             line=dict(color="#2F6FED", width=3),
@@ -221,31 +216,54 @@ def line_chart(
             line_width=3,
             marker=dict(size=8, color="#FFFFFF", line=dict(color=PALETTE[0], width=2)),
         )
-    fig.update_layout(height=360)
-    fig = _apply_professional_layout(fig, x_col=x_col, y_col=y_col)
-    if not title:
-        fig.update_layout(title=None)
-        fig.update_layout(title_text="")
-    fig.update_layout(
-        margin=dict(l=24, r=36, t=8, b=24)
-    ) if not title else None
+    fig.update_layout(height=440)
+    fig = _apply_professional_layout(fig, x_col=x_col, y_col=y_col, is_pie=False)
     if overview_style:
         fig.update_layout(font=dict(family="Manrope, system-ui, sans-serif", size=11))
+    fig.update_layout(
+        margin=dict(l=24, r=36, t=0, b=50)
+    )
     return fig
 
 
-def donut(df: pd.DataFrame, names_col: str, values_col: str, title: str):
+def donut(df: pd.DataFrame, names_col: str, values_col: str, title: str = None):
     if df.empty or names_col not in df.columns or values_col not in df.columns:
         return empty_figure(title)
+    # Filter out null/NaN values and empty strings to prevent "undefined" labels
+    plot_df = df.copy()
+    # First drop NaN values
+    plot_df = plot_df.dropna(subset=[names_col, values_col])
+    if plot_df.empty:
+        return empty_figure(title)
+    # Convert to string and filter empty/whitespace strings
+    plot_df[names_col] = plot_df[names_col].astype(str).str.strip()
+    plot_df = plot_df[plot_df[names_col] != ""]
+    plot_df = plot_df[plot_df[names_col].str.lower() != "none"]
+    # Filter out "undefined" or "nan" strings
+    plot_df = plot_df[~plot_df[names_col].str.lower().isin(["undefined", "nan", "null"])]
+    if plot_df.empty:
+        return empty_figure(title)
+    
     fig = px.pie(
-        df,
+        plot_df,
         names=names_col,
         values=values_col,
         hole=0.55,
         color_discrete_sequence=PALETTE,
-        title=title,
+        title=None,
     )
-    fig.update_layout(height=360, legend_title_text="")
+    fig.update_layout(
+        height=440,
+        legend_title_text="",
+        legend=dict(
+            font=dict(size=11, color="#17324D"),
+            x=1.0,
+            y=1.0,
+            xanchor="right",
+            yanchor="top",
+        ),
+        margin=dict(l=24, r=150, t=16, b=50),
+    )
     fig.update_traces(
         textposition="inside",
         textinfo="percent",
@@ -254,4 +272,4 @@ def donut(df: pd.DataFrame, names_col: str, values_col: str, title: str):
         marker=dict(line=dict(color="#FFFFFF", width=2)),
         hovertemplate="%{label}<br>%{value:,.0f} case reports (%{percent})<extra></extra>",
     )
-    return _apply_professional_layout(fig, x_col=values_col, y_col=names_col)
+    return _apply_professional_layout(fig, x_col=values_col, y_col=names_col, is_pie=True)

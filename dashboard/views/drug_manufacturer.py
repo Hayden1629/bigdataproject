@@ -19,29 +19,30 @@ def render(bundle: dict, top_n: int) -> None:
     render_section_intro("Manufacturer view")
     render_table(bundle["ingredients"], height=280)
 
+    st.markdown(f"#### Top manufacturers (top {top_n})")
     st.plotly_chart(
         charts.bar_horizontal(
             bundle["manufacturer_counts"],
             "n_cases",
             "manufacturer",
-            f"Top manufacturers (top {top_n})",
         ),
         width="stretch",
         key="drug_mfr_manufacturer_counts",
     )
+    st.markdown("#### Case reports by quarter")
     st.plotly_chart(
         charts.line_chart(
-            bundle["quarterly_trend"], "year_q", "n_cases", "Case reports by quarter"
+            bundle["quarterly_trend"], "year_q", "n_cases"
         ),
         width="stretch",
         key="drug_mfr_quarterly_trend",
     )
+    st.markdown(f"#### Dosage form distribution")
     st.plotly_chart(
         charts.bar_horizontal(
             bundle["dose_form_counts"],
             "n_cases",
             "dose_form",
-            f"Dosage form distribution (top {top_n})",
         ),
         width="stretch",
         key="drug_mfr_dose_form_counts",
@@ -49,12 +50,12 @@ def render(bundle: dict, top_n: int) -> None:
 
     c1, c2 = st.columns(2)
     with c1:
+        st.markdown(f"#### Outcome distribution")
         st.plotly_chart(
             charts.bar_horizontal(
                 bundle["outcome_counts"],
                 "n_cases",
                 "outc_cod",
-                f"Outcome distribution (top {top_n})",
             ),
             width="stretch",
             key="drug_mfr_outcome_counts",
@@ -65,12 +66,12 @@ def render(bundle: dict, top_n: int) -> None:
             "OT = Other Serious"
         )
     with c2:
+        st.markdown(f"#### Top reporting countries")
         st.plotly_chart(
             charts.bar_horizontal(
                 bundle["country_counts"],
                 "n_cases",
                 "country",
-                f"Top reporting countries (top {top_n})",
             ),
             width="stretch",
             key="drug_mfr_country_counts",

@@ -86,6 +86,7 @@ def _kpi_strip_html(kpi: dict, quarters: tuple[str, ...]) -> str:
 def render(filters: dict) -> None:
     quarters = tuple(filters["quarters"])
     role_filter = filters["role_filter"]
+    top_n = int(filters["top_n"])
 
     kpi = queries.global_kpis(quarters, role_filter)
     logger.info(
@@ -95,11 +96,11 @@ def render(filters: dict) -> None:
         kpi["cases"],
     )
 
-    top_drugs = queries.load_drug_summary().head(10)
-    top_reac = queries.load_reac_summary().head(10)
+    top_drugs = queries.load_drug_summary().head(top_n)
+    top_reac = queries.load_reac_summary().head(top_n)
     trend = queries.global_quarterly_trend(quarters, role_filter)
-    td = queries.trending_drugs(top_n=10)
-    tr = queries.trending_reactions(top_n=10)
+    td = queries.trending_drugs(top_n=top_n)
+    tr = queries.trending_reactions(top_n=top_n)
 
     render_section_intro("Executive overview")
     st.markdown(
@@ -107,7 +108,7 @@ def render(filters: dict) -> None:
         unsafe_allow_html=True,
     )
 
-    st.markdown("#### Top 10 drugs by case reports")
+    st.markdown(f"#### Top {top_n} drugs by case reports")
     st.plotly_chart(
         charts.bar_horizontal(
             top_drugs,
@@ -120,7 +121,7 @@ def render(filters: dict) -> None:
         key="overview_top_drugs",
     )
 
-    st.markdown("#### Top 10 reactions by case reports")
+    st.markdown(f"#### Top {top_n} reactions by case reports")
     st.plotly_chart(
         charts.bar_horizontal(
             top_reac,

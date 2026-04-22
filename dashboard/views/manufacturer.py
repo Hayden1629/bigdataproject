@@ -69,31 +69,34 @@ def render(filters: dict) -> None:
     with c4:
         metric_card("Countries", format_compact(kpi.get("countries", 0)))
 
+    st.markdown("#### Top drugs")
     st.plotly_chart(
-        charts.bar_horizontal(bundle["drug_counts"], "n_cases", "drugname", "Top drugs"),
+        charts.bar_horizontal(bundle["drug_counts"], "n_cases", "drugname"),
         width="stretch",
         key="mfr_lookup_drug_counts",
     )
+    st.markdown("#### Case reports by quarter")
     st.plotly_chart(
         charts.line_chart(
-            bundle["quarterly_trend"], "year_q", "n_cases", "Case reports by quarter"
+            bundle["quarterly_trend"], "year_q", "n_cases"
         ),
         width="stretch",
         key="mfr_lookup_quarterly_trend",
     )
+    st.markdown("#### Top active ingredients")
     st.plotly_chart(
         charts.bar_horizontal(
             bundle["ingredient_counts"],
             "n_cases",
             "ingredient",
-            "Top active ingredients",
         ),
         width="stretch",
         key="mfr_lookup_ingredient_counts",
     )
+    st.markdown("#### Outcome distribution")
     st.plotly_chart(
         charts.bar_horizontal(
-            bundle["outcome_counts"], "n_cases", "outc_cod", "Outcome distribution"
+            bundle["outcome_counts"], "n_cases", "outc_cod"
         ),
         width="stretch",
         key="mfr_lookup_outcome_counts",
@@ -103,19 +106,20 @@ def render(filters: dict) -> None:
         "DS = Disability · CA = Congenital Anomaly · RI = Required Intervention · "
         "OT = Other Serious"
     )
+    st.markdown("#### Top reporting countries")
     st.plotly_chart(
         charts.bar_horizontal(
             bundle["country_counts"],
             "n_cases",
             "country",
-            "Top reporting countries",
         ),
         width="stretch",
         key="mfr_lookup_country_counts",
     )
+    st.markdown("#### Top indications")
     st.plotly_chart(
         charts.bar_horizontal(
-            bundle["indication_counts"], "n_cases", "indi_pt", "Top indications"
+            bundle["indication_counts"], "n_cases", "indi_pt"
         ),
         width="stretch",
         key="mfr_lookup_indication_counts",
