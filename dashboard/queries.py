@@ -426,7 +426,9 @@ def drug_query_bundle(
     return out
 
 
-def _build_case_table(ids: set[str], include_lit_ref: bool = False) -> pd.DataFrame:
+def _build_case_table(
+    ids: set[str], include_lit_ref: bool = False, role_filter: str = "all"
+) -> pd.DataFrame:
     t0 = time.perf_counter()
     t = _tables()
     demo = t["demo_slim"][t["demo_slim"]["primaryid"].astype(str).isin(ids)][
@@ -454,6 +456,7 @@ def _build_case_table(ids: set[str], include_lit_ref: bool = False) -> pd.DataFr
             "prod_ai",
         ]
     ]
+    drug = _filter_drug_role(drug, role_filter)
     reac = t["reac_slim"][t["reac_slim"]["primaryid"].astype(str).isin(ids)][
         ["primaryid", "pt"]
     ]
@@ -604,7 +607,7 @@ def drug_provider_bundle(
         "reactions": _top_counts(reac, "pt", top_n),
         "outcomes": _top_counts(outc, "outc_cod", top_n, label_map=OUTCOME_LABELS),
         "indications": _top_counts(indi, "indi_pt", top_n),
-        "cases": _build_case_table(ids2, include_lit_ref=True),
+        "cases": _build_case_table(ids2, include_lit_ref=True, role_filter=role_filter),
     }
     logger.info(
         "drug_provider_bundle timings: ids=%s ids_post_role=%s drug=%s reac=%s outc=%s indi=%s elapsed=%.3fs",
@@ -664,7 +667,7 @@ def drug_manufacturer_bundle(
         .sort_values("year_q")
     )
 
-    cases = _build_case_table(ids2)
+    cases = _build_case_table(ids2, role_filter=role_filter)
     keep = [
         "event_dt",
         "manufacturer",
@@ -765,7 +768,7 @@ def manufacturer_query_bundle(
         .sort_values("year_q")
     )
 
-    table = _build_case_table(ids)
+    table = _build_case_table(ids, role_filter=role_filter)
     keep = ["active_ingredient", "country", "outcomes", "top_indication"]
     if not table.empty:
         drugname_by_id = drug.groupby("primaryid")["drugname"].first().to_dict()

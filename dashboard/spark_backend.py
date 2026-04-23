@@ -31,7 +31,7 @@ def _make_connection():
     w = WorkspaceClient()
     host = (w.config.host or "").rstrip("/")
     if host.startswith("https://"):
-        host = host[len("https://"):]
+        host = host[len("https://") :]
 
     warehouse_id = os.environ.get("DATABRICKS_WAREHOUSE_ID", "").strip()
     http_path = f"/sql/1.0/warehouses/{warehouse_id}" if warehouse_id else ""
@@ -123,9 +123,7 @@ def _run_sql(sql: str) -> pd.DataFrame:
         raise
     else:
         _return_connection(conn)
-    logger.info(
-        "sql completed (rows=%s, %.3fs)", len(out), time.perf_counter() - t0
-    )
+    logger.info("sql completed (rows=%s, %.3fs)", len(out), time.perf_counter() - t0)
     return out
 
 
@@ -281,7 +279,12 @@ def _kpi_from_ids(ids_sql: str) -> dict[str, Any]:
     }
 
 
-def _build_case_table(ids_sql: str, include_lit_ref: bool = False, limit: int = 100) -> pd.DataFrame:
+def _build_case_table(
+    ids_sql: str,
+    include_lit_ref: bool = False,
+    limit: int = 100,
+    role_filter: str = "all",
+) -> pd.DataFrame:
     sql = f"""
         WITH ids AS ({ids_sql}),
         demo AS (
@@ -298,18 +301,19 @@ def _build_case_table(ids_sql: str, include_lit_ref: bool = False, limit: int = 
         ),
         drug AS (
           SELECT
-            CAST(primaryid AS STRING) AS primaryid,
-            FIRST(CAST(role_cod AS STRING), true) AS role,
-            FIRST(CAST(route AS STRING), true) AS route,
-            FIRST(CAST(dose_amt AS STRING), true) AS dose_amt,
-            FIRST(CAST(dose_unit AS STRING), true) AS dose_unit,
-            FIRST(CAST(dose_form AS STRING), true) AS dose_form,
-            FIRST(CAST(dose_freq AS STRING), true) AS dose_freq,
-            FIRST(CAST(mfr_sndr AS STRING), true) AS drug_mfr,
-            FIRST(CAST(prod_ai AS STRING), true) AS active_ingredient
-          FROM {_table("drug_records_slim")}
-          WHERE CAST(primaryid AS STRING) IN (SELECT primaryid FROM ids)
-          GROUP BY CAST(primaryid AS STRING)
+            CAST(d.primaryid AS STRING) AS primaryid,
+            FIRST(CAST(d.drugname AS STRING), true) AS drug_name,
+            FIRST(CAST(d.role_cod AS STRING), true) AS role,
+            FIRST(CAST(d.route AS STRING), true) AS route,
+            FIRST(CAST(d.dose_amt AS STRING), true) AS dose_amt,
+            FIRST(CAST(d.dose_unit AS STRING), true) AS dose_unit,
+            FIRST(CAST(d.dose_form AS STRING), true) AS dose_form,
+            FIRST(CAST(d.dose_freq AS STRING), true) AS dose_freq,
+            FIRST(CAST(d.mfr_sndr AS STRING), true) AS drug_mfr,
+            FIRST(CAST(d.prod_ai AS STRING), true) AS active_ingredient
+          FROM {_table("drug_records_slim")} d
+          WHERE CAST(d.primaryid AS STRING) IN (SELECT primaryid FROM ids){_role_filter("d", role_filter)}
+          GROUP BY CAST(d.primaryid AS STRING)
         ),
         reac AS (
           SELECT CAST(primaryid AS STRING) AS primaryid, FIRST(CAST(pt AS STRING), true) AS top_reaction
@@ -334,6 +338,7 @@ def _build_case_table(ids_sql: str, include_lit_ref: bool = False, limit: int = 
         SELECT
           d.primaryid,
           COALESCE(dm.event_dt, '') AS event_dt,
+          COALESCE(d.drug_name, '') AS drug_name,
           COALESCE(dm.country, '') AS country,
           COALESCE(d.role, '') AS role,
           COALESCE(d.route, '') AS route,
@@ -633,6 +638,7 @@ def drug_query_bundle(
                    CAST(d.dose_freq AS STRING) AS dose_freq
             FROM {_table("drug_records_slim")} d
             INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid
+            WHERE 1=1{_role_filter("d", role_filter)}
             LIMIT 100
             """,
         )
@@ -665,12 +671,22 @@ def drug_query_bundle(
             GROUP BY age_group
             """,
         )
-        f_reporter = pool.submit(_top_counts_by_ids, "rpsr_slim", "rpsr_cod", top_n, ids_sql)
-        f_countries = pool.submit(_top_counts_by_ids, "demo_slim", "occr_country", top_n, ids_sql)
+        f_reporter = pool.submit(
+            _top_counts_by_ids, "rpsr_slim", "rpsr_cod", top_n, ids_sql
+        )
+        f_countries = pool.submit(
+            _top_counts_by_ids, "demo_slim", "occr_country", top_n, ids_sql
+        )
         f_reactions = pool.submit(_top_counts_by_ids, "reac_slim", "pt", top_n, ids_sql)
-        f_outcomes = pool.submit(_top_counts_by_ids, "outc_slim", "outc_cod", top_n, ids_sql)
-        f_indications = pool.submit(_top_counts_by_ids, "indi_slim", "indi_pt", top_n, ids_sql)
-        f_concomitants = pool.submit(_top_counts_by_ids, "drug_records_slim", "drugname", top_n + 5, ids_sql)
+        f_outcomes = pool.submit(
+            _top_counts_by_ids, "outc_slim", "outc_cod", top_n, ids_sql
+        )
+        f_indications = pool.submit(
+            _top_counts_by_ids, "indi_slim", "indi_pt", top_n, ids_sql
+        )
+        f_concomitants = pool.submit(
+            _top_counts_by_ids, "drug_records_slim", "drugname", top_n + 5, ids_sql
+        )
 
         concomitants = f_concomitants.result()
         if not concomitants.empty and matched_names:
@@ -753,18 +769,34 @@ def drug_provider_bundle(
             LIMIT {int(top_n)}
             """,
         )
-        f_ingredients = pool.submit(_top_counts_by_ids, "drug_records_slim", "prod_ai", top_n, queried_ids_sql)
-        f_role = pool.submit(_top_counts_by_ids, "drug_records_slim", "role_cod", top_n, ids_sql)
-        f_route = pool.submit(_top_counts_by_ids, "drug_records_slim", "route", top_n, ids_sql)
-        f_dose_form = pool.submit(_top_counts_by_ids, "drug_records_slim", "dose_form", top_n, ids_sql)
-        f_dose_freq = pool.submit(_top_counts_by_ids, "drug_records_slim", "dose_freq", top_n, ids_sql)
+        f_ingredients = pool.submit(
+            _top_counts_by_ids, "drug_records_slim", "prod_ai", top_n, queried_ids_sql
+        )
+        f_role = pool.submit(
+            _top_counts_by_ids, "drug_records_slim", "role_cod", top_n, ids_sql
+        )
+        f_route = pool.submit(
+            _top_counts_by_ids, "drug_records_slim", "route", top_n, ids_sql
+        )
+        f_dose_form = pool.submit(
+            _top_counts_by_ids, "drug_records_slim", "dose_form", top_n, ids_sql
+        )
+        f_dose_freq = pool.submit(
+            _top_counts_by_ids, "drug_records_slim", "dose_freq", top_n, ids_sql
+        )
         f_reactions = pool.submit(_top_counts_by_ids, "reac_slim", "pt", top_n, ids_sql)
-        f_outcomes = pool.submit(_top_counts_by_ids, "outc_slim", "outc_cod", top_n, ids_sql)
-        f_indications = pool.submit(_top_counts_by_ids, "indi_slim", "indi_pt", top_n, ids_sql)
-        f_cases = pool.submit(_build_case_table, ids_sql, True)
+        f_outcomes = pool.submit(
+            _top_counts_by_ids, "outc_slim", "outc_cod", top_n, ids_sql
+        )
+        f_indications = pool.submit(
+            _top_counts_by_ids, "indi_slim", "indi_pt", top_n, ids_sql
+        )
+        f_cases = pool.submit(_build_case_table, ids_sql, True, 100, role_filter)
 
         return {
-            "ingredients": f_ingredients.result().rename(columns={"prod_ai": "ingredient"}),
+            "ingredients": f_ingredients.result().rename(
+                columns={"prod_ai": "ingredient"}
+            ),
             "role_counts": f_role.result(),
             "route_counts": f_route.result(),
             "dose_counts": f_dose.result(),
@@ -810,12 +842,22 @@ def drug_manufacturer_bundle(
             _run_sql,
             f"SELECT CAST(d.year_q AS STRING) AS year_q, COUNT(DISTINCT CAST(d.primaryid AS STRING)) AS n_cases FROM {_table('demo_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid GROUP BY CAST(d.year_q AS STRING) ORDER BY year_q",
         )
-        f_cases = pool.submit(_build_case_table, ids_sql)
-        f_ingredients = pool.submit(_top_counts_by_ids, "drug_records_slim", "prod_ai", top_n, queried_ids_sql)
-        f_mfr = pool.submit(_top_counts_by_ids, "demo_slim", "canonical_mfr", top_n, ids_sql)
-        f_country = pool.submit(_top_counts_by_ids, "demo_slim", "occr_country", top_n, ids_sql)
-        f_outcomes = pool.submit(_top_counts_by_ids, "outc_slim", "outc_cod", top_n, ids_sql)
-        f_dose_form = pool.submit(_top_counts_by_ids, "drug_records_slim", "dose_form", top_n, ids_sql)
+        f_cases = pool.submit(_build_case_table, ids_sql, False, 100, role_filter)
+        f_ingredients = pool.submit(
+            _top_counts_by_ids, "drug_records_slim", "prod_ai", top_n, queried_ids_sql
+        )
+        f_mfr = pool.submit(
+            _top_counts_by_ids, "demo_slim", "canonical_mfr", top_n, ids_sql
+        )
+        f_country = pool.submit(
+            _top_counts_by_ids, "demo_slim", "occr_country", top_n, ids_sql
+        )
+        f_outcomes = pool.submit(
+            _top_counts_by_ids, "outc_slim", "outc_cod", top_n, ids_sql
+        )
+        f_dose_form = pool.submit(
+            _top_counts_by_ids, "drug_records_slim", "dose_form", top_n, ids_sql
+        )
 
         cases = f_cases.result()
         if not cases.empty:
@@ -830,9 +872,15 @@ def drug_manufacturer_bundle(
             cases = cases[keep].sort_values("event_dt", ascending=False)
 
         return {
-            "ingredients": f_ingredients.result().rename(columns={"prod_ai": "ingredient"}),
-            "manufacturer_counts": f_mfr.result().rename(columns={"canonical_mfr": "manufacturer"}),
-            "country_counts": f_country.result().rename(columns={"occr_country": "country"}),
+            "ingredients": f_ingredients.result().rename(
+                columns={"prod_ai": "ingredient"}
+            ),
+            "manufacturer_counts": f_mfr.result().rename(
+                columns={"canonical_mfr": "manufacturer"}
+            ),
+            "country_counts": f_country.result().rename(
+                columns={"occr_country": "country"}
+            ),
             "outcome_counts": f_outcomes.result(),
             "dose_form_counts": f_dose_form.result(),
             "cases": cases,
@@ -866,11 +914,7 @@ def manufacturer_query_bundle(
             _run_sql,
             f"SELECT CAST(d.year_q AS STRING) AS year_q, COUNT(DISTINCT CAST(d.primaryid AS STRING)) AS n_cases FROM {_table('demo_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid GROUP BY CAST(d.year_q AS STRING) ORDER BY year_q",
         )
-        f_cases = pool.submit(_build_case_table, ids_sql)
-        f_drug_names = pool.submit(
-            _run_sql,
-            f"SELECT CAST(d.primaryid AS STRING) AS primaryid, FIRST(CAST(d.drugname AS STRING), true) AS drug_name FROM {_table('drug_records_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid GROUP BY CAST(d.primaryid AS STRING)",
-        )
+        f_cases = pool.submit(_build_case_table, ids_sql, False, 100, role_filter)
         f_kpi = pool.submit(_kpi_from_ids, ids_sql)
         f_unique_drugs = pool.submit(
             _run_sql,
@@ -880,22 +924,24 @@ def manufacturer_query_bundle(
             _run_sql,
             f"SELECT COUNT(DISTINCT CAST(d.occr_country AS STRING)) AS n FROM {_table('demo_slim')} d INNER JOIN ({ids_sql}) ids ON CAST(d.primaryid AS STRING)=ids.primaryid WHERE TRIM(CAST(d.occr_country AS STRING)) <> ''",
         )
-        f_drug_counts = pool.submit(_top_counts_by_ids, "drug_records_slim", "drugname", top_n, ids_sql)
-        f_ingredients = pool.submit(_top_counts_by_ids, "drug_records_slim", "prod_ai", top_n, ids_sql)
-        f_outcomes = pool.submit(_top_counts_by_ids, "outc_slim", "outc_cod", top_n, ids_sql)
-        f_indications = pool.submit(_top_counts_by_ids, "indi_slim", "indi_pt", top_n, ids_sql)
-        f_countries = pool.submit(_top_counts_by_ids, "demo_slim", "occr_country", top_n, ids_sql)
+        f_drug_counts = pool.submit(
+            _top_counts_by_ids, "drug_records_slim", "drugname", top_n, ids_sql
+        )
+        f_ingredients = pool.submit(
+            _top_counts_by_ids, "drug_records_slim", "prod_ai", top_n, ids_sql
+        )
+        f_outcomes = pool.submit(
+            _top_counts_by_ids, "outc_slim", "outc_cod", top_n, ids_sql
+        )
+        f_indications = pool.submit(
+            _top_counts_by_ids, "indi_slim", "indi_pt", top_n, ids_sql
+        )
+        f_countries = pool.submit(
+            _top_counts_by_ids, "demo_slim", "occr_country", top_n, ids_sql
+        )
 
         table = f_cases.result()
-        drug_name_by_id = f_drug_names.result()
-        if not table.empty and not drug_name_by_id.empty:
-            dmap = dict(
-                zip(
-                    drug_name_by_id["primaryid"].astype(str),
-                    drug_name_by_id["drug_name"].astype(str),
-                )
-            )
-            table["drug_name"] = table["primaryid"].map(lambda x: dmap.get(str(x), ""))
+        if not table.empty:
             table = table[
                 [
                     "event_dt",
@@ -914,10 +960,14 @@ def manufacturer_query_bundle(
         return {
             "kpi": kpi,
             "drug_counts": f_drug_counts.result(),
-            "ingredient_counts": f_ingredients.result().rename(columns={"prod_ai": "ingredient"}),
+            "ingredient_counts": f_ingredients.result().rename(
+                columns={"prod_ai": "ingredient"}
+            ),
             "outcome_counts": f_outcomes.result(),
             "indication_counts": f_indications.result(),
-            "country_counts": f_countries.result().rename(columns={"occr_country": "country"}),
+            "country_counts": f_countries.result().rename(
+                columns={"occr_country": "country"}
+            ),
             "cases": table,
             "quarterly_trend": f_trend.result(),
         }

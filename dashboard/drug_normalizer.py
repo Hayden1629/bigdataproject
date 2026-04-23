@@ -70,17 +70,17 @@ def match_drug_names(
     }
 
     direct = local[
-        local["drugname_norm"].str.contains(q, na=False)
-        | local["prod_ai_norm"].str.contains(q, na=False)
+        local["drugname_norm"].str.contains(q, na=False, regex=False)
+        | local["prod_ai_norm"].str.contains(q, na=False, regex=False)
     ]
 
     bridge = pd.DataFrame()
     if rx_tokens:
         mask = False
         for tok in rx_tokens:
-            tok_mask = local["drugname_norm"].str.contains(tok, na=False) | local[
-                "prod_ai_norm"
-            ].str.contains(tok, na=False)
+            tok_mask = local["drugname_norm"].str.contains(
+                tok, na=False, regex=False
+            ) | local["prod_ai_norm"].str.contains(tok, na=False, regex=False)
             mask = tok_mask if isinstance(mask, bool) else (mask | tok_mask)
         if not isinstance(mask, bool):
             bridge = local[mask]
@@ -103,8 +103,8 @@ def match_drug_names(
         if fallback:
             fq = _norm(fallback)
             combined = local[
-                local["drugname_norm"].str.contains(fq, na=False)
-                | local["prod_ai_norm"].str.contains(fq, na=False)
+                local["drugname_norm"].str.contains(fq, na=False, regex=False)
+                | local["prod_ai_norm"].str.contains(fq, na=False, regex=False)
             ]
 
     if combined.empty:
