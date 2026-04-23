@@ -114,6 +114,12 @@ def _run_sql(sql: str) -> pd.DataFrame:
             conn.close()
         except Exception:
             pass
+        # Replace dead connection so pool doesn't shrink
+        try:
+            _return_connection(_make_connection())
+            logger.info("Replaced dead connection in pool")
+        except Exception as reconnect_err:
+            logger.warning("Failed to replace connection: %s", reconnect_err)
         raise
     else:
         _return_connection(conn)

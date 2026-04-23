@@ -87,6 +87,16 @@ def render_sidebar(default_top_n: int = 20) -> dict[str, Any]:
             coverage_text = f"Coverage: {profile.get('quarter_min', '-')} to {profile.get('quarter_max', '-')}"
         st.caption(coverage_text)
 
+        st.divider()
+        st.markdown(
+            "<div style='font-size:.68rem;'>"
+            "<a href='https://www.fda.gov/drugs/questions-and-answers-fdas-adverse-event-reporting-system-faers/"
+            "fda-adverse-event-reporting-system-faers-public-dashboard' "
+            "target='_blank'>Official FDA FAERS Dashboard</a>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
     return {
         "quarters": selected_quarters,
         "role_filter": role_filter,

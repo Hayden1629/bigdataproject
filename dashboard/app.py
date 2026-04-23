@@ -37,15 +37,19 @@ def main() -> None:
         st.session_state["_warmed"] = True
         _warm_start()
 
-    with log_timing(logger, "Warm resource: drug name lookup"):
-        _ = dl.load_drug_name_lookup()
-    with log_timing(logger, "Warm resource: reaction terms"):
-        _ = dl.get_all_reaction_terms()
-    with log_timing(logger, "Warm resource: quarters"):
-        _ = dl.get_quarters()
-    with log_timing(logger, "Warm resource: manufacturer lookup"):
-        _ = dl.load_manufacturer_lookup()
-    logger.info("Warm resources loaded")
+    try:
+        with log_timing(logger, "Warm resource: drug name lookup"):
+            _ = dl.load_drug_name_lookup()
+        with log_timing(logger, "Warm resource: reaction terms"):
+            _ = dl.get_all_reaction_terms()
+        with log_timing(logger, "Warm resource: quarters"):
+            _ = dl.get_quarters()
+        with log_timing(logger, "Warm resource: manufacturer lookup"):
+            _ = dl.load_manufacturer_lookup()
+        logger.info("Warm resources loaded")
+    except Exception as e:
+        logger.warning("Warm resource loading failed, will retry on demand: %s", e)
+        st.warning("Dashboard is warming up — some data may load slowly. Please refresh if needed.")
 
     filters = render_sidebar(default_top_n=20)
 

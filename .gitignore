@@ -13,3 +13,4 @@ claude_test/__pycache__/
 dashboard/faers_dashboard.log
 # Databricks
 .databricks/
+Logs_ faers-dash.html
