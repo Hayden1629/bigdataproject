@@ -4,13 +4,13 @@
 
 ## Executive Summary
 
-FAERS Analytics Dashboard is an AI-powered big data project that transforms millions of messy FDA adverse event reports into actionable drug safety insights. It addresses the scale, inconsistency, and usability limitations of FAERS data by combining cloud-scale processing, AI-driven normalization, and an interactive dashboard for trend discovery and signal detection [file:1].
+FAERS Analytics Dashboard is an AI-powered big data project that transforms millions of messy FDA adverse event reports into actionable drug safety insights. It addresses the scale, inconsistency, and usability limitations of FAERS data by combining cloud-scale processing, AI-driven normalization, and an interactive dashboard for trend discovery and signal detection.
 
-The project centralizes public quarterly FAERS extracts, processes them with Databricks Spark, standardizes drug and reaction terminology with AI support, and presents findings in a Streamlit dashboard. It is designed for pharma teams, analysts, regulators, and healthcare systems that need faster, clearer, and more accessible safety intelligence [file:1].
+The project centralizes public quarterly FAERS extracts, processes them with Databricks Spark, standardizes drug and reaction terminology with AI support, and presents findings in a Streamlit dashboard. It is designed for pharma teams, analysts, regulators, and healthcare systems that need faster, clearer, and more accessible safety intelligence.
 
 ## Problem Statement
 
-FAERS data is large, messy, and difficult to analyze at scale. The flyer highlights four major challenges: roughly 1 million new reports per year, inconsistent free-text data entry, limited dashboard usability, and clinical terminology that is hard for non-specialists to navigate [file:1].
+FAERS data is large, messy, and difficult to analyze at scale. The flyer highlights four major challenges: roughly 1 million new reports per year, inconsistent free-text data entry, limited dashboard usability, and clinical terminology that is hard for non-specialists to navigate.
 
 ## Solution Overview
 
@@ -24,12 +24,12 @@ The solution combines three layers:
 
 | Layer | Tools | Purpose |
 |---|---|---|
-| Data source | FDA FAERS public quarterly extracts | Source adverse event reports [file:1] |
-| Processing | Databricks, Apache Spark | Deduplication, cleansing, and aggregation at scale [file:1] |
+| Data source | FDA FAERS public quarterly extracts | Source adverse event reports |
+| Processing | Databricks, Apache Spark | Deduplication, cleansing, and aggregation at scale |
 | Storage | Parquet datasets, cache tables | Efficient downstream analytics and dashboard loading |
-| AI / NLP | LLM normalization, semantic clustering, generative summaries | Standardize messy text and explain signals [file:1] |
-| App layer | Streamlit | Interactive dashboard and exploration UI [file:1] |
-| Deployment | Databricks Apps | Hosted production dashboard [file:1] |
+| AI / NLP | LLM normalization, semantic clustering, generative summaries | Standardize messy text and explain signals |
+| App layer | Streamlit | Interactive dashboard and exploration UI |
+| Deployment | Databricks Apps | Hosted production dashboard |
 | Local setup | Python setup script | One-step bootstrap for dependencies, data prep, and launch |
 
 ## One-Step Setup
@@ -107,35 +107,35 @@ python utils/setup_dashboard.py --mode full --start-quarter 2023Q1 --end-quarter
 
 1. **Ingest**
    - Load quarterly FAERS files from FDA public releases.
-   - Move raw data into the processing environment [file:1].
+   - Move raw data into the processing environment.
 
 2. **Clean**
    - Deduplicate records.
-   - Handle inconsistent formatting and noisy free-text fields with Spark-based processing [file:1].
+   - Handle inconsistent formatting and noisy free-text fields with Spark-based processing.
 
 3. **Standardize**
    - Normalize drug names into standardized identifiers.
    - Standardize adverse event and reaction terminology.
-   - Group semantically similar terms together [file:1].
+   - Group semantically similar terms together.
 
 4. **Analyze**
    - Identify key drugs, manufacturers, and reactions.
-   - Detect quarter-over-quarter movers, trend spikes, and emerging safety signals [file:1].
+   - Detect quarter-over-quarter movers, trend spikes, and emerging safety signals.
 
 5. **Explain**
    - Generate plain-language summaries for flagged signals.
-   - Provide reviewer-facing explanations for why a case or trend was surfaced [file:1].
+   - Provide reviewer-facing explanations for why a case or trend was surfaced.
 
 6. **Publish**
    - Materialize cache tables for dashboard performance.
-   - Serve the interactive app in Streamlit and Databricks Apps [file:1].
+   - Serve the interactive app in Streamlit and Databricks Apps.
 
 ## Core Capabilities
 
 - Smart semantic search across related medical terms.
 - Risk detection for unexpected drug-event relationships.
 - AI-generated signal summaries for non-clinical users.
-- Interactive filtering and drill-down across drugs, events, trends, and outcomes [file:1].
+- Interactive filtering and drill-down across drugs, events, trends, and outcomes.
 
 ## Business Value
 
@@ -143,7 +143,7 @@ This project delivers value across multiple user groups:
 
 - **Pharma companies** can monitor competitor safety signals and improve risk management.
 - **Analysts and regulators** can identify public health risks faster and reduce manual review.
-- **Healthcare systems** can better track adverse event patterns and support decision-making [file:1].
+- **Healthcare systems** can better track adverse event patterns and support decision-making.
 
 ## Quantifiable Impact
 
@@ -153,7 +153,7 @@ The flyer highlights several measurable outcomes:
 - **40** earlier signal detection.
 - **3x** deeper insight.
 - **80** less manual cleaning.
-- **98/100** match accuracy for reaction clustering and related-term mapping [file:1].
+- **98/100** match accuracy for reaction clustering and related-term mapping.
 
 ## Generative AI Layer
 
@@ -161,7 +161,7 @@ The generative and agentic AI layer adds three key functions:
 
 - Normalize messy free-text drug names into standardized identifiers.
 - Summarize clusters of related adverse events into readable safety signals.
-- Generate reviewer-facing explanations of why a case or signal was flagged [file:1].
+- Generate reviewer-facing explanations of why a case or signal was flagged.
 
 ## Repository Structure
 
@@ -193,7 +193,7 @@ The generative and agentic AI layer adds three key functions:
 - Hayden Herstrom
 - Amogha Yalgi
 - Hannah Huang
-- Rachel Le [file:1]
+- Rachel Le
 
 ## Acknowledgements
 
