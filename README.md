@@ -188,6 +188,11 @@ The flyer highlights several measurable outcomes:
 - Hannah Huang
 - Rachel Le
 
+## Flyer
+Our final published flyer used for the marketplace presentation can be found here: https://github.com/Hayden1629/bigdataproject/blob/main/Team%2011%20flyer.pdf
+
 ## Acknowledgements
 
 We acknowledge the Carlson School of Management IT department for technical support on this project [file:1].
+
+This project repository is created in partial fulfillment of the requirements for the Big Data Analytics course offered by the Master of Science in Business Analytics program at the Carlson School of Management, University of Minnesota.
