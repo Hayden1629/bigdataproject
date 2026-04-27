@@ -27,7 +27,7 @@ The solution combines three layers:
 | Data source | FDA FAERS public quarterly extracts | Source adverse event reports |
 | Processing | Databricks, Apache Spark | Deduplication, cleansing, and aggregation at scale |
 | Storage | Parquet datasets, cache tables | Efficient downstream analytics and dashboard loading |
-| AI / NLP | LLM normalization, semantic clustering, generative summaries | Standardize messy text and explain signals |
+| AI / NLP | RxNorm API, semantic clustering, generative summaries | Standardize drug names, cluster reaction terms, and explain signals |
 | App layer | Streamlit | Interactive dashboard and exploration UI |
 | Deployment | Databricks Apps | Hosted production dashboard |
 | Local setup | Python setup script | One-step bootstrap for dependencies, data prep, and launch |
@@ -155,13 +155,6 @@ The flyer highlights several measurable outcomes:
 - **80** less manual cleaning.
 - **98/100** match accuracy for reaction clustering and related-term mapping.
 
-## Generative AI Layer
-
-The generative and agentic AI layer adds three key functions:
-
-- Normalize messy free-text drug names into standardized identifiers.
-- Summarize clusters of related adverse events into readable safety signals.
-- Generate reviewer-facing explanations of why a case or signal was flagged.
 
 ## Repository Structure
 
