@@ -150,9 +150,9 @@ This project delivers value across multiple user groups:
 The flyer highlights several measurable outcomes:
 
 - **16.9M** cases unified.
-- **40** earlier signal detection.
+- **40%** earlier signal detection.
 - **3x** deeper insight.
-- **80** less manual cleaning.
+- **80%** less manual cleaning.
 - **98/100** match accuracy for reaction clustering and related-term mapping.
 
 
